@@ -39,7 +39,7 @@ export default function Home() {
       .from('spelers')
       .insert([{ naam: inschrijfNaam.trim(), totaal_score: 0 }]);
     
-    if (error) setStatus('Fout bij inschrijven.');
+    if (error) setStatus('Naam bestaat al of er is een fout.');
     else {
       setStatus('Gelukt! Vraag Jorden om je code.');
       setInschrijfNaam('');
@@ -91,7 +91,7 @@ export default function Home() {
         .install-guide {
           background: rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 10px 15px;
           font-size: 0.65rem; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1);
-          width: 100%; max-width: 400px; text-align: center; color: rgba(255,255,255,0.7);
+          width: 100%; max-width: 420px; text-align: center; color: rgba(255,255,255,0.7);
         }
 
         .glass-card { 
@@ -99,6 +99,11 @@ export default function Home() {
           padding: 30px 20px; border-radius: 32px; border: 1px solid rgba(255, 255, 255, 0.15); 
           width: 100%; max-width: 420px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); 
           text-align: center; box-sizing: border-box;
+        }
+
+        .payment-box {
+          background: rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 20px;
+          margin-top: 25px; border: 1px solid rgba(156, 246, 246, 0.3); text-align: left;
         }
 
         .title { font-size: 2.5rem; font-weight: 900; margin: 0; letter-spacing: -1.5px; }
@@ -111,7 +116,6 @@ export default function Home() {
           width: 100%; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.1); 
           background: rgba(255,255,255,0.05); color: white; font-size: 1rem; outline: none; box-sizing: border-box;
         }
-        .input-field::placeholder { color: rgba(255,255,255,0.3); }
 
         .btn-primary { 
           width: 100%; padding: 16px; margin-top: 5px; border-radius: 16px; border: none; 
@@ -134,11 +138,9 @@ export default function Home() {
         }
         .chip-active { background: #9CF6F6; color: #1A3C40; border: none; font-weight: 700; }
 
-        /* Mobiele optimalisatie voor grotere schermen */
         @media (min-width: 480px) {
           .glass-card { padding: 40px; }
           .title { font-size: 3rem; }
-          .chip { font-size: 0.8rem; padding: 8px 18px; }
         }
       `}</style>
 
@@ -153,11 +155,16 @@ export default function Home() {
 
         {actieveSpeler ? (
           <div style={{ padding: '10px 0' }}>
-            <p style={{ fontSize: '1.1rem', marginBottom: '5px', opacity: 0.8 }}>Gefeliciteerd,</p>
+            <p style={{ fontSize: '1.1rem', marginBottom: '5px', opacity: 0.8 }}>Welkom,</p>
             <h2 style={{ color: '#9CF6F6', fontSize: '2rem', margin: 0 }}>{actieveSpeler.naam}</h2>
-            <div style={{ marginTop: '25px', padding: '15px', borderRadius: '20px', background: 'rgba(255,255,255,0.05)', fontSize: '0.85rem', lineHeight: '1.5' }}>
-              Je account is gekoppeld. Zodra de wedstrijden live gaan, kun je hier je scores invoeren.
+            
+            <div className="payment-box">
+              <p style={{ margin: '0 0 10px 0', fontSize: '0.8rem', fontWeight: 800, color: '#9CF6F6', textTransform: 'uppercase' }}>💳 Betaling</p>
+              <p style={{ margin: '0 0 5px 0', fontSize: '0.9rem' }}>Stort <strong>€10</strong> naar:</p>
+              <p style={{ margin: '0 0 12px 0', fontSize: '1rem', fontFamily: 'monospace', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '8px' }}>BE85 0018 2075 8506</p>
+              <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.9 }}>Mededeling: <br/><strong>WK prono + {actieveSpeler.naam}</strong></p>
             </div>
+
             <button className="btn-secondary" style={{marginTop:'30px'}} onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>
               Ander profiel
             </button>
