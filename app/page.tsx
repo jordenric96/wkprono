@@ -71,13 +71,15 @@ export default function Home() {
     <main className="main-container">
       <style>{`
         html, body {
-          margin: 0 !important;
-          padding: 0 !important;
-          background: #C46D5E; /* Fallback */
+          margin: 0; padding: 0;
+          width: 100%; min-height: 100%;
+          background: #C46D5E;
+          overflow-x: hidden;
         }
 
         .main-container {
-          margin: 0; padding: 40px 20px; min-height: 100vh; display: flex; flexDirection: column; alignItems: center;
+          margin: 0; padding: 20px 15px 80px 15px; 
+          min-height: 100vh; display: flex; flex-direction: column; align-items: center;
           font-family: 'Inter', -apple-system, system-ui, sans-serif;
           background: linear-gradient(-45deg, #F3C98B, #DAA588, #C46D5E, #F56960);
           background-size: 400% 400%; animation: gradientBG 15s ease infinite;
@@ -87,56 +89,62 @@ export default function Home() {
         @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
         .install-guide {
-          background: rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 12px 20px;
-          font-size: 0.7rem; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.1);
-          max-width: 400px; text-align: center; color: rgba(255,255,255,0.8); letter-spacing: 0.3px;
+          background: rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 10px 15px;
+          font-size: 0.65rem; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1);
+          width: 100%; max-width: 400px; text-align: center; color: rgba(255,255,255,0.7);
         }
 
         .glass-card { 
           background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-          padding: 40px; border-radius: 32px; border: 1px solid rgba(255, 255, 255, 0.15); 
-          width: 100%; max-width: 420px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); text-align: center;
+          padding: 30px 20px; border-radius: 32px; border: 1px solid rgba(255, 255, 255, 0.15); 
+          width: 100%; max-width: 420px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); 
+          text-align: center; box-sizing: border-box;
         }
 
-        .title { font-size: 3rem; fontWeight: 900; margin: 0; letter-spacing: -2px; line-height: 1; }
-        .subtitle { font-size: 0.8rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 30px; color: rgba(255,255,255,0.7); }
+        .title { font-size: 2.5rem; font-weight: 900; margin: 0; letter-spacing: -1.5px; }
+        .subtitle { font-size: 0.75rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 25px; color: rgba(255,255,255,0.6); }
 
-        .input-group { text-align: left; margin-bottom: 15px; }
-        .label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-left: 12px; margin-bottom: 6px; display: block; opacity: 0.8; }
+        .input-group { text-align: left; margin-bottom: 12px; }
+        .label { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-left: 10px; margin-bottom: 4px; display: block; opacity: 0.7; }
         
         .input-field { 
-          width: 100%; padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); 
+          width: 100%; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.1); 
           background: rgba(255,255,255,0.05); color: white; font-size: 1rem; outline: none; box-sizing: border-box;
-          transition: all 0.3s ease;
         }
-        .input-field::placeholder { color: rgba(255,255,255,0.4); }
-        .input-field:focus { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); }
+        .input-field::placeholder { color: rgba(255,255,255,0.3); }
 
         .btn-primary { 
-          width: 100%; padding: 18px; margin-top: 10px; border-radius: 18px; border: none; 
-          background: #9CF6F6; color: #1A3C40; font-weight: 800; cursor: pointer; font-size: 0.95rem;
-          box-shadow: 0 10px 20px -5px rgba(156, 246, 246, 0.4); transition: all 0.2s;
+          width: 100%; padding: 16px; margin-top: 5px; border-radius: 16px; border: none; 
+          background: #9CF6F6; color: #1A3C40; font-weight: 800; cursor: pointer; font-size: 0.9rem;
+          box-shadow: 0 10px 20px -5px rgba(156, 246, 246, 0.3);
         }
-        .btn-primary:active { transform: translateY(2px); box-shadow: 0 5px 10px -5px rgba(156, 246, 246, 0.4); }
 
         .btn-secondary { 
-          width: 100%; padding: 14px; margin-top: 10px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.2);
-          background: transparent; color: white; font-weight: 600; cursor: pointer; font-size: 0.85rem;
+          width: 100%; padding: 12px; margin-top: 8px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.2);
+          background: transparent; color: white; font-weight: 600; font-size: 0.8rem;
         }
 
-        .status-text { margin-top: 20px; font-size: 0.8rem; font-weight: 600; color: #9CF6F6; min-height: 1.2rem; }
-
-        .chip-container { display: flex; flex-wrap: wrap; gap: 8px; justifyContent: center; margin-top: 50px; max-width: 450px; }
+        .chip-container { 
+          display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; 
+          margin-top: 40px; width: 100%; max-width: 420px; 
+        }
         .chip {
-          background: rgba(255, 255, 255, 0.06); padding: 8px 18px; border-radius: 50px;
-          border: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.8rem; font-weight: 500; letter-spacing: 0.2px;
+          background: rgba(255, 255, 255, 0.06); padding: 6px 14px; border-radius: 50px;
+          border: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.75rem; white-space: nowrap;
         }
         .chip-active { background: #9CF6F6; color: #1A3C40; border: none; font-weight: 700; }
+
+        /* Mobiele optimalisatie voor grotere schermen */
+        @media (min-width: 480px) {
+          .glass-card { padding: 40px; }
+          .title { font-size: 3rem; }
+          .chip { font-size: 0.8rem; padding: 8px 18px; }
+        }
       `}</style>
 
       <div className="install-guide">
         <strong>WEB APP INSTALLATIE</strong><br/>
-        iOS: <span style={{fontSize:'1rem'}}>⎋</span> 'Zet op beginscherm' • Android: 'App installeren'
+        iOS: <span style={{fontSize:'0.9rem'}}>⎋</span> 'Zet op beginscherm' • Android: 'App installeren'
       </div>
 
       <div className="glass-card">
@@ -144,13 +152,13 @@ export default function Home() {
         <p className="subtitle">Pronostiek • Inzet €10</p>
 
         {actieveSpeler ? (
-          <div style={{ padding: '20px 0' }}>
-            <p style={{ fontSize: '1.2rem', marginBottom: '8px' }}>Gefeliciteerd,</p>
-            <h2 style={{ color: '#9CF6F6', fontSize: '2.2rem', margin: 0, letterSpacing: '-1px' }}>{actieveSpeler.naam}</h2>
-            <div style={{ marginTop: '30px', padding: '20px', borderRadius: '24px', background: 'rgba(255,255,255,0.05)', fontSize: '0.9rem', opacity: 0.8 }}>
+          <div style={{ padding: '10px 0' }}>
+            <p style={{ fontSize: '1.1rem', marginBottom: '5px', opacity: 0.8 }}>Gefeliciteerd,</p>
+            <h2 style={{ color: '#9CF6F6', fontSize: '2rem', margin: 0 }}>{actieveSpeler.naam}</h2>
+            <div style={{ marginTop: '25px', padding: '15px', borderRadius: '20px', background: 'rgba(255,255,255,0.05)', fontSize: '0.85rem', lineHeight: '1.5' }}>
               Je account is gekoppeld. Zodra de wedstrijden live gaan, kun je hier je scores invoeren.
             </div>
-            <button className="btn-secondary" style={{marginTop:'40px'}} onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>
+            <button className="btn-secondary" style={{marginTop:'30px'}} onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>
               Ander profiel
             </button>
           </div>
@@ -165,23 +173,23 @@ export default function Home() {
               <button className="btn-primary" type="submit">LOGIN</button>
             </form>
 
-            <div style={{ margin: '35px 0', display: 'flex', alignItems: 'center', opacity: 0.2 }}>
+            <div style={{ margin: '25px 0', display: 'flex', alignItems: 'center', opacity: 0.15 }}>
               <hr style={{ flex: 1, border: 'none', height: '1px', background: 'white' }} />
-              <span style={{ padding: '0 15px', fontSize: '0.6rem', fontWeight: 900 }}>OF</span>
+              <span style={{ padding: '0 12px', fontSize: '0.55rem', fontWeight: 900 }}>OF</span>
               <hr style={{ flex: 1, border: 'none', height: '1px', background: 'white' }} />
             </div>
 
             <form onSubmit={schrijfIn}>
               <div className="input-group">
                 <label className="label">Nieuwe Deelnemer</label>
-                <input className="input-field" placeholder="Voornaam + Achternaam" value={inschrijfNaam} onChange={e => setInschrijfNaam(e.target.value)} />
+                <input className="input-field" placeholder="Naam + Achternaam" value={inschrijfNaam} onChange={e => setInschrijfNaam(e.target.value)} />
               </div>
               <button className="btn-secondary" type="submit">INSCHRIJVEN</button>
             </form>
           </div>
         )}
 
-        <div className="status-text">{status}</div>
+        <div style={{ marginTop: '15px', fontSize: '0.75rem', fontWeight: '700', color: '#9CF6F6' }}>{status}</div>
       </div>
 
       <div className="chip-container">
