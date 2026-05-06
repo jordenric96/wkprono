@@ -34,14 +34,13 @@ export default function Home() {
 
   const schrijfIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus('Bezig met inschrijven...');
+    setStatus('Bezig...');
     const { error } = await supabase
       .from('spelers')
       .insert([{ naam: inschrijfNaam.trim(), totaal_score: 0 }]);
     
-    if (error) {
-      setStatus('Naam bestaat al of er is een fout.');
-    } else {
+    if (error) setStatus('Fout bij inschrijven.');
+    else {
       setStatus('Gelukt! Vraag Jorden om je code.');
       setInschrijfNaam('');
       haalSpelersOp();
@@ -50,8 +49,7 @@ export default function Home() {
 
   const ontgrendel = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus('Controleren...');
-
+    setStatus('Verificatie...');
     const { data, error } = await supabase
       .from('spelers')
       .select('*')
@@ -59,127 +57,139 @@ export default function Home() {
       .eq('code', invoerCode.trim())
       .single();
 
-    if (error || !data) {
-      setStatus('Combinatie niet gevonden.');
-    } else {
+    if (error || !data) setStatus('Inloggegevens onjuist.');
+    else {
       localStorage.setItem('wk_speler_id', data.id.toString());
       setActieveSpeler(data);
-      setStatus('Welkom terug!');
+      setStatus('');
       setInvoerCode('');
       setOntgrendelNaam('');
     }
   };
 
   return (
-    <main style={{
-      margin: 0, padding: '20px 20px 60px 20px', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      background: 'linear-gradient(-45deg, #F3C98B, #DAA588, #C46D5E, #F56960)',
-      backgroundSize: '400% 400%', animation: 'gradientBG 15s ease infinite', color: '#ffffff'
-    }}>
-      {/* We voegen de global reset direct toe in een style tag */}
+    <main className="main-container">
       <style>{`
-        /* VERWIJDER DE WITTE RANDEN VAN DE BROWSER */
         html, body {
           margin: 0 !important;
           padding: 0 !important;
-          width: 100% !important;
-          height: 100% !important;
-          overflow-x: hidden; /* Voorkomt horizontaal scrollen */
+          background: #C46D5E; /* Fallback */
+        }
+
+        .main-container {
+          margin: 0; padding: 40px 20px; min-height: 100vh; display: flex; flexDirection: column; alignItems: center;
+          font-family: 'Inter', -apple-system, system-ui, sans-serif;
+          background: linear-gradient(-45deg, #F3C98B, #DAA588, #C46D5E, #F56960);
+          background-size: 400% 400%; animation: gradientBG 15s ease infinite;
+          color: white; box-sizing: border-box;
         }
 
         @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        
-        .install-note {
-          background: rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 10px 15px;
-          font-size: 0.75rem; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.2);
-          max-width: 450px; text-align: center; line-height: 1.4;
+
+        .install-guide {
+          background: rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 12px 20px;
+          font-size: 0.7rem; margin-bottom: 30px; border: 1px solid rgba(255,255,255,0.1);
+          max-width: 400px; text-align: center; color: rgba(255,255,255,0.8); letter-spacing: 0.3px;
         }
+
         .glass-card { 
-          background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-          padding: 35px; border-radius: 30px; border: 1px solid rgba(255, 255, 255, 0.2); 
-          width: 100%; max-width: 450px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); text-align: center;
+          background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+          padding: 40px; border-radius: 32px; border: 1px solid rgba(255, 255, 255, 0.15); 
+          width: 100%; max-width: 420px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); text-align: center;
         }
+
+        .title { font-size: 3rem; fontWeight: 900; margin: 0; letter-spacing: -2px; line-height: 1; }
+        .subtitle { font-size: 0.8rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 30px; color: rgba(255,255,255,0.7); }
+
+        .input-group { text-align: left; margin-bottom: 15px; }
+        .label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-left: 12px; margin-bottom: 6px; display: block; opacity: 0.8; }
+        
         .input-field { 
-          width: 100%; padding: 14px; margin-top: 12px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.3); 
-          background: rgba(255,255,255,0.9); color: #333; font-size: 1rem; outline: none; box-sizing: border-box;
+          width: 100%; padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); 
+          background: rgba(255,255,255,0.05); color: white; font-size: 1rem; outline: none; box-sizing: border-box;
+          transition: all 0.3s ease;
         }
-        .btn-main { 
-          width: 100%; padding: 15px; margin-top: 15px; border-radius: 15px; border: none; 
-          background: #9CF6F6; color: #1A3C40; font-weight: 800; cursor: pointer; font-size: 1rem;
-          box-shadow: 0 4px 15px rgba(156, 246, 246, 0.3);
+        .input-field::placeholder { color: rgba(255,255,255,0.4); }
+        .input-field:focus { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); }
+
+        .btn-primary { 
+          width: 100%; padding: 18px; margin-top: 10px; border-radius: 18px; border: none; 
+          background: #9CF6F6; color: #1A3C40; font-weight: 800; cursor: pointer; font-size: 0.95rem;
+          box-shadow: 0 10px 20px -5px rgba(156, 246, 246, 0.4); transition: all 0.2s;
         }
-        .btn-logout { 
-          background: rgba(255,255,255,0.2); color: white; padding: 10px 20px; border-radius: 12px; 
-          border: 1px solid rgba(255,255,255,0.3); cursor: pointer; margin-top: 20px; font-size: 0.8rem;
+        .btn-primary:active { transform: translateY(2px); box-shadow: 0 5px 10px -5px rgba(156, 246, 246, 0.4); }
+
+        .btn-secondary { 
+          width: 100%; padding: 14px; margin-top: 10px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.2);
+          background: transparent; color: white; font-weight: 600; cursor: pointer; font-size: 0.85rem;
         }
-        .deelnemer-chip {
-          background: rgba(255, 255, 255, 0.1); padding: 8px 16px; border-radius: 50px;
-          border: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.85rem;
+
+        .status-text { margin-top: 20px; font-size: 0.8rem; font-weight: 600; color: #9CF6F6; min-height: 1.2rem; }
+
+        .chip-container { display: flex; flex-wrap: wrap; gap: 8px; justifyContent: center; margin-top: 50px; max-width: 450px; }
+        .chip {
+          background: rgba(255, 255, 255, 0.06); padding: 8px 18px; border-radius: 50px;
+          border: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.8rem; font-weight: 500; letter-spacing: 0.2px;
         }
-        .active-chip { background: #9CF6F6; color: #1A3C40; }
+        .chip-active { background: #9CF6F6; color: #1A3C40; border: none; font-weight: 700; }
       `}</style>
 
-      {/* Installatie-instructie bovenaan */}
-      <div className="install-note">
-        <strong>📱 Tip: Gebruik dit als app</strong><br/>
-        iPhone: Tik onderaan op <span style={{fontSize:'1.1rem'}}>⎋</span> en kies <strong>'Zet op beginscherm'</strong>.<br/>
-        Android: Tik rechtsboven op de 3 puntjes en kies <strong>'App installeren'</strong>.
+      <div className="install-guide">
+        <strong>WEB APP INSTALLATIE</strong><br/>
+        iOS: <span style={{fontSize:'1rem'}}>⎋</span> 'Zet op beginscherm' • Android: 'App installeren'
       </div>
 
       <div className="glass-card">
-        <h1 style={{ fontSize: '2.8rem', fontWeight: '900', margin: '0 0 5px 0', letterSpacing: '-1px' }}>WK PRONO</h1>
-        <div style={{ background: 'rgba(0,0,0,0.15)', padding: '6px 20px', borderRadius: '50px', display: 'inline-block', fontSize: '0.9rem', marginBottom: '30px' }}>
-          Inzet: €10
-        </div>
+        <h1 className="title">WK'26</h1>
+        <p className="subtitle">Pronostiek • Inzet €10</p>
 
         {actieveSpeler ? (
-          <div>
-            <h2 style={{ color: '#9CF6F6', fontSize: '1.8rem' }}>Hoi, {actieveSpeler.naam}! 🏆</h2>
-            <div style={{ background: 'rgba(255,255,255,0.1)', padding: '20px', borderRadius: '20px' }}>
-              <p style={{ margin: 0, fontSize: '0.9rem' }}>Je profiel is ontgrendeld. Binnenkort kun je hier je voorspellingen invullen.</p>
+          <div style={{ padding: '20px 0' }}>
+            <p style={{ fontSize: '1.2rem', marginBottom: '8px' }}>Gefeliciteerd,</p>
+            <h2 style={{ color: '#9CF6F6', fontSize: '2.2rem', margin: 0, letterSpacing: '-1px' }}>{actieveSpeler.naam}</h2>
+            <div style={{ marginTop: '30px', padding: '20px', borderRadius: '24px', background: 'rgba(255,255,255,0.05)', fontSize: '0.9rem', opacity: 0.8 }}>
+              Je account is gekoppeld. Zodra de wedstrijden live gaan, kun je hier je scores invoeren.
             </div>
-            <button className="btn-logout" onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>
-              Ander profiel gebruiken
+            <button className="btn-secondary" style={{marginTop:'40px'}} onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>
+              Ander profiel
             </button>
           </div>
         ) : (
           <div>
             <form onSubmit={ontgrendel}>
-              <h3 style={{ fontSize: '0.9rem', textAlign: 'left', margin: '0 0 5px 5px', opacity: 0.8 }}>AL OP DE LIJST?</h3>
-              <input className="input-field" placeholder="Je naam" value={ontgrendelNaam} onChange={e => setOntgrendelNaam(e.target.value)} />
-              <input className="input-field" type="password" placeholder="Geheime code" value={invoerCode} onChange={e => setInvoerCode(e.target.value)} />
-              <button className="btn-main" type="submit">ONTGRENDELEN</button>
+              <div className="input-group">
+                <label className="label">Ontgrendelen</label>
+                <input className="input-field" placeholder="Je naam" value={ontgrendelNaam} onChange={e => setOntgrendelNaam(e.target.value)} />
+                <input className="input-field" style={{marginTop:'8px'}} type="password" placeholder="Geheime code" value={invoerCode} onChange={e => setInvoerCode(e.target.value)} />
+              </div>
+              <button className="btn-primary" type="submit">LOGIN</button>
             </form>
 
-            <div style={{ margin: '30px 0', display: 'flex', alignItems: 'center', opacity: 0.2 }}>
-              <hr style={{ flex: 1 }} /><span style={{ padding: '0 10px', fontSize: '0.7rem' }}>OF</span><hr style={{ flex: 1 }} />
+            <div style={{ margin: '35px 0', display: 'flex', alignItems: 'center', opacity: 0.2 }}>
+              <hr style={{ flex: 1, border: 'none', height: '1px', background: 'white' }} />
+              <span style={{ padding: '0 15px', fontSize: '0.6rem', fontWeight: 900 }}>OF</span>
+              <hr style={{ flex: 1, border: 'none', height: '1px', background: 'white' }} />
             </div>
 
             <form onSubmit={schrijfIn}>
-              <h3 style={{ fontSize: '0.9rem', textAlign: 'left', margin: '0 0 5px 5px', opacity: 0.8 }}>NIEUWE DEELNEMER?</h3>
-              <input className="input-field" placeholder="Voornaam + Achternaam" value={inschrijfNaam} onChange={e => setInschrijfNaam(e.target.value)} />
-              <button className="btn-main" type="submit" style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>
-                IK DOE MEE
-              </button>
+              <div className="input-group">
+                <label className="label">Nieuwe Deelnemer</label>
+                <input className="input-field" placeholder="Voornaam + Achternaam" value={inschrijfNaam} onChange={e => setInschrijfNaam(e.target.value)} />
+              </div>
+              <button className="btn-secondary" type="submit">INSCHRIJVEN</button>
             </form>
           </div>
         )}
 
-        <p style={{ marginTop: '20px', fontSize: '0.85rem', fontWeight: 'bold' }}>{status}</p>
+        <div className="status-text">{status}</div>
       </div>
 
-      <div style={{ width: '100%', maxWidth: '450px', marginTop: '40px' }}>
-        <h3 style={{ fontSize: '1rem', marginBottom: '15px', textAlign: 'center', opacity: 0.8 }}>
-          Deelnemers ({spelers.length})
-        </h3>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
-          {spelers.map(s => (
-            <div key={s.id} className={`deelnemer-chip ${actieveSpeler?.id === s.id ? 'active-chip' : ''}`}>
-              {s.naam} {actieveSpeler?.id === s.id && '⭐'}
-            </div>
-          ))}
-        </div>
+      <div className="chip-container">
+        {spelers.map(s => (
+          <div key={s.id} className={`chip ${actieveSpeler?.id === s.id ? 'chip-active' : ''}`}>
+            {s.naam} {actieveSpeler?.id === s.id && '⭐'}
+          </div>
+        ))}
       </div>
     </main>
   );
