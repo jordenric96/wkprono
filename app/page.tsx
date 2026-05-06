@@ -77,8 +77,19 @@ export default function Home() {
       background: 'linear-gradient(-45deg, #F3C98B, #DAA588, #C46D5E, #F56960)',
       backgroundSize: '400% 400%', animation: 'gradientBG 15s ease infinite', color: '#ffffff'
     }}>
+      {/* We voegen de global reset direct toe in een style tag */}
       <style>{`
+        /* VERWIJDER DE WITTE RANDEN VAN DE BROWSER */
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
+          overflow-x: hidden; /* Voorkomt horizontaal scrollen */
+        }
+
         @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        
         .install-note {
           background: rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 10px 15px;
           font-size: 0.75rem; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.2);
