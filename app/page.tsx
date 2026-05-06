@@ -78,7 +78,7 @@ export default function Home() {
         }
 
         .main-container {
-          margin: 0; padding: 20px 15px 80px 15px; 
+          margin: 0; padding: 15px 15px 80px 15px; 
           min-height: 100vh; display: flex; flex-direction: column; align-items: center;
           font-family: 'Inter', -apple-system, system-ui, sans-serif;
           background: linear-gradient(-45deg, #F3C98B, #DAA588, #C46D5E, #F56960);
@@ -89,64 +89,69 @@ export default function Home() {
         @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
         .install-guide {
-          background: rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 10px 15px;
-          font-size: 0.65rem; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1);
-          width: 100%; max-width: 420px; text-align: center; color: rgba(255,255,255,0.7);
+          background: rgba(255, 255, 255, 0.08); border-radius: 18px; padding: 12px 18px;
+          font-size: 0.68rem; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.15);
+          width: 100%; max-width: 420px; text-align: center; color: rgba(255,255,255,0.85);
+          line-height: 1.5; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
         }
 
         .glass-card { 
           background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-          padding: 30px 20px; border-radius: 32px; border: 1px solid rgba(255, 255, 255, 0.15); 
+          padding: 35px 25px; border-radius: 32px; border: 1px solid rgba(255, 255, 255, 0.18); 
           width: 100%; max-width: 420px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); 
           text-align: center; box-sizing: border-box;
         }
 
         .payment-box {
-          background: rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 20px;
-          margin-top: 25px; border: 1px solid rgba(156, 246, 246, 0.3); text-align: left;
+          background: rgba(255, 255, 255, 0.07); border-radius: 20px; padding: 20px;
+          margin-top: 25px; border: 1px solid rgba(156, 246, 246, 0.2); text-align: left;
         }
 
-        .title { font-size: 2.5rem; font-weight: 900; margin: 0; letter-spacing: -1.5px; }
-        .subtitle { font-size: 0.75rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 25px; color: rgba(255,255,255,0.6); }
+        .title { font-size: 2.8rem; font-weight: 900; margin: 0; letter-spacing: -1.5px; }
+        .subtitle { font-size: 0.75rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 30px; color: rgba(255,255,255,0.6); }
 
         .input-group { text-align: left; margin-bottom: 12px; }
-        .label { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-left: 10px; margin-bottom: 4px; display: block; opacity: 0.7; }
+        .label { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; margin-left: 12px; margin-bottom: 5px; display: block; opacity: 0.7; }
         
         .input-field { 
-          width: 100%; padding: 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.1); 
-          background: rgba(255,255,255,0.05); color: white; font-size: 1rem; outline: none; box-sizing: border-box;
+          width: 100%; padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); 
+          background: rgba(255,255,255,0.06); color: white; font-size: 1rem; outline: none; box-sizing: border-box;
         }
 
         .btn-primary { 
-          width: 100%; padding: 16px; margin-top: 5px; border-radius: 16px; border: none; 
-          background: #9CF6F6; color: #1A3C40; font-weight: 800; cursor: pointer; font-size: 0.9rem;
-          box-shadow: 0 10px 20px -5px rgba(156, 246, 246, 0.3);
+          width: 100%; padding: 18px; margin-top: 5px; border-radius: 18px; border: none; 
+          background: #9CF6F6; color: #1A3C40; font-weight: 800; cursor: pointer; font-size: 0.95rem;
+          box-shadow: 0 10px 20px -5px rgba(156, 246, 246, 0.35);
         }
 
         .btn-secondary { 
-          width: 100%; padding: 12px; margin-top: 8px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.2);
-          background: transparent; color: white; font-weight: 600; font-size: 0.8rem;
+          width: 100%; padding: 14px; margin-top: 10px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.25);
+          background: transparent; color: white; font-weight: 600; font-size: 0.85rem;
         }
 
         .chip-container { 
-          display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; 
+          display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; 
           margin-top: 40px; width: 100%; max-width: 420px; 
         }
         .chip {
-          background: rgba(255, 255, 255, 0.06); padding: 6px 14px; border-radius: 50px;
-          border: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.75rem; white-space: nowrap;
+          background: rgba(255, 255, 255, 0.06); padding: 7px 16px; border-radius: 50px;
+          border: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.78rem; white-space: nowrap;
         }
         .chip-active { background: #9CF6F6; color: #1A3C40; border: none; font-weight: 700; }
 
         @media (min-width: 480px) {
-          .glass-card { padding: 40px; }
-          .title { font-size: 3rem; }
+          .glass-card { padding: 45px; }
+          .title { font-size: 3.2rem; }
         }
       `}</style>
 
+      {/* Verfijnde Installatie-instructie */}
       <div className="install-guide">
-        <strong>WEB APP INSTALLATIE</strong><br/>
-        iOS: <span style={{fontSize:'0.9rem'}}>⎋</span> 'Zet op beginscherm' • Android: 'App installeren'
+        <strong style={{color: '#9CF6F6', letterSpacing: '1px'}}>INSTALLEER ALS APP</strong><br/>
+        <div style={{marginTop: '4px'}}>
+          iPhone: Tik op <span style={{fontSize:'1rem'}}>⎋</span> en kies <strong>'Zet op beginscherm'</strong><br/>
+          Android: Tik op <span style={{fontSize:'1rem'}}>⋮</span> en kies <strong>'Toevoegen aan startscherm'</strong>
+        </div>
       </div>
 
       <div className="glass-card">
@@ -155,17 +160,17 @@ export default function Home() {
 
         {actieveSpeler ? (
           <div style={{ padding: '10px 0' }}>
-            <p style={{ fontSize: '1.1rem', marginBottom: '5px', opacity: 0.8 }}>Welkom,</p>
-            <h2 style={{ color: '#9CF6F6', fontSize: '2rem', margin: 0 }}>{actieveSpeler.naam}</h2>
+            <p style={{ fontSize: '1.1rem', marginBottom: '5px', opacity: 0.85 }}>Welkom,</p>
+            <h2 style={{ color: '#9CF6F6', fontSize: '2.2rem', margin: 0, letterSpacing: '-0.5px' }}>{actieveSpeler.naam}</h2>
             
             <div className="payment-box">
-              <p style={{ margin: '0 0 10px 0', fontSize: '0.8rem', fontWeight: 800, color: '#9CF6F6', textTransform: 'uppercase' }}>💳 Betaling</p>
-              <p style={{ margin: '0 0 5px 0', fontSize: '0.9rem' }}>Stort <strong>€10</strong> naar:</p>
-              <p style={{ margin: '0 0 12px 0', fontSize: '1rem', fontFamily: 'monospace', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '8px' }}>BE85 0018 2075 8506</p>
-              <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.9 }}>Mededeling: <br/><strong>WK prono + {actieveSpeler.naam}</strong></p>
+              <p style={{ margin: '0 0 12px 0', fontSize: '0.7rem', fontWeight: 800, color: '#9CF6F6', textTransform: 'uppercase', letterSpacing: '1px' }}>💳 Betaalgegevens</p>
+              <p style={{ margin: '0 0 6px 0', fontSize: '0.9rem' }}>Stort <strong>€10</strong> naar:</p>
+              <p style={{ margin: '0 0 15px 0', fontSize: '1rem', fontFamily: 'monospace', background: 'rgba(0,0,0,0.25)', padding: '10px', borderLeft: '3px solid #9CF6F6', borderRadius: '4px' }}>BE85 0018 2075 8506</p>
+              <p style={{ margin: 0, fontSize: '0.85rem', opacity: 0.9, lineHeight: '1.4' }}>Mededeling: <br/><strong>WK prono + {actieveSpeler.naam}</strong></p>
             </div>
 
-            <button className="btn-secondary" style={{marginTop:'30px'}} onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>
+            <button className="btn-secondary" style={{marginTop:'35px'}} onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>
               Ander profiel
             </button>
           </div>
@@ -175,14 +180,14 @@ export default function Home() {
               <div className="input-group">
                 <label className="label">Ontgrendelen</label>
                 <input className="input-field" placeholder="Je naam" value={ontgrendelNaam} onChange={e => setOntgrendelNaam(e.target.value)} />
-                <input className="input-field" style={{marginTop:'8px'}} type="password" placeholder="Geheime code" value={invoerCode} onChange={e => setInvoerCode(e.target.value)} />
+                <input className="input-field" style={{marginTop:'10px'}} type="password" placeholder="Geheime code" value={invoerCode} onChange={e => setInvoerCode(e.target.value)} />
               </div>
               <button className="btn-primary" type="submit">LOGIN</button>
             </form>
 
-            <div style={{ margin: '25px 0', display: 'flex', alignItems: 'center', opacity: 0.15 }}>
+            <div style={{ margin: '30px 0', display: 'flex', alignItems: 'center', opacity: 0.18 }}>
               <hr style={{ flex: 1, border: 'none', height: '1px', background: 'white' }} />
-              <span style={{ padding: '0 12px', fontSize: '0.55rem', fontWeight: 900 }}>OF</span>
+              <span style={{ padding: '0 15px', fontSize: '0.6rem', fontWeight: 900 }}>OF</span>
               <hr style={{ flex: 1, border: 'none', height: '1px', background: 'white' }} />
             </div>
 
@@ -196,7 +201,7 @@ export default function Home() {
           </div>
         )}
 
-        <div style={{ marginTop: '15px', fontSize: '0.75rem', fontWeight: '700', color: '#9CF6F6' }}>{status}</div>
+        <div style={{ marginTop: '20px', fontSize: '0.8rem', fontWeight: '700', color: '#9CF6F6' }}>{status}</div>
       </div>
 
       <div className="chip-container">
