@@ -1,23 +1,31 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { WK_LANDEN, TOP_SPELERS, TOP_KEEPERS } from '../lib/data';
 
 // DEADLINE: 11 Juni 2026 om 21:00
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
 
+// Leuke avatars om uit te kiezen
+const AVATARS = ['⚽', '🦁', '🍟', '🍺', '👑', '🔥', '🏆', '👽', '🤡', '😎', '👻', '🌶️'];
+
 export default function Home() {
+  // LOGIN / INSCHRIJVING
   const [ontgrendelNaam, setOntgrendelNaam] = useState('');
   const [inschrijfNaam, setInschrijfNaam] = useState('');
   const [invoerCode, setInvoerCode] = useState('');
+  const [kiesAvatar, setKiesAvatar] = useState('⚽');
   const [status, setStatus] = useState('');
   const [spelers, setSpelers] = useState<any[]>([]);
   const [actieveSpeler, setActieveSpeler] = useState<any>(null);
+  
+  // NAVIGATIE
   const [actieveTab, setActieveTab] = useState('toernooi');
   
-  // TOERNOOI STATE (Eigen formulier)
+  // TOERNOOI INVOER
   const [voorspellingStatus, setVoorspellingStatus] = useState('');
+  const [showConfetti, setShowConfetti] = useState(false); // 🎉 CONFETTI STATE
   const [winnaar, setWinnaar] = useState('');
   const [topschutter, setTopschutter] = useState('');
   const [besteKeeper, setBesteKeeper] = useState('');
@@ -30,13 +38,18 @@ export default function Home() {
   const [lv3, setLv3] = useState('');
   const [lv4, setLv4] = useState('');
 
-  // COUNTDOWN STATE
+  // COUNTDOWN
   const [tijdOver, setTijdOver] = useState({ dagen: 0, uren: 0, minuten: 0, seconden: 0 });
   const [isGesloten, setIsGesloten] = useState(false);
 
-  // RANKING & OVERZICHT STATE
+  // DATA
   const [klassement, setKlassement] = useState<any[]>([]);
   const [alleVoorspellingen, setAlleVoorspellingen] = useState<any[]>([]);
+  
+  // KLEEDKAMER (CHAT)
+  const [chatBerichten, setChatBerichten] = useState<any[]>([]);
+  const [nieuwBericht, setNieuwBericht] = useState('');
+  const chatEindeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const opgeslagenId = localStorage.getItem('wk_speler_id');
@@ -67,11 +80,12 @@ export default function Home() {
       if (actieveTab === 'toernooi') haalToernooiVoorspellingOp();
       if (actieveTab === 'ranking') haalKlassementOp();
       if (actieveTab === 'antwoorden') haalAlleVoorspellingenOp();
+      if (actieveTab === 'kleedkamer') haalChatOp();
     }
   }, [actieveSpeler, actieveTab]);
 
   const haalSpelersOp = async (checkId?: string | null) => {
-    const { data, error } = await supabase.from('spelers').select('id, naam').order('created_at', { ascending: true });
+    const { data, error } = await supabase.from('spelers').select('*').order('created_at', { ascending: true });
     if (!error && data) {
       setSpelers(data);
       if (checkId) {
@@ -82,7 +96,7 @@ export default function Home() {
   };
 
   const haalKlassementOp = async () => {
-    const { data, error } = await supabase.from('spelers').select('id, naam, totaal_score').order('totaal_score', { ascending: false });
+    const { data, error } = await supabase.from('spelers').select('*').order('totaal_score', { ascending: false });
     if (!error && data) setKlassement(data);
   };
 
@@ -90,6 +104,24 @@ export default function Home() {
     if (spelers.length === 0) await haalSpelersOp();
     const { data, error } = await supabase.from('toernooi_voorspellingen').select('*');
     if (!error && data) setAlleVoorspellingen(data);
+  };
+
+  const haalChatOp = async () => {
+    const { data, error } = await supabase
+      .from('kleedkamer')
+      .select('*, spelers(naam, avatar)')
+      .order('created_at', { ascending: true });
+    if (!error && data) {
+      setChatBerichten(data);
+      setTimeout(() => chatEindeRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    }
+  };
+
+  const verstuurChat = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nieuwBericht.trim()) return;
+    const { error } = await supabase.from('kleedkamer').insert([{ speler_id: actieveSpeler.id, bericht: nieuwBericht.trim() }]);
+    if (!error) { setNieuwBericht(''); haalChatOp(); }
   };
 
   const haalToernooiVoorspellingOp = async () => {
@@ -115,55 +147,50 @@ export default function Home() {
     setVoorspellingStatus('Bezig met opslaan...');
     const laatsteVierArray = [lv1, lv2, lv3, lv4].filter(land => land.trim() !== '');
     const voorspellingData = {
-      speler_id: actieveSpeler.id, 
-      winnaar: winnaar.trim(), 
-      topschutter: topschutter.trim(),
-      beste_keeper: besteKeeper.trim(), 
-      eindstation_belgie: eindstation.trim(),
-      totaal_goals_tornooi: parseInt(totaalGoals) || 0, 
-      totaal_gele_kaarten: parseInt(geelKaarten) || 0,
-      totaal_rode_kaarten: parseInt(roodKaarten) || 0,
-      laatste_vier: laatsteVierArray
+      speler_id: actieveSpeler.id, winnaar: winnaar.trim(), topschutter: topschutter.trim(),
+      beste_keeper: besteKeeper.trim(), eindstation_belgie: eindstation.trim(),
+      totaal_goals_tornooi: parseInt(totaalGoals) || 0, totaal_gele_kaarten: parseInt(geelKaarten) || 0,
+      totaal_rode_kaarten: parseInt(roodKaarten) || 0, laatste_vier: laatsteVierArray
     };
 
     const { data: bestaand } = await supabase.from('toernooi_voorspellingen').select('id').eq('speler_id', actieveSpeler.id).single();
     let error;
     if (bestaand) {
-      const { error: updateError } = await supabase.from('toernooi_voorspellingen').update(voorspellingData).eq('speler_id', actieveSpeler.id);
-      error = updateError;
+      error = (await supabase.from('toernooi_voorspellingen').update(voorspellingData).eq('speler_id', actieveSpeler.id)).error;
     } else {
-      const { error: insertError } = await supabase.from('toernooi_voorspellingen').insert([voorspellingData]);
-      error = insertError;
+      error = (await supabase.from('toernooi_voorspellingen').insert([voorspellingData])).error;
     }
 
-    if (error) setVoorspellingStatus('❌ Fout bij opslaan.');
+    if (error) setVoorspellingStatus('🚩 Buitenspel! Probeer opnieuw.');
     else {
-      setVoorspellingStatus('✅ Succesvol opgeslagen!');
+      setVoorspellingStatus('✅ Wereldgoal! Opgeslagen.');
+      setShowConfetti(true); // 🎉 Activeer Confetti
+      setTimeout(() => setShowConfetti(false), 4000); // Zet uit na 4s
       setTimeout(() => setVoorspellingStatus(''), 3000);
     }
   };
 
   const schrijfIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus('Bezig...');
-    const { error } = await supabase.from('spelers').insert([{ naam: inschrijfNaam.trim(), totaal_score: 0 }]);
-    if (error) setStatus('Naam bestaat al of er is een fout.');
-    else { setStatus('Gelukt! Vraag de beheerder om je code.'); setInschrijfNaam(''); haalSpelersOp(); }
+    setStatus('De VAR kijkt ernaar... 📺');
+    const { error } = await supabase.from('spelers').insert([{ naam: inschrijfNaam.trim(), totaal_score: 0, avatar: kiesAvatar }]);
+    if (error) setStatus('🚩 Naam bestaat al of er is een fout.');
+    else { setStatus('✅ Transfer afgerond! Vraag je code.'); setInschrijfNaam(''); haalSpelersOp(); }
   };
 
   const ontgrendel = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus('Verificatie...');
+    setStatus('De VAR kijkt ernaar... 📺');
     const { data: speler, error } = await supabase.from('spelers').select('*').ilike('naam', ontgrendelNaam.trim()).single();
-    if (error || !speler) { setStatus('Naam niet gevonden.'); return; }
+    if (error || !speler) { setStatus('🚩 Speler niet gevonden op het veld.'); return; }
     if (String(speler.code).trim() === String(invoerCode).trim()) {
       localStorage.setItem('wk_speler_id', speler.id.toString());
       setActieveSpeler(speler); setStatus(''); setInvoerCode(''); setOntgrendelNaam('');
-    } else setStatus('De code is onjuist.');
+    } else setStatus('🚩 Code is fout. Gele kaart!');
   };
 
   const VeiligAntwoord = ({ toon, waarde }: { toon: boolean, waarde: string }) => {
-    if (toon) return <span className="antw-text">{waarde}</span>;
+    if (toon) return <span className="antw-text neon-text">{waarde}</span>;
     return <span className="antw-text blurred-waarde">█████████</span>;
   };
 
@@ -181,83 +208,137 @@ export default function Home() {
   return (
     <main className="main-container">
       <style>{`
-        html, body { margin: 0; padding: 0; width: 100%; min-height: 100%; background: #C46D5E; overflow-x: hidden; }
-        .main-container { margin: 0; padding: 15px 15px 80px 15px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; font-family: 'Inter', -apple-system, sans-serif; background: linear-gradient(-45deg, #F3C98B, #DAA588, #C46D5E, #F56960); background-size: 400% 400%; animation: gradientBG 15s ease infinite; color: white; box-sizing: border-box; }
-        @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        .glass-card { background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); padding: 30px 20px; border-radius: 32px; border: 1px solid rgba(255, 255, 255, 0.18); width: 100%; max-width: 480px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); box-sizing: border-box; }
-        .title { font-size: 2.8rem; font-weight: 900; margin: 0; letter-spacing: -1.5px; text-align: center; }
-        .subtitle { font-size: 0.75rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 20px; color: rgba(255,255,255,0.6); text-align: center; }
+        /* IMPORT SPORT FONTS */
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;800;900&display=swap');
+
+        html, body { margin: 0; padding: 0; width: 100%; min-height: 100%; background: #0B0E14; overflow-x: hidden; }
+        .main-container { margin: 0; padding: 15px 15px 80px 15px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; font-family: 'Inter', sans-serif; background: radial-gradient(circle at 50% 0%, #1a2235 0%, #090c15 100%); color: #E0E6ED; box-sizing: border-box; }
         
-        .countdown-banner { background: rgba(0,0,0,0.25); border-radius: 16px; padding: 15px 10px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(156, 246, 246, 0.2); }
-        .countdown-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: #9CF6F6; margin-bottom: 10px; font-weight: 800; }
+        .glass-card { background: rgba(15, 20, 30, 0.6); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); padding: 30px 20px; border-radius: 32px; border: 1px solid rgba(0, 240, 255, 0.15); width: 100%; max-width: 500px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5), 0 0 40px rgba(0, 240, 255, 0.05); position: relative; z-index: 10; }
+        
+        .title { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; letter-spacing: 2px; margin: 0; text-align: center; color: #FFF; text-shadow: 0 0 20px rgba(0, 240, 255, 0.4); line-height: 1; }
+        .subtitle { font-size: 0.75rem; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 25px; color: #00F0FF; text-align: center; }
+        
+        /* CONFETTI ANIMATIE */
+        .confetti-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; overflow: hidden; display: flex; justify-content: center; }
+        .confetti { position: absolute; width: 10px; height: 10px; background-color: #00F0FF; animation: fall linear forwards; }
+        .confetti:nth-child(2n) { background-color: #FF0055; }
+        .confetti:nth-child(3n) { background-color: #FFD700; }
+        @keyframes fall { 0% { transform: translateY(-100px) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+
+        /* TABS (SCROLLABLE OP MOBIEL) */
+        .tab-container { display: flex; background: rgba(0,0,0,0.4); border-radius: 16px; padding: 5px; margin-bottom: 25px; overflow-x: auto; scrollbar-width: none; }
+        .tab-container::-webkit-scrollbar { display: none; }
+        .tab { flex: 1; min-width: 80px; text-align: center; padding: 12px 5px; font-size: 0.65rem; font-weight: 800; border-radius: 12px; cursor: pointer; transition: all 0.3s; opacity: 0.5; white-space: nowrap; letter-spacing: 1px; color: white; }
+        .tab:active { transform: scale(0.95); }
+        .tab.active { background: rgba(0, 240, 255, 0.1); color: #00F0FF; opacity: 1; box-shadow: inset 0 0 10px rgba(0, 240, 255, 0.2); border: 1px solid rgba(0, 240, 255, 0.3); }
+        
+        /* COUNTDOWN (SPORT FONT) */
+        .countdown-banner { background: rgba(0,0,0,0.3); border-radius: 16px; padding: 15px 10px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(0, 240, 255, 0.2); box-shadow: 0 0 15px rgba(0, 240, 255, 0.05); }
+        .countdown-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: #00F0FF; margin-bottom: 10px; font-weight: 800; }
         .tijd-grid { display: flex; justify-content: center; gap: 6px; width: 100%; }
-        .tijd-box { background: rgba(255,255,255,0.1); padding: 8px 4px; border-radius: 12px; text-align: center; flex: 1; max-width: 70px; }
-        .tijd-cijfer { font-size: 1.2rem; font-weight: 900; line-height: 1; margin-bottom: 3px; font-variant-numeric: tabular-nums; }
-        .tijd-label { font-size: 0.5rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; }
-        .gesloten-banner { background: rgba(245, 105, 96, 0.3); border: 1px solid #F56960; color: white; padding: 15px; border-radius: 16px; text-align: center; font-weight: 800; margin-bottom: 25px; letter-spacing: 1px; text-transform: uppercase; }
+        .tijd-box { background: rgba(255,255,255,0.05); padding: 8px 4px; border-radius: 12px; text-align: center; flex: 1; max-width: 70px; border: 1px solid rgba(255,255,255,0.05); }
+        .tijd-cijfer { font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: #FFF; line-height: 1; margin-bottom: 0px; letter-spacing: 1px; }
+        .tijd-label { font-size: 0.5rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.6; }
+        .gesloten-banner { background: rgba(255, 0, 85, 0.15); border: 1px solid #FF0055; color: #FF0055; padding: 15px; border-radius: 16px; text-align: center; font-weight: 800; margin-bottom: 25px; letter-spacing: 1px; text-transform: uppercase; box-shadow: 0 0 15px rgba(255, 0, 85, 0.2); }
 
-        .tab-container { display: flex; background: rgba(0,0,0,0.2); border-radius: 16px; padding: 5px; margin-bottom: 25px; }
-        .tab { flex: 1; text-align: center; padding: 12px 2px; font-size: 0.65rem; font-weight: 800; border-radius: 12px; cursor: pointer; transition: all 0.3s; opacity: 0.6; white-space: nowrap; letter-spacing: 0.5px; }
-        .tab.active { background: #9CF6F6; color: #1A3C40; opacity: 1; }
-        
+        /* FORMULIER */
         .input-group { text-align: left; margin-bottom: 15px; }
-        .label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; margin-left: 12px; margin-bottom: 6px; display: block; opacity: 0.8; color: #9CF6F6; }
-        .input-field { width: 100%; padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); color: white; font-size: 1rem; outline: none; box-sizing: border-box; -webkit-appearance: none; }
-        .input-field:focus { border-color: #9CF6F6; background: rgba(255,255,255,0.1); }
+        .label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; margin-left: 12px; margin-bottom: 6px; display: block; color: #00F0FF; }
+        .input-field { width: 100%; padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: white; font-size: 1rem; outline: none; box-sizing: border-box; -webkit-appearance: none; transition: 0.3s; }
+        .input-field:focus { border-color: #00F0FF; box-shadow: 0 0 10px rgba(0, 240, 255, 0.2); }
         .input-field:disabled { opacity: 0.5; cursor: not-allowed; }
-        .input-field option { background: #C46D5E; color: white; }
-        .btn-primary { width: 100%; padding: 18px; border-radius: 18px; border: none; background: #9CF6F6; color: #1A3C40; font-weight: 800; cursor: pointer; font-size: 0.95rem; box-shadow: 0 10px 20px -5px rgba(156, 246, 246, 0.35); }
+        .input-field option { background: #0B0E14; color: white; }
+        .btn-primary { width: 100%; padding: 18px; border-radius: 18px; border: none; background: #00F0FF; color: #090c15; font-weight: 900; cursor: pointer; font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 0 20px rgba(0, 240, 255, 0.4); transition: 0.2s; }
+        .btn-primary:active { transform: scale(0.98); }
         .btn-primary:disabled { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); box-shadow: none; cursor: not-allowed; }
-        .btn-secondary { width: 100%; padding: 14px; margin-top: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.25); background: transparent; color: white; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+        .btn-secondary { width: 100%; padding: 14px; margin-top: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: white; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: 0.2s; }
+        .btn-secondary:active { background: rgba(255,255,255,0.05); }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .avatar-picker { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
+        .avatar-optie { font-size: 1.5rem; padding: 10px; border-radius: 50%; background: rgba(0,0,0,0.3); cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
+        .avatar-optie.selected { border-color: #00F0FF; background: rgba(0, 240, 255, 0.1); transform: scale(1.1); }
 
-        /* AANGEPAST: COMPACT KLASSEMENT CSS */
-        .ranking-item { background: rgba(255,255,255,0.08); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; }
-        .ranking-item.is-me { border-color: #9CF6F6; background: rgba(156, 246, 246, 0.1); }
-        .ranking-hoofd { display: flex; align-items: center; margin-bottom: 4px; }
-        .ranking-pos { width: 28px; font-size: 1.1rem; font-weight: 900; opacity: 0.8; text-align: left; }
-        .pos-1 { color: #FFD700; opacity: 1; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
-        .pos-2 { color: #C0C0C0; opacity: 1; }
-        .pos-3 { color: #CD7F32; opacity: 1; }
-        .ranking-naam { flex: 1; font-size: 0.95rem; font-weight: 800; margin: 0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .ranking-totaal { font-size: 1.2rem; font-weight: 900; color: #9CF6F6; text-align: right; min-width: 40px; }
+        /* RANKING (SFEERVOL) */
+        .ranking-item { background: rgba(0,0,0,0.3); border-radius: 16px; padding: 12px 15px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.2s; position: relative; overflow: hidden; }
+        .ranking-item.is-me { border-color: #00F0FF; background: rgba(0, 240, 255, 0.05); }
+        .ranking-item.leader-glow { border-color: #FFD700; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); background: linear-gradient(90deg, rgba(255,215,0,0.05) 0%, transparent 100%); }
+        .ranking-hoofd { display: flex; align-items: center; margin-bottom: 8px; }
+        .ranking-pos { width: 30px; font-family: 'Bebas Neue', sans-serif; font-size: 1.5rem; color: rgba(255,255,255,0.5); text-align: left; }
+        .pos-1 { color: #FFD700; text-shadow: 0 0 10px rgba(255,215,0,0.5); font-size: 1.8rem; }
+        .pos-2 { color: #C0C0C0; }
+        .pos-3 { color: #CD7F32; }
+        .ranking-avatar { font-size: 1.4rem; margin-right: 10px; }
+        .ranking-naam { flex: 1; font-size: 1rem; font-weight: 800; margin: 0; color: #FFF; }
+        .ranking-totaal { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; color: #00F0FF; text-align: right; min-width: 40px; line-height: 1; }
         
-        .ranking-sub { display: flex; justify-content: space-between; align-items: center; font-size: 0.65rem; color: rgba(255,255,255,0.7); }
-        .ranking-punten { display: flex; gap: 8px; }
-        .ranking-punten span { font-weight: 700; color: #9CF6F6; margin-left: 3px; }
-        .ranking-stats { display: flex; gap: 6px; }
-        .stat-mini { display: flex; align-items: center; gap: 3px; background: rgba(0,0,0,0.2); padding: 3px 6px; border-radius: 6px; }
-        .stat-mini span { font-weight: 800; color: white; }
+        .ranking-sub { display: flex; justify-content: space-between; align-items: center; font-size: 0.65rem; color: rgba(255,255,255,0.6); background: rgba(0,0,0,0.2); padding: 6px 10px; border-radius: 8px; }
+        .ranking-punten { display: flex; gap: 10px; }
+        .ranking-punten span { font-weight: 800; color: #FFF; margin-left: 4px; }
+        .ranking-stats { display: flex; gap: 8px; }
+        .stat-mini { display: flex; align-items: center; gap: 3px; }
+        .stat-mini span { font-weight: 800; color: white; font-family: 'Bebas Neue', sans-serif; font-size: 0.9rem; letter-spacing: 1px; }
 
-        /* ANTWOORDEN CSS */
-        .cat-card { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 0; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; }
-        .cat-header { background: rgba(0,0,0,0.2); padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .cat-titel { font-size: 1rem; font-weight: 800; color: #9CF6F6; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px; }
-        .cat-stand { font-size: 0.75rem; color: rgba(255,255,255,0.7); font-weight: 600; display: inline-block; background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 50px; }
-        .cat-lijst { padding: 10px 15px; }
-        .cat-speler-rij { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        /* KLEEDKAMER CHAT */
+        .chat-container { display: flex; flex-direction: column; height: 400px; background: rgba(0,0,0,0.3); border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; }
+        .chat-berichten { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
+        .chat-bericht { display: flex; gap: 10px; align-items: flex-start; }
+        .chat-bericht.is-mij { flex-direction: row-reverse; }
+        .chat-avatar { font-size: 1.5rem; background: rgba(255,255,255,0.05); border-radius: 50%; padding: 5px; }
+        .chat-bubbel { background: rgba(255,255,255,0.08); padding: 10px 15px; border-radius: 16px; border-top-left-radius: 4px; max-width: 75%; font-size: 0.85rem; line-height: 1.4; color: #E0E6ED; }
+        .chat-bericht.is-mij .chat-bubbel { background: rgba(0, 240, 255, 0.15); border-radius: 16px; border-top-right-radius: 4px; color: #FFF; border: 1px solid rgba(0, 240, 255, 0.2); }
+        .chat-naam { font-size: 0.6rem; font-weight: 800; opacity: 0.5; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+        .chat-bericht.is-mij .chat-naam { text-align: right; color: #00F0FF; opacity: 0.8; }
+        .chat-invoer { display: flex; padding: 10px; background: rgba(0,0,0,0.5); border-top: 1px solid rgba(255,255,255,0.1); }
+        .chat-input { flex: 1; background: rgba(255,255,255,0.1); border: none; padding: 12px 15px; border-radius: 20px; color: white; outline: none; font-size: 0.9rem; }
+        .chat-send { background: #00F0FF; border: none; width: 42px; height: 42px; border-radius: 50%; margin-left: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; transition: 0.2s; }
+        .chat-send:active { transform: scale(0.9); }
+
+        /* ANTWOORDEN */
+        .cat-card { background: rgba(0,0,0,0.3); border-radius: 16px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; }
+        .cat-header { background: rgba(255,255,255,0.03); padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;}
+        .cat-titel { font-size: 0.85rem; font-weight: 800; color: #00F0FF; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
+        .cat-stand { font-size: 0.65rem; color: rgba(255,255,255,0.6); font-weight: 800; background: rgba(0,0,0,0.4); padding: 4px 8px; border-radius: 8px; }
+        .cat-lijst { padding: 5px 15px; }
+        .cat-speler-rij { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
         .cat-speler-rij:last-child { border-bottom: none; }
-        .antw-naam { font-size: 0.85rem; font-weight: 600; opacity: 0.9; }
-        .antw-text { font-size: 0.85rem; font-weight: 800; text-align: right; max-width: 60%; word-break: break-word; }
-        .blurred-waarde { filter: blur(4px); opacity: 0.5; user-select: none; letter-spacing: 2px; }
-        .eigen-antw .antw-naam { color: #9CF6F6; font-weight: 800; }
-        .eigen-antw .antw-text { color: #9CF6F6; }
+        .antw-naam { font-size: 0.8rem; font-weight: 600; opacity: 0.8; display: flex; align-items: center; gap: 6px;}
+        .antw-text { font-size: 0.85rem; font-weight: 700; text-align: right; max-width: 60%; }
+        .blurred-waarde { filter: blur(4px); opacity: 0.4; user-select: none; letter-spacing: 2px; }
+        .neon-text { color: #FFF; text-shadow: 0 0 8px rgba(255,255,255,0.3); }
+        .eigen-antw .antw-naam { color: #00F0FF; font-weight: 800; opacity: 1;}
+        .eigen-antw .antw-text { color: #00F0FF; }
       `}</style>
+
+      {/* CONFETTI KANON OVERLAY */}
+      {showConfetti && (
+        <div className="confetti-container">
+          {Array.from({ length: 50 }).map((_, i) => (
+            <div key={i} className="confetti" style={{ 
+              left: `${Math.random() * 100}%`, 
+              animationDelay: `${Math.random() * 2}s`,
+              animationDuration: `${Math.random() * 2 + 2}s`
+            }}></div>
+          ))}
+        </div>
+      )}
 
       <datalist id="top-spelers">{TOP_SPELERS.map(speler => <option key={speler} value={speler} />)}</datalist>
       <datalist id="top-keepers">{TOP_KEEPERS.map(keeper => <option key={keeper} value={keeper} />)}</datalist>
 
       <div className="glass-card">
-        <h1 className="title">WK'26</h1>
-        <p className="subtitle">Pronostiek • Inzet €10</p>
+        <h1 className="title">WK 2026</h1>
+        <p className="subtitle">Pronostiek • Road to America</p>
 
         {actieveSpeler ? (
           <div>
+            {/* 5 TABS MENU */}
             <div className="tab-container">
               <div className={`tab ${actieveTab === 'matchen' ? 'active' : ''}`} onClick={() => setActieveTab('matchen')}>MATCHEN</div>
               <div className={`tab ${actieveTab === 'toernooi' ? 'active' : ''}`} onClick={() => setActieveTab('toernooi')}>TOERNOOI</div>
               <div className={`tab ${actieveTab === 'antwoorden' ? 'active' : ''}`} onClick={() => setActieveTab('antwoorden')}>ANTWOORDEN</div>
               <div className={`tab ${actieveTab === 'ranking' ? 'active' : ''}`} onClick={() => setActieveTab('ranking')}>RANKING</div>
+              <div className={`tab ${actieveTab === 'kleedkamer' ? 'active' : ''}`} onClick={() => setActieveTab('kleedkamer')}>KLEEDKAMER💬</div>
             </div>
 
             {actieveTab === 'toernooi' && (
@@ -266,7 +347,7 @@ export default function Home() {
                   <div className="gesloten-banner">⛔ Inzendingen Gesloten</div>
                 ) : (
                   <div className="countdown-banner">
-                    <div className="countdown-title">Sluiting over:</div>
+                    <div className="countdown-title">De bal rolt over:</div>
                     <div className="tijd-grid">
                       <div className="tijd-box"><div className="tijd-cijfer">{tijdOver.dagen}</div><div className="tijd-label">Dagen</div></div>
                       <div className="tijd-box"><div className="tijd-cijfer">{tijdOver.uren}</div><div className="tijd-label">Uren</div></div>
@@ -276,26 +357,26 @@ export default function Home() {
                   </div>
                 )}
 
-                <div className="input-group"><label className="label">Eindwinnaar WK</label><select className="input-field" value={winnaar} onChange={e => setWinnaar(e.target.value)} required disabled={isGesloten}><option value="" disabled>Kies een land...</option>{WK_LANDEN.map(land => <option key={land} value={land}>{land}</option>)}</select></div>
-                <div className="input-group"><label className="label">Topschutter</label><input className="input-field" list="top-spelers" placeholder="Begin te typen..." value={topschutter} onChange={e => setTopschutter(e.target.value)} required disabled={isGesloten} /></div>
-                <div className="input-group"><label className="label">Beste Keeper</label><input className="input-field" list="top-keepers" placeholder="Begin te typen..." value={besteKeeper} onChange={e => setBesteKeeper(e.target.value)} required disabled={isGesloten} /></div>
+                <div className="input-group"><label className="label">Eindwinnaar WK</label><select className="input-field" value={winnaar} onChange={e => setWinnaar(e.target.value)} required disabled={isGesloten}><option value="" disabled>Kies je kampioen...</option>{WK_LANDEN.map(land => <option key={land} value={land}>{land}</option>)}</select></div>
+                <div className="input-group"><label className="label">Topschutter</label><input className="input-field" list="top-spelers" placeholder="Wie schiet ze erin?" value={topschutter} onChange={e => setTopschutter(e.target.value)} required disabled={isGesloten} /></div>
+                <div className="input-group"><label className="label">Beste Keeper</label><input className="input-field" list="top-keepers" placeholder="De muur in de goal..." value={besteKeeper} onChange={e => setBesteKeeper(e.target.value)} required disabled={isGesloten} /></div>
                 
                 <div className="input-group">
                   <label className="label">Eindstation Rode Duivels</label>
                   <select className="input-field" value={eindstation} onChange={e => setEindstation(e.target.value)} required disabled={isGesloten}>
-                    <option value="" disabled>Kies een ronde...</option>
-                    <option value="Groepsfase">Groepsfase</option>
+                    <option value="" disabled>Tot waar geraken ze?</option>
+                    <option value="Groepsfase">Groepsfase (Schande!)</option>
                     <option value="1/16e Finale">1/16e Finale</option>
                     <option value="1/8e Finale">1/8e Finale</option>
                     <option value="Kwartfinale">Kwartfinale</option>
                     <option value="Halve Finale">Halve Finale</option>
                     <option value="Verliezend Finalist">Verliezend Finalist</option>
-                    <option value="Wereldkampioen">Wereldkampioen</option>
+                    <option value="Wereldkampioen">Wereldkampioen 🏆</option>
                   </select>
                 </div>
 
                 <div className="input-group">
-                  <label className="label">De Laatste Vier</label>
+                  <label className="label">De Laatste Vier (Halve Finalisten)</label>
                   <div className="grid-2">
                     <select className="input-field" value={lv1} onChange={e => setLv1(e.target.value)} required disabled={isGesloten}><option value="" disabled>Land 1</option>{WK_LANDEN.map(land => <option key={land} value={land}>{land}</option>)}</select>
                     <select className="input-field" value={lv2} onChange={e => setLv2(e.target.value)} required disabled={isGesloten}><option value="" disabled>Land 2</option>{WK_LANDEN.map(land => <option key={land} value={land}>{land}</option>)}</select>
@@ -304,21 +385,21 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="input-group"><label className="label">Tie-breaker: Totaal goals WK</label><input className="input-field" type="number" placeholder="Bv. 172" value={totaalGoals} onChange={e => setTotaalGoals(e.target.value)} required disabled={isGesloten} /></div>
+                <div className="input-group"><label className="label">Tie-breaker: Totaal goals hele toernooi</label><input className="input-field" type="number" placeholder="Bv. 172" value={totaalGoals} onChange={e => setTotaalGoals(e.target.value)} required disabled={isGesloten} /></div>
                 <div className="grid-2">
                   <div className="input-group"><label className="label">Gele Kaarten</label><input className="input-field" type="number" placeholder="Bv. 220" value={geelKaarten} onChange={e => setGeelKaarten(e.target.value)} required disabled={isGesloten} /></div>
                   <div className="input-group"><label className="label">Rode Kaarten</label><input className="input-field" type="number" placeholder="Bv. 12" value={roodKaarten} onChange={e => setRoodKaarten(e.target.value)} required disabled={isGesloten} /></div>
                 </div>
 
-                {voorspellingStatus && <div style={{ textAlign: 'center', margin: '15px 0', fontSize: '0.9rem', fontWeight: 'bold' }}>{voorspellingStatus}</div>}
+                {voorspellingStatus && <div style={{ textAlign: 'center', margin: '15px 0', fontSize: '0.9rem', fontWeight: '800', color: voorspellingStatus.includes('✅') ? '#00F0FF' : '#FF0055' }}>{voorspellingStatus}</div>}
                 {!isGesloten && <button className="btn-primary" type="submit">OPSLAAN</button>}
-                <button className="btn-secondary" type="button" onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>Uitloggen</button>
+                <button className="btn-secondary" type="button" onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>Terug naar de spelerstunnel (Uitloggen)</button>
               </form>
             )}
 
             {actieveTab === 'antwoorden' && (
               <div style={{ animation: 'fadeIn 0.4s' }}>
-                <p style={{ textAlign: 'center', fontSize: '0.8rem', opacity: 0.8, marginBottom: '20px', lineHeight: '1.4' }}>Bekijk hier per vraag wat iedereen gegokt heeft.<br/><strong style={{color: '#9CF6F6'}}>Anderen zijn geblurred tot de start!</strong></p>
+                <p style={{ textAlign: 'center', fontSize: '0.8rem', opacity: 0.8, marginBottom: '20px', lineHeight: '1.4' }}>Kijk wat de concurrentie denkt.<br/><strong style={{color: '#00F0FF'}}>Tegenstanders zijn geblurred tot de aftrap!</strong></p>
                 {CATEGORIEEN.map((cat, idx) => (
                   <div key={idx} className="cat-card">
                     <div className="cat-header">
@@ -330,14 +411,14 @@ export default function Home() {
                         const v = alleVoorspellingen.find(x => x.speler_id === speler.id);
                         const isMijzelf = speler.id === actieveSpeler.id;
                         const toonData = isGesloten || isMijzelf;
-                        let getoondeWaarde = "Nog niets ingevuld...";
+                        let getoondeWaarde = "Zit nog in de kleedkamer 🚪";
                         if (v) {
                           if (cat.key === 'laatste_vier') getoondeWaarde = v[cat.key]?.join(', ') || '-';
                           else getoondeWaarde = v[cat.key] || '-';
                         }
                         return (
                           <div key={speler.id} className={`cat-speler-rij ${isMijzelf ? 'eigen-antw' : ''}`}>
-                            <span className="antw-naam">{speler.naam}</span>
+                            <span className="antw-naam"><span style={{fontSize:'1rem'}}>{speler.avatar || '⚽'}</span> {speler.naam}</span>
                             {v ? <VeiligAntwoord toon={toonData} waarde={getoondeWaarde.toString()} /> : <span style={{ fontSize: '0.75rem', fontStyle: 'italic', opacity: 0.4 }}>Wachtend...</span>}
                           </div>
                         );
@@ -348,26 +429,30 @@ export default function Home() {
               </div>
             )}
 
-            {/* AANGEPAST: COMPACT RANKING */}
             {actieveTab === 'ranking' && (
               <div style={{ animation: 'fadeIn 0.4s' }}>
-                <p style={{ textAlign: 'center', fontSize: '0.75rem', opacity: 0.8, margin: '0 0 15px 0' }}>Inclusief live updates voor je bonusvragen!</p>
+                <p style={{ textAlign: 'center', fontSize: '0.75rem', opacity: 0.8, margin: '0 0 15px 0' }}>Live klassement inclusief bonuspunten.</p>
                 {klassement.length === 0 ? (
-                  <p style={{ textAlign: 'center', opacity: 0.5 }}>Laden...</p>
+                  <p style={{ textAlign: 'center', color: '#00F0FF', fontWeight: 'bold' }}>De VAR kijkt ernaar... 📺</p>
                 ) : (
                   klassement.map((speler, index) => {
                     const isMijzelf = speler.id === actieveSpeler.id;
+                    const isNummerEen = index === 0 && klassement[0].totaal_score > 0; // Alleen glow als er punten zijn
+                    const isLaatste = index === klassement.length - 1 && klassement.length > 1; // Rode lantaarn
                     const positieKlasse = index === 0 ? 'pos-1' : index === 1 ? 'pos-2' : index === 2 ? 'pos-3' : '';
                     
                     return (
-                      <div key={speler.id} className={`ranking-item ${isMijzelf ? 'is-me' : ''}`}>
-                        
+                      <div key={speler.id} className={`ranking-item ${isMijzelf ? 'is-me' : ''} ${isNummerEen ? 'leader-glow' : ''}`}>
                         <div className="ranking-hoofd">
                           <div className={`ranking-pos ${positieKlasse}`}>{index + 1}</div>
-                          <h3 className="ranking-naam">{speler.naam}</h3>
+                          <div className="ranking-avatar">{speler.avatar || '⚽'}</div>
+                          <h3 className="ranking-naam">
+                            {speler.naam} 
+                            {isNummerEen && <span style={{marginLeft:'5px'}} title="On Fire!">🔥</span>}
+                            {isLaatste && <span style={{marginLeft:'5px', filter: 'grayscale(1)'}} title="De Rode Lantaarn">🐌</span>}
+                          </h3>
                           <div className="ranking-totaal">{speler.totaal_score || 0}</div>
                         </div>
-                        
                         <div className="ranking-sub">
                           <div className="ranking-punten" title="Punten uit Matchen & Bonus">
                             <div>⚽ <span>0</span></div>
@@ -376,23 +461,53 @@ export default function Home() {
                           <div className="ranking-stats">
                             <div className="stat-mini" title="Exacte score">🎯 <span>0</span></div>
                             <div className="stat-mini" title="Juiste ploeg">✅ <span>0</span></div>
-                            <div className="stat-mini" title="Helemaal fout">❌ <span>0</span></div>
+                            <div className="stat-mini" title="Fout">❌ <span>0</span></div>
                           </div>
                         </div>
-
                       </div>
                     );
                   })
                 )}
-                <button className="btn-secondary" style={{ marginTop: '20px' }} onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>Uitloggen</button>
+              </div>
+            )}
+
+            {/* NIEUWE TAB: KLEEDKAMER CHAT */}
+            {actieveTab === 'kleedkamer' && (
+              <div style={{ animation: 'fadeIn 0.4s' }}>
+                <p style={{ textAlign: 'center', fontSize: '0.75rem', opacity: 0.8, margin: '0 0 15px 0' }}>Banter, bluf en trash talk.</p>
+                <div className="chat-container">
+                  <div className="chat-berichten">
+                    {chatBerichten.length === 0 ? (
+                      <p style={{ textAlign: 'center', opacity: 0.5, marginTop: 'auto', marginBottom: 'auto' }}>Het is hier nog stil... Deel de eerste plaagstoot! 🥊</p>
+                    ) : (
+                      chatBerichten.map((chat) => {
+                        const isMij = chat.speler_id === actieveSpeler.id;
+                        return (
+                          <div key={chat.id} className={`chat-bericht ${isMij ? 'is-mij' : ''}`}>
+                            <div className="chat-avatar">{chat.spelers?.avatar || '⚽'}</div>
+                            <div style={{ maxWidth: '80%' }}>
+                              <div className="chat-naam">{chat.spelers?.naam || 'Onbekend'}</div>
+                              <div className="chat-bubbel">{chat.bericht}</div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                    <div ref={chatEindeRef} />
+                  </div>
+                  <form onSubmit={verstuurChat} className="chat-invoer">
+                    <input className="chat-input" placeholder="Zeg iets snedig..." value={nieuwBericht} onChange={e => setNieuwBericht(e.target.value)} maxLength={150} />
+                    <button type="submit" className="chat-send" disabled={!nieuwBericht.trim()}>🚀</button>
+                  </form>
+                </div>
               </div>
             )}
 
             {actieveTab === 'matchen' && (
               <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.7 }}>
-                <h3>Komt Binnenkort</h3>
-                <p style={{ fontSize: '0.9rem' }}>De kalender met wedstrijden wordt hier klaargezet.</p>
-                <button className="btn-secondary" onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>Uitloggen</button>
+                <div style={{fontSize: '3rem', marginBottom: '10px'}}>🏟️</div>
+                <h3 style={{color: '#00F0FF', margin: 0}}>Het Gras wordt gemaaid...</h3>
+                <p style={{ fontSize: '0.85rem' }}>De wedstrijdkalender wordt hier binnenkort opgebouwd, inclusief jouw **Gouden Bal Joker**!</p>
               </div>
             )}
           </div>
@@ -404,17 +519,27 @@ export default function Home() {
                 <input className="input-field" placeholder="Je naam" value={ontgrendelNaam} onChange={e => setOntgrendelNaam(e.target.value)} />
                 <input className="input-field" style={{marginTop:'10px'}} type="text" placeholder="Geheime code" value={invoerCode} onChange={e => setInvoerCode(e.target.value)} />
               </div>
-              <button className="btn-primary" type="submit">LOGIN</button>
+              <button className="btn-primary" type="submit">HET VELD OP</button>
             </form>
             <div style={{ margin: '30px 0', display: 'flex', alignItems: 'center', opacity: 0.18 }}><hr style={{ flex: 1, border: 'none', height: '1px', background: 'white' }} /><span style={{ padding: '0 15px', fontSize: '0.6rem', fontWeight: 900 }}>OF</span><hr style={{ flex: 1, border: 'none', height: '1px', background: 'white' }} /></div>
             <form onSubmit={schrijfIn}>
               <div className="input-group">
-                <label className="label">Nieuwe Deelnemer</label>
-                <input className="input-field" placeholder="Naam + Achternaam" value={inschrijfNaam} onChange={e => setInschrijfNaam(e.target.value)} />
+                <label className="label">Nieuwe Transfer (Inschrijven)</label>
+                <input className="input-field" placeholder="Naam + Achternaam" value={inschrijfNaam} onChange={e => setInschrijfNaam(e.target.value)} required />
               </div>
-              <button className="btn-secondary" type="submit">INSCHRIJVEN</button>
+              
+              <label className="label">Kies je Avatar</label>
+              <div className="avatar-picker">
+                {AVATARS.map(emoji => (
+                  <div key={emoji} className={`avatar-optie ${kiesAvatar === emoji ? 'selected' : ''}`} onClick={() => setKiesAvatar(emoji)}>
+                    {emoji}
+                  </div>
+                ))}
+              </div>
+
+              <button className="btn-secondary" type="submit" style={{marginTop:'20px'}}>TEKEN CONTRACT</button>
             </form>
-            <div style={{ marginTop: '20px', fontSize: '0.8rem', fontWeight: '700', color: '#9CF6F6', textAlign: 'center' }}>{status}</div>
+            <div style={{ marginTop: '20px', fontSize: '0.85rem', fontWeight: '800', color: status.includes('🚩') ? '#FF0055' : '#00F0FF', textAlign: 'center' }}>{status}</div>
           </div>
         )}
       </div>

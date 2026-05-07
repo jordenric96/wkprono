@@ -1,12 +1,13 @@
 // --- 48 LANDEN (Het nieuwe WK 2026 format) ---
+// --- 48 LANDEN (Met Vlaggen) ---
 export const WK_LANDEN = [
-  'Algerije', 'Argentinië', 'Australië', 'België', 'Brazilië', 'Canada', 'Chili', 
-  'Colombia', 'Costa Rica', 'Denemarken', 'Duitsland', 'Ecuador', 'Egypte', 'Engeland', 
-  'Frankrijk', 'Ghana', 'Hongarije', 'Iran', 'Italië', 'Ivoorkust', 'Japan', 
-  'Kameroen', 'Kroatië', 'Mali', 'Marokko', 'Mexico', 'Nederland', 'Nigeria', 
-  'Oekraïne', 'Oostenrijk', 'Paraguay', 'Peru', 'Polen', 'Portugal', 'Qatar', 
-  'Saudi-Arabië', 'Schotland', 'Senegal', 'Servië', 'Spanje', 'Turkije', 'Uruguay', 
-  'Venezuela', 'Verenigde Staten', 'Wales', 'Zuid-Afrika', 'Zuid-Korea', 'Zweden', 'Zwitserland'
+  '🇩🇿 Algerije', '🇦🇷 Argentinië', '🇦🇺 Australië', '🇧🇪 België', '🇧🇷 Brazilië', '🇨🇦 Canada', '🇨🇱 Chili', 
+  '🇨🇴 Colombia', '🇨🇷 Costa Rica', '🇩🇰 Denemarken', '🇩🇪 Duitsland', '🇪🇨 Ecuador', '🇪🇬 Egypte', '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Engeland', 
+  '🇫🇷 Frankrijk', '🇬🇭 Ghana', '🇭🇺 Hongarije', '🇮🇷 Iran', '🇮🇹 Italië', '🇨🇮 Ivoorkust', '🇯🇵 Japan', 
+  '🇨🇲 Kameroen', '🇭🇷 Kroatië', '🇲🇱 Mali', '🇲🇦 Marokko', '🇲🇽 Mexico', '🇳🇱 Nederland', '🇳🇬 Nigeria', 
+  '🇺🇦 Oekraïne', '🇦🇹 Oostenrijk', '🇵🇾 Paraguay', '🇵🇪 Peru', '🇵🇱 Polen', '🇵🇹 Portugal', '🇶🇦 Qatar', 
+  '🇸🇦 Saudi-Arabië', '🏴󠁧󠁢󠁳󠁣󠁴󠁿 Schotland', '🇸🇳 Senegal', '🇷🇸 Servië', '🇪🇸 Spanje', '🇹🇷 Turkije', '🇺🇾 Uruguay', 
+  '🇻🇪 Venezuela', '🇺🇸 Verenigde Staten', '🏴󠁧󠁢󠁷󠁬󠁳󠁿 Wales', '🇿🇦 Zuid-Afrika', '🇰🇷 Zuid-Korea', '🇸🇪 Zweden', '🇨🇭 Zwitserland'
 ].sort();
 
 // --- GIGANTISCHE SPELERSLIJST ---
