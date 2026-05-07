@@ -6,6 +6,46 @@ import { WK_LANDEN, TOP_SPELERS, TOP_KEEPERS } from '../lib/data';
 
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
 
+// --- EIGEN SLIM KEUZEMENU (Voor Mobiel) ---
+const Autocomplete = ({ options, value, onChange, placeholder, disabled }: { options: string[], value: string, onChange: (val: string) => void, placeholder: string, disabled: boolean }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Zoek direct de opties die overeenkomen met wat je typt
+  const filtered = options.filter(o => o.toLowerCase().includes(value.toLowerCase()));
+
+  useEffect(() => {
+    // Sluit het menu als je ergens anders op het scherm klikt
+    const handleClickOutside = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={wrapperRef} style={{ position: 'relative' }}>
+      <input
+        className="input-field"
+        value={value}
+        onChange={(e) => { onChange(e.target.value); setIsOpen(true); }}
+        onFocus={() => setIsOpen(true)}
+        disabled={disabled}
+        placeholder={placeholder}
+      />
+      {isOpen && !disabled && (
+        <ul className="autocomplete-dropdown">
+          {filtered.length > 0 ? filtered.map(opt => (
+            <li key={opt} className="autocomplete-item" onClick={() => { onChange(opt); setIsOpen(false); }}>
+              {opt}
+            </li>
+          )) : <li className="autocomplete-item" style={{ color: 'var(--wk-red)' }}>Ongekende speler...</li>}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 export default function Home() {
   const [ontgrendelNaam, setOntgrendelNaam] = useState('');
   const [inschrijfNaam, setInschrijfNaam] = useState('');
@@ -142,6 +182,17 @@ export default function Home() {
   const slaToernooiVoorspellingOp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isGesloten) return;
+
+    // --- STRIKTE VALIDATIE ---
+    if (!TOP_SPELERS.includes(topschutter)) {
+      setVoorspellingStatus('Oeps! 🚩 Kies een geldige topschutter uit de lijst.');
+      return;
+    }
+    if (!TOP_KEEPERS.includes(besteKeeper)) {
+      setVoorspellingStatus('Oeps! 🚩 Kies een geldige keeper uit de lijst.');
+      return;
+    }
+
     setVoorspellingStatus('Bezig met opslaan... ⚽');
     const laatsteVierArray = [lv1, lv2, lv3, lv4].filter(land => land.trim() !== '');
     const voorspellingData = {
@@ -150,12 +201,13 @@ export default function Home() {
       totaal_goals_tornooi: parseInt(totaalGoals) || 0, totaal_gele_kaarten: parseInt(geelKaarten) || 0,
       totaal_rode_kaarten: parseInt(roodKaarten) || 0, laatste_vier: laatsteVierArray
     };
+
     const { data: bestaand } = await supabase.from('toernooi_voorspellingen').select('id').eq('speler_id', actieveSpeler.id).single();
     let error;
     if (bestaand) error = (await supabase.from('toernooi_voorspellingen').update(voorspellingData).eq('speler_id', actieveSpeler.id)).error;
     else error = (await supabase.from('toernooi_voorspellingen').insert([voorspellingData])).error;
 
-    if (error) setVoorspellingStatus('Oeps! 🚩 Probeer opnieuw.');
+    if (error) setVoorspellingStatus('Oeps! 🚩 Er ging iets mis. Probeer opnieuw.');
     else {
       setVoorspellingStatus('Gelukt! 🌟');
       setShowConfetti(true);
@@ -194,7 +246,6 @@ export default function Home() {
   ];
 
   const prijzenPot = spelers.length * 10;
-  const loadingIndicator = <div className="bouncing-ball-loader">⚽</div>;
 
   return (
     <main className="main-container">
@@ -267,12 +318,17 @@ export default function Home() {
         .input-field:focus { border-color: var(--magenta); background: #FFF; box-shadow: 0 5px 15px rgba(240, 56, 255, 0.1); transform: translateY(-2px); }
         .input-field:disabled { opacity: 0.6; cursor: not-allowed; background: #E9ECEF; }
         
+        /* CSS VOOR AUTOCOMPLETE DROPDOWN */
+        .autocomplete-dropdown { position: absolute; top: calc(100% + 5px); left: 0; right: 0; max-height: 200px; overflow-y: auto; background: #FFF; border: 2px solid var(--crayola); border-radius: 15px; z-index: 100; list-style: none; padding: 0; margin: 0; box-shadow: 0 10px 25px rgba(55, 114, 255, 0.2); }
+        .autocomplete-item { padding: 12px 18px; border-bottom: 1px solid #F1F3F5; cursor: pointer; color: var(--text-dark); font-size: 0.95rem; font-weight: 800; transition: 0.2s; }
+        .autocomplete-item:hover { background: #F8FBFF; color: var(--crayola); }
+        .autocomplete-item:last-child { border-bottom: none; }
+
         .btn-primary { width: 100%; padding: 18px; border-radius: 25px; border: none; background: var(--magenta); color: #FFF; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 1.1rem; letter-spacing: 2px; box-shadow: 0 8px 25px rgba(240, 56, 255, 0.3); transition: all 0.2s; }
         .btn-primary:active { transform: scale(0.95); }
         .btn-secondary { width: 100%; padding: 15px; margin-top: 15px; border-radius: 20px; border: 3px solid var(--crayola); background: transparent; color: var(--crayola); font-weight: 900; font-size: 1rem; cursor: pointer; transition: all 0.2s; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         
-        /* AANGEPAST: COUNTDOWN (NU ALLES NAAST ELKAAR) */
         .countdown-banner { background: #FFF; border-radius: 25px; padding: 20px; margin-bottom: 25px; border: 3px solid var(--rose); text-align: center; box-shadow: 0 10px 30px rgba(239, 112, 157, 0.15); }
         .countdown-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; color: var(--rose); margin-bottom: 15px; font-weight: 900; }
         .tijd-grid { display: flex; justify-content: center; gap: 6px; flex-wrap: nowrap; width: 100%; }
@@ -289,7 +345,7 @@ export default function Home() {
         .cat-card:hover { border-color: var(--aqua); box-shadow: 0 5px 20px rgba(112, 228, 239, 0.2); }
         .cat-header { background: #F8F9FA; padding: 15px 20px; border-bottom: 2px solid #E9ECEF; display: flex; justify-content: space-between; align-items: center; }
         .cat-titel { font-size: 0.85rem; font-weight: 900; color: var(--crayola); text-transform: uppercase; margin: 0; }
-        .cat-stand { font-size: 0.65rem; font-weight: 900; background: var(--off-green); color: white; padding: 5px 10px; border-radius: 10px; }
+        .cat-stand { font-size: 0.65rem; font-weight: 900; background: var(--wk-green); color: white; padding: 5px 10px; border-radius: 10px; }
         .cat-lijst { padding: 5px 20px; }
         .cat-speler-rij { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #F1F3F5; font-size: 0.9rem; }
         .antw-naam { font-weight: 800; color: #ADB5BD; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;}
@@ -316,9 +372,6 @@ export default function Home() {
           ))}
         </div>
       )}
-
-      <datalist id="top-spelers">{TOP_SPELERS.map(s => <option key={s} value={s} />)}</datalist>
-      <datalist id="top-keepers">{TOP_KEEPERS.map(k => <option key={k} value={k} />)}</datalist>
 
       <div className="glass-card">
         <h1 className="title">WK 2026</h1>
@@ -351,7 +404,7 @@ export default function Home() {
                         <span>0 pt</span>
                       </div>
                       <div className="score-pill pill-bonus">
-                        <span>🏆 Toernooi</span>
+                        <span>🏆 Bonusvragen</span>
                         <span>0 pt</span>
                       </div>
                     </div>
@@ -379,9 +432,20 @@ export default function Home() {
                     </div>
                   </div>
                 )}
+                
                 <div className="input-group"><label className="label">Eindwinnaar WK</label><select className="input-field" value={winnaar} onChange={e=>setWinnaar(e.target.value)} required disabled={isGesloten}><option value="" disabled>Kies je kampioen...</option>{WK_LANDEN.map(l=><option key={l} value={l}>{l}</option>)}</select></div>
-                <div className="input-group"><label className="label">Topschutter</label><input className="input-field" list="top-spelers" placeholder="Wie schiet ze erin?" value={topschutter} onChange={e=>setTopschutter(e.target.value)} required disabled={isGesloten}/></div>
-                <div className="input-group"><label className="label">Beste Keeper</label><input className="input-field" list="top-keepers" placeholder="De muur..." value={besteKeeper} onChange={e=>setBesteKeeper(e.target.value)} required disabled={isGesloten}/></div>
+                
+                {/* AANGEPAST NAAR HET NIEUWE AUTOCOMPLETE MENU */}
+                <div className="input-group">
+                  <label className="label">Topschutter</label>
+                  <Autocomplete options={TOP_SPELERS} value={topschutter} onChange={setTopschutter} placeholder="Wie schiet ze erin?" disabled={isGesloten} />
+                </div>
+                
+                <div className="input-group">
+                  <label className="label">Beste Keeper</label>
+                  <Autocomplete options={TOP_KEEPERS} value={besteKeeper} onChange={setBesteKeeper} placeholder="De muur..." disabled={isGesloten} />
+                </div>
+
                 <div className="input-group"><label className="label">Eindstation België</label><select className="input-field" value={eindstation} onChange={e=>setEindstation(e.target.value)} required disabled={isGesloten}><option value="" disabled>Tot waar geraken ze?</option><option value="Groepsfase">Groepsfase</option><option value="1/16e">1/16e</option><option value="1/8e">1/8e</option><option value="Kwart">Kwart</option><option value="Halve">Halve</option><option value="Finale">Finale</option><option value="Winnaar">Winnaar 🏆</option></select></div>
                 <div className="input-group">
                   <label className="label">Laatste Vier (Halve finalisten)</label>
@@ -398,7 +462,7 @@ export default function Home() {
                   <div className="input-group"><label className="label">Rode kaarten</label><input className="input-field" type="number" placeholder="Bv. 12" value={roodKaarten} onChange={e=>setRoodKaarten(e.target.value)} required disabled={isGesloten}/></div>
                 </div>
                 {!isGesloten && <button className="btn-primary" type="submit">OPSLAAN</button>}
-                <div style={{color:'var(--aqua)', marginTop:'15px', fontWeight:900, textAlign:'center', fontSize:'1.1rem'}}>{voorspellingStatus}</div>
+                <div style={{color:'var(--wk-red)', marginTop:'15px', fontWeight:900, textAlign:'center', fontSize:'1.1rem'}}>{voorspellingStatus}</div>
               </form>
             )}
 
