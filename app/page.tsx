@@ -55,6 +55,9 @@ export default function Home() {
   const [meesteGoalsLand, setMeesteGoalsLand] = useState('');
   const [besteVerdedigingLand, setBesteVerdedigingLand] = useState('');
   const [eindstation, setEindstation] = useState('');
+  const [totaalGeel, setTotaalGeel] = useState('');
+  const [totaalRood, setTotaalRood] = useState('');
+  const [alleAntwoorden, setAlleAntwoorden] = useState<any[]>([]);
 
   // KLASSEMENT & CHAT
   const [klassement, setKlassement] = useState<any[]>([]);
@@ -105,6 +108,7 @@ export default function Home() {
       if (actieveTab === 'bonus') haalToernooiVoorspellingOp();
       if (actieveTab === 'ranking') haalKlassementOp();
       if (actieveTab === 'kleedkamer') haalChatOp();
+      if (actieveTab === 'antwoorden') haalAlleAntwoordenOp();
     }
   }, [actieveSpeler, actieveTab]);
 
@@ -185,9 +189,15 @@ export default function Home() {
       await supabase.from('match_voorspellingen').upsert(inserts, { onConflict: 'speler_id, match_id' });
     }
 
-    // Bonus opslaan (we hergebruiken tijdelijk topschutter/beste_keeper kolommen voor de nieuwe vragen)
+    // Bonus opslaan (we hergebruiken tijdelijk kolommen of voegen toe als ze in supabase staan)
     await supabase.from('toernooi_voorspellingen').upsert({
-      speler_id: actieveSpeler.id, winnaar, topschutter: meesteGoalsLand, beste_keeper: besteVerdedigingLand, eindstation_belgie: eindstation
+      speler_id: actieveSpeler.id, 
+      winnaar, 
+      topschutter: meesteGoalsLand, 
+      beste_keeper: besteVerdedigingLand, 
+      eindstation_belgie: eindstation,
+      totaal_gele_kaarten: parseInt(totaalGeel) || 0,
+      totaal_rode_kaarten: parseInt(totaalRood) || 0
     }, { onConflict: 'speler_id' });
 
     setOpslaanStatus('Alles opgeslagen! 🌟');
@@ -198,9 +208,18 @@ export default function Home() {
   const haalToernooiVoorspellingOp = async () => {
     const { data } = await supabase.from('toernooi_voorspellingen').select('*').eq('speler_id', actieveSpeler.id).single();
     if (data) {
-      setWinnaar(data.winnaar || ''); setMeesteGoalsLand(data.topschutter || '');
-      setBesteVerdedigingLand(data.beste_keeper || ''); setEindstation(data.eindstation_belgie || '');
+      setWinnaar(data.winnaar || ''); 
+      setMeesteGoalsLand(data.topschutter || '');
+      setBesteVerdedigingLand(data.beste_keeper || ''); 
+      setEindstation(data.eindstation_belgie || '');
+      setTotaalGeel(data.totaal_gele_kaarten?.toString() || '');
+      setTotaalRood(data.totaal_rode_kaarten?.toString() || '');
     }
+  };
+
+  const haalAlleAntwoordenOp = async () => {
+    const { data } = await supabase.from('toernooi_voorspellingen').select('*, spelers(naam)');
+    if (data) setAlleAntwoorden(data);
   };
 
   const haalKlassementOp = async () => {
@@ -245,6 +264,34 @@ export default function Home() {
     } else setStatus('Naam of code fout! 🚩');
   };
 
+  // TELLERS BEREKENING
+  const tellersData = useMemo(() => {
+    let totaleGoals = 0;
+    let totaleGeleKaarten = 0;
+    let totaleRodeKaarten = 0;
+    const teamGoalsVoor: Record<string, number> = {};
+    const teamGoalsTegen: Record<string, number> = {};
+
+    matchen.forEach(m => {
+      if (m.thuis_score !== null && m.uit_score !== null) {
+        totaleGoals += (m.thuis_score + m.uit_score);
+        totaleGeleKaarten += (m.gele_kaarten || 0);
+        totaleRodeKaarten += (m.rode_kaarten || 0);
+        
+        teamGoalsVoor[m.thuisploeg] = (teamGoalsVoor[m.thuisploeg] || 0) + m.thuis_score;
+        teamGoalsVoor[m.uitploeg] = (teamGoalsVoor[m.uitploeg] || 0) + m.uit_score;
+        
+        teamGoalsTegen[m.thuisploeg] = (teamGoalsTegen[m.thuisploeg] || 0) + m.uit_score;
+        teamGoalsTegen[m.uitploeg] = (teamGoalsTegen[m.uitploeg] || 0) + m.thuis_score;
+      }
+    });
+
+    const meestScorendTeam = Object.entries(teamGoalsVoor).sort((a, b) => b[1] - a[1])[0] || ['N.v.t.', 0];
+    const minstTegenTeam = Object.entries(teamGoalsTegen).sort((a, b) => a[1] - b[1])[0] || ['N.v.t.', 0];
+
+    return { totaleGoals, totaleGeleKaarten, totaleRodeKaarten, meestScorendTeam, minstTegenTeam };
+  }, [matchen]);
+
   const gefilterdeMatchen = useMemo(() => {
     if (filterRonde === 'Alle') return matchen;
     if (filterRonde === 'Nog in te vullen') {
@@ -271,8 +318,8 @@ export default function Home() {
         .timer-value { font-size: 1.5rem; }
         .timer-label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.8; }
 
-        .tab-container { display: flex; background: #F0F4F8; border-radius: 16px; padding: 5px; margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; }
-        .tab { flex: 1; min-width: 80px; text-align: center; padding: 12px 5px; font-size: 0.65rem; font-weight: 800; border-radius: 12px; cursor: pointer; color: #6C757D; position: relative; }
+        .tab-container { display: flex; background: #F0F4F8; border-radius: 16px; padding: 5px; margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; gap: 5px; }
+        .tab { flex: 1; min-width: auto; text-align: center; padding: 12px 10px; font-size: 0.65rem; font-weight: 800; border-radius: 12px; cursor: pointer; color: #6C757D; position: relative; white-space: nowrap; }
         .tab.active { background: var(--crayola); color: #FFF; }
         .unread-badge { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; background: var(--rose); border-radius: 50%; }
 
@@ -298,6 +345,12 @@ export default function Home() {
         .ranking-stats { font-size: 0.75rem; color: #6C757D; font-weight: 800; margin-top: 4px; }
         .ranking-score { font-family: 'Bebas Neue'; font-size: 2.5rem; color: var(--magenta); }
 
+        /* TELLER STYLES */
+        .teller-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .teller-card { background: var(--crayola); color: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .teller-val { font-family: 'Bebas Neue'; font-size: 3rem; line-height: 1; }
+        .teller-label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin-top: 5px; opacity: 0.9; }
+
         .chat-container { height: 350px; overflow-y: auto; padding-right: 5px; margin-bottom: 15px; }
         .chat-bericht { background: #F8F9FA; padding: 12px; border-radius: 16px; border-bottom-left-radius: 4px; margin-bottom: 10px; font-size: 0.9rem; font-weight: 700; border: 1px solid #E9ECEF; }
         .chat-eigen { background: var(--lime); border-color: #d4e062; border-bottom-left-radius: 16px; border-bottom-right-radius: 4px; }
@@ -311,6 +364,10 @@ export default function Home() {
         .autocomplete-dropdown { position: absolute; z-index: 100; background: #FFF; width: 100%; border: 2px solid #E9ECEF; border-radius: 12px; max-height: 200px; overflow-y: auto; padding: 0; list-style: none; margin-top: 5px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         .autocomplete-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #F8F9FA; font-weight: 800; font-size: 0.9rem; }
         .autocomplete-item:hover { background: #F8F9FA; color: var(--crayola); }
+
+        .antwoorden-tabel { width: 100%; border-collapse: collapse; font-size: 0.75rem; font-weight: 700; }
+        .antwoorden-tabel th, .antwoorden-tabel td { padding: 10px; border-bottom: 1px solid #E9ECEF; text-align: left; }
+        .antwoorden-tabel th { background: #F8F9FA; color: #ADB5BD; font-weight: 900; text-transform: uppercase; font-size: 0.65rem; }
       `}</style>
 
       {showConfetti && (
@@ -336,7 +393,9 @@ export default function Home() {
             <div className="tab-container">
               <div className={`tab ${actieveTab === 'matchen' ? 'active' : ''}`} onClick={() => veranderTab('matchen')}>MATCHEN</div>
               <div className={`tab ${actieveTab === 'bonus' ? 'active' : ''}`} onClick={() => veranderTab('bonus')}>BONUS</div>
+              <div className={`tab ${actieveTab === 'antwoorden' ? 'active' : ''}`} onClick={() => veranderTab('antwoorden')}>ANTWOORDEN</div>
               <div className={`tab ${actieveTab === 'ranking' ? 'active' : ''}`} onClick={() => veranderTab('ranking')}>RANKING</div>
+              <div className={`tab ${actieveTab === 'tellers' ? 'active' : ''}`} onClick={() => veranderTab('tellers')}>TELLERS</div>
               <div className={`tab ${actieveTab === 'kleedkamer' ? 'active' : ''}`} onClick={() => veranderTab('kleedkamer')}>CHAT {ongelezenBerichten && <span className="unread-badge" />}</div>
             </div>
 
@@ -397,7 +456,46 @@ export default function Home() {
                     {['Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale', 'Wereldkampioen'].map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
+                <div className="input-group">
+                  <label className="input-label">Totaal aantal gele kaarten?</label>
+                  <input className="full-input" type="number" value={totaalGeel} onChange={e => setTotaalGeel(e.target.value)} disabled={isGesloten} />
+                </div>
+                <div className="input-group">
+                  <label className="input-label">Totaal aantal rode kaarten?</label>
+                  <input className="full-input" type="number" value={totaalRood} onChange={e => setTotaalRood(e.target.value)} disabled={isGesloten} />
+                </div>
                 <button className="btn-primary" onClick={slaAllesOp} disabled={isGesloten}>BONUS OPSLAAN</button>
+              </div>
+            )}
+
+            {actieveTab === 'antwoorden' && (
+              <div style={{overflowX: 'auto'}}>
+                <table className="antwoorden-tabel">
+                  <thead>
+                    <tr>
+                      <th>Naam</th>
+                      <th>Kampioen</th>
+                      <th>Meest Goals</th>
+                      <th>Beste Def</th>
+                      <th>België</th>
+                      <th>Geel</th>
+                      <th>Rood</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {alleAntwoorden.map(v => (
+                      <tr key={v.id}>
+                        <td style={{fontWeight:900}}>{v.spelers?.naam}</td>
+                        <td>{v.winnaar || '-'}</td>
+                        <td>{v.topschutter || '-'}</td>
+                        <td>{v.beste_keeper || '-'}</td>
+                        <td>{v.eindstation_belgie || '-'}</td>
+                        <td>{v.totaal_gele_kaarten || '-'}</td>
+                        <td>{v.totaal_rode_kaarten || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
 
@@ -415,6 +513,37 @@ export default function Home() {
                     <span className="ranking-score">{s.totaal_score}</span>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {actieveTab === 'tellers' && (
+              <div>
+                <div className="teller-grid">
+                  <div className="teller-card" style={{gridColumn: 'span 2'}}>
+                    <div className="teller-val">{tellersData.totaleGoals}</div>
+                    <div className="teller-label">Totaal Aantal Doelpunten</div>
+                  </div>
+                  
+                  <div className="teller-card" style={{background: '#FFD43B', color: '#111827'}}>
+                    <div className="teller-val">{tellersData.totaleGeleKaarten}</div>
+                    <div className="teller-label">Gele Kaarten</div>
+                  </div>
+                  
+                  <div className="teller-card" style={{background: '#FA5252'}}>
+                    <div className="teller-val">{tellersData.totaleRodeKaarten}</div>
+                    <div className="teller-label">Rode Kaarten</div>
+                  </div>
+
+                  <div className="teller-card" style={{background: '#40C057'}}>
+                    <div className="teller-val" style={{fontSize: '2rem'}}>{tellersData.meestScorendTeam[1]} goals</div>
+                    <div className="teller-label">Meest Scorend ({tellersData.meestScorendTeam[0]})</div>
+                  </div>
+
+                  <div className="teller-card" style={{background: '#228BE6'}}>
+                    <div className="teller-val" style={{fontSize: '2rem'}}>{tellersData.minstTegenTeam[1]} goals</div>
+                    <div className="teller-label">Minst Tegen ({tellersData.minstTegenTeam[0]})</div>
+                  </div>
+                </div>
               </div>
             )}
 
