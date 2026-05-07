@@ -4,21 +4,41 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { WK_LANDEN } from '../lib/data';
 
-import { CountdownTimer } from '../components/Shared';
-import MatchenTab from '../components/MatchenTab';
-import BonusTab from '../components/BonusTab';
-import AntwoordenTab from '../components/AntwoordenTab';
-import RankingTab from '../components/RankingTab';
-import TellersTab from '../components/TellersTab';
-import ChatTab from '../components/ChatTab';
-
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
 
+// --- HULP COMPONENT: AUTOCOMPLETE ---
+const Autocomplete = ({ options, value, onChange, placeholder, disabled }: any) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const filtered = options.filter((o: string) => o.toLowerCase().includes(value.toLowerCase()));
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={wrapperRef} style={{ position: 'relative', width: '100%' }}>
+      <input className="full-input" value={value} onChange={(e) => { onChange(e.target.value); setIsOpen(true); }} onFocus={() => setIsOpen(true)} disabled={disabled} placeholder={placeholder} />
+      {isOpen && !disabled && (
+        <ul className="autocomplete-dropdown">
+          {filtered.length > 0 ? filtered.map((opt: string) => (
+            <li key={opt} className="autocomplete-item" onClick={() => { onChange(opt); setIsOpen(false); }}>{opt}</li>
+          )) : <li className="autocomplete-item" style={{ color: '#F038FF' }}>Onbekend...</li>}
+        </ul>
+      )}
+    </div>
+  );
+};
+
 export default function Home() {
+  // --- AUTH & NAV ---
   const [ontgrendelNaam, setOntgrendelNaam] = useState('');
   const [invoerCode, setInvoerCode] = useState('');
   const [status, setStatus] = useState('');
-  
   const [actieveSpeler, setActieveSpeler] = useState<any>(null);
   const [alleSpelers, setAlleSpelers] = useState<any[]>([]); 
   const [actieveTab, setActieveTab] = useState('matchen');
@@ -26,24 +46,20 @@ export default function Home() {
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
   const actieveTabRef = useRef(actieveTab);
 
-  // INFO BANNER & ADMIN STATES
+  // --- ADMIN & INFO ---
   const [infoOpen, setInfoOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState('');
   const isAdmin = actieveSpeler?.naam?.toLowerCase() === 'jorden ricour'.toLowerCase();
 
-  // DATA STATES
+  // --- MATCHES & VOORSPELLINGEN ---
   const [matchen, setMatchen] = useState<any[]>([]);
   const [matchVoorspellingen, setMatchVoorspellingen] = useState<Record<number, {thuis: string, uit: string, joker: boolean}>>({});
   const [alleMatchVoorspellingen, setAlleMatchVoorspellingen] = useState<any[]>([]); 
   const [matchSaveStatus, setMatchSaveStatus] = useState<Record<number, 'idle' | 'saving' | 'saved'>>({});
-  const [alleToernooiV, setAlleToernooiV] = useState<any[]>([]);
-  const [opslaanStatus, setOpslaanStatus] = useState('');
-  const [showConfetti, setShowConfetti] = useState(false);
   const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null);
-  
   const saveTimeoutRef = useRef<Record<number, any>>({});
 
-  // BONUSVRAGEN STATES
+  // --- BONUS ---
   const [winnaar, setWinnaar] = useState('');
   const [hf, setHf] = useState(['', '', '', '']);
   const [meesteGoalsLand, setMeesteGoalsLand] = useState('');
@@ -51,34 +67,32 @@ export default function Home() {
   const [eindstation, setEindstation] = useState('');
   const [totaalGeel, setTotaalGeel] = useState('');
   const [totaalRood, setTotaalRood] = useState('');
+  const [alleToernooiV, setAlleToernooiV] = useState<any[]>([]);
+  const [opslaanStatus, setOpslaanStatus] = useState('');
 
-  // KLASSEMENT & CHAT
+  // --- RANKING & CHAT ---
   const [klassement, setKlassement] = useState<any[]>([]);
   const [chatBerichten, setChatBerichten] = useState<any[]>([]);
   const [nieuwBericht, setNieuwBericht] = useState('');
   const chatEindeRef = useRef<HTMLDivElement>(null);
 
-  // TIMER
+  // --- TIMER ---
   const [nu, setNu] = useState(new Date().getTime());
   const [tijdOver, setTijdOver] = useState({ dagen: 0, uren: 0, minuten: 0, seconden: 0 });
   const [isGesloten, setIsGesloten] = useState(false); 
+  const [showConfetti, setShowConfetti] = useState(false);
 
+  // 1. INITIALISEREN
   useEffect(() => {
     actieveTabRef.current = actieveTab;
-  }, [actieveTab]);
-
-  useEffect(() => {
     const opgeslagenId = localStorage.getItem('wk_speler_id');
     haalSpelersOp(opgeslagenId);
-    
-    if ("Notification" in window) Notification.requestPermission();
     
     const klokInterval = setInterval(() => {
       const nuTijd = new Date().getTime();
       setNu(nuTijd); 
-      
       const verschil = DEADLINE_DATE - nuTijd;
-      if (verschil <= 0) { setIsGesloten(true); } 
+      if (verschil <= 0) setIsGesloten(true);
       else {
         setTijdOver({
           dagen: Math.floor(verschil / (1000 * 60 * 60 * 24)),
@@ -89,15 +103,15 @@ export default function Home() {
       }
     }, 1000);
 
-    const chatSubscription = supabase.channel('kleedkamer_berichten')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kleedkamer' }, () => {
-        haalChatOp();
-        if (actieveTabRef.current !== 'kleedkamer') setOngelezenBerichten(true);
-      }).subscribe();
+    const chatSub = supabase.channel('chat').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kleedkamer' }, () => {
+      haalChatOp();
+      if (actieveTabRef.current !== 'kleedkamer') setOngelezenBerichten(true);
+    }).subscribe();
 
-    return () => { clearInterval(klokInterval); supabase.removeChannel(chatSubscription); };
+    return () => { clearInterval(klokInterval); supabase.removeChannel(chatSub); };
   }, []);
 
+  // 2. DATA LADEN BIJ TABWISSEL
   useEffect(() => {
     if (actieveSpeler) {
       if (actieveTab === 'matchen') haalMatchenOp();
@@ -108,98 +122,59 @@ export default function Home() {
     }
   }, [actieveSpeler, actieveTab]);
 
-  const veranderTab = (tab: string) => {
-    setActieveTab(tab);
-    if (tab === 'kleedkamer') setOngelezenBerichten(false);
-  };
-
-  const haalSpelersOp = async (checkId?: string | null) => {
+  const haalSpelersOp = async (id?: string | null) => {
     const { data } = await supabase.from('spelers').select('*').order('created_at', { ascending: true });
     if (data) {
       setAlleSpelers(data);
-      if (checkId) {
-        const gevonden = data.find(s => s.id.toString() === checkId);
-        if (gevonden) setActieveSpeler(gevonden);
+      if (id) {
+        const gev = data.find(s => s.id.toString() === id);
+        if (gev) setActieveSpeler(gev);
       }
     }
   };
 
   const haalChatOp = async () => {
     const { data } = await supabase.from('kleedkamer').select('*, spelers(naam)').order('created_at', { ascending: true });
-    if (data) {
-      setChatBerichten(data);
-      setTimeout(() => chatEindeRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-    }
+    if (data) setChatBerichten(data);
   };
 
-  const verstuurChat = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nieuwBericht.trim()) return;
-    const { error } = await supabase.from('kleedkamer').insert([{ speler_id: actieveSpeler.id, bericht: nieuwBericht.trim() }]);
-    if (!error) setNieuwBericht('');
+  const syncMetSpreadsheet = async () => {
+    if (!isAdmin) return;
+    setSyncStatus('⏳ Bezig...');
+    try {
+      const res = await fetch('/api/sync?code=geheim123');
+      const data = await res.json();
+      setSyncStatus(data.succes ? '✅ Klaar' : '❌ Fout');
+      if (data.succes) { haalMatchenOp(); haalKlassementOp(); }
+    } catch (e) { setSyncStatus('❌ Error'); }
+    setTimeout(() => setSyncStatus(''), 3000);
   };
 
   const haalMatchenOp = async () => {
     const { data: matchenData } = await supabase.from('matchen').select('*').order('id', { ascending: true });
     if (matchenData) setMatchen(matchenData);
-
-    const { data: voorspellingenData } = await supabase.from('match_voorspellingen').select('*, spelers(naam)');
-    if (voorspellingenData) {
-      setAlleMatchVoorspellingen(voorspellingenData); 
-
-      const mijnVoorspellingen = voorspellingenData.filter(v => v.speler_id === actieveSpeler.id);
-      const stateObj: any = {};
-      mijnVoorspellingen.forEach(v => {
-        stateObj[v.match_id] = { thuis: v.thuis_score?.toString() || '', uit: v.uit_score?.toString() || '', joker: v.gouden_bal };
+    const { data: vData } = await supabase.from('match_voorspellingen').select('*, spelers(naam)');
+    if (vData) {
+      setAlleMatchVoorspellingen(vData); 
+      const mijnV = vData.filter(v => v.speler_id === actieveSpeler.id);
+      const obj: any = {};
+      mijnV.forEach(v => {
+        obj[v.match_id] = { thuis: v.thuis_score?.toString() || '', uit: v.uit_score?.toString() || '', joker: v.gouden_bal };
       });
-      setMatchVoorspellingen(stateObj);
-    }
-  };
-
-  // ADMIN FUNCTIE: SYNC MET GOOGLE SHEETS
-  const syncMetSpreadsheet = async () => {
-    if (!isAdmin) return;
-    setSyncStatus('⏳ Data ophalen uit Google Sheets...');
-    try {
-      const res = await fetch('/api/sync?code=geheim123');
-      const data = await res.json();
-      if (data.succes) {
-        setSyncStatus('✅ ' + data.bericht);
-        // Herlaad alle data in de app!
-        haalMatchenOp();
-        haalKlassementOp();
-        setTimeout(() => setSyncStatus(''), 4000);
-      } else {
-        setSyncStatus('❌ Fout: ' + data.error);
-        setTimeout(() => setSyncStatus(''), 5000);
-      }
-    } catch (e) {
-      setSyncStatus('❌ Fout bij verbinden.');
-      setTimeout(() => setSyncStatus(''), 5000);
+      setMatchVoorspellingen(stateObj => ({...stateObj, ...obj}));
     }
   };
 
   const triggerAutoSave = (mId: number, data: { thuis: string, uit: string, joker: boolean }) => {
     if (data.thuis === '' || data.uit === '') return;
-    
     if (saveTimeoutRef.current[mId]) clearTimeout(saveTimeoutRef.current[mId]);
     setMatchSaveStatus(prev => ({ ...prev, [mId]: 'saving' }));
-    
     saveTimeoutRef.current[mId] = setTimeout(async () => {
       const { error } = await supabase.from('match_voorspellingen').upsert({
         speler_id: actieveSpeler.id, match_id: mId, thuis_score: parseInt(data.thuis), uit_score: parseInt(data.uit), gouden_bal: data.joker
       }, { onConflict: 'speler_id, match_id' });
-      
       setMatchSaveStatus(prev => ({ ...prev, [mId]: error ? 'idle' : 'saved' }));
-      
-      if (!error) {
-        setAlleMatchVoorspellingen(prev => {
-          const bestaand = prev.filter(p => !(p.match_id === mId && p.speler_id === actieveSpeler.id));
-          return [...bestaand, { 
-            match_id: mId, speler_id: actieveSpeler.id, thuis_score: parseInt(data.thuis), uit_score: parseInt(data.uit), gouden_bal: data.joker, spelers: { naam: actieveSpeler.naam } 
-          }];
-        });
-      }
+      if (!error) haalMatchenOp(); 
     }, 800); 
   };
 
@@ -214,9 +189,7 @@ export default function Home() {
     setMatchVoorspellingen(prev => {
       const isNuJoker = prev[mId]?.joker || false;
       const nieuwStaat = { ...prev };
-      Object.keys(nieuwStaat).forEach(key => {
-        if (nieuwStaat[Number(key)]) nieuwStaat[Number(key)].joker = false;
-      });
+      Object.keys(nieuwStaat).forEach(key => { if (nieuwStaat[Number(key)]) nieuwStaat[Number(key)].joker = false; });
       const newData = { ...prev[mId], joker: !isNuJoker, thuis: prev[mId]?.thuis || '', uit: prev[mId]?.uit || '' };
       nieuwStaat[mId] = newData;
       triggerAutoSave(mId, newData);
@@ -224,26 +197,14 @@ export default function Home() {
     });
   };
 
-  const slaMatchOp = async (mId: number) => {
-    const v = matchVoorspellingen[mId];
-    if (!v || v.thuis === '' || v.uit === '') return;
-    setMatchSaveStatus(prev => ({...prev, [mId]: 'saving'}));
-    const { error } = await supabase.from('match_voorspellingen').upsert({
-      speler_id: actieveSpeler.id, match_id: mId, thuis_score: parseInt(v.thuis), uit_score: parseInt(v.uit), gouden_bal: v.joker
-    }, { onConflict: 'speler_id, match_id' });
-    if (!error) setMatchSaveStatus(prev => ({...prev, [mId]: 'saved'}));
-    else setMatchSaveStatus(prev => ({...prev, [mId]: 'idle'}));
-  };
-
   const slaBonusOp = async () => {
-    setOpslaanStatus('Bezig... ⚽');
+    setOpslaanStatus('Bezig...');
     await supabase.from('toernooi_voorspellingen').upsert({
       speler_id: actieveSpeler.id, winnaar, halve_finalist_1: hf[0], halve_finalist_2: hf[1], halve_finalist_3: hf[2], halve_finalist_4: hf[3],
       topschutter: meesteGoalsLand, beste_keeper: besteVerdedigingLand, eindstation_belgie: eindstation,
       totaal_gele_kaarten: parseInt(totaalGeel) || 0, totaal_rode_kaarten: parseInt(totaalRood) || 0
     }, { onConflict: 'speler_id' });
-
-    setOpslaanStatus('Bonusvragen Opgeslagen! 🌟');
+    setOpslaanStatus('Opgeslagen! 🌟');
     setShowConfetti(true);
     setTimeout(() => { setShowConfetti(false); setOpslaanStatus(''); }, 3000);
   };
@@ -270,30 +231,23 @@ export default function Home() {
     const { data: s } = await supabase.from('spelers').select('*');
     const { data: m } = await supabase.from('matchen').select('*');
     const { data: v } = await supabase.from('match_voorspellingen').select('*');
-
     if (s && m && v) {
       const stats = s.map(sp => {
-        let punten = 0; let exact = 0; let winnaarCorrect = 0; let fout = 0; let jokerIngezet = false;
-
-        const spelerV = v.filter(vo => vo.speler_id === sp.id);
-        spelerV.forEach(vo => {
-          if (vo.gouden_bal) jokerIngezet = true;
+        let p = 0; let ex = 0; let wc = 0; let f = 0; let jk = false;
+        const spV = v.filter(vo => vo.speler_id === sp.id);
+        spV.forEach(vo => {
+          if (vo.gouden_bal) jk = true;
           const match = m.find(ma => ma.id === vo.match_id);
-          if (match && match.thuis_score !== null && match.uit_score !== null) {
-            const factor = vo.gouden_bal ? 2 : 1;
-            const echtResultaat = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
-            const voorspeldResultaat = vo.thuis_score > vo.uit_score ? 1 : vo.thuis_score < vo.uit_score ? 2 : 0;
-
-            if (vo.thuis_score === match.thuis_score && vo.uit_score === match.uit_score) {
-              punten += (5 * factor); exact++;
-            } else if (echtResultaat === voorspeldResultaat) {
-              punten += (3 * factor); winnaarCorrect++;
-            } else {
-              fout++;
-            }
+          if (match && match.thuis_score !== null) {
+            const fac = vo.gouden_bal ? 2 : 1;
+            const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
+            const pred = vo.thuis_score > vo.uit_score ? 1 : vo.thuis_score < vo.uit_score ? 2 : 0;
+            if (vo.thuis_score === match.thuis_score && vo.uit_score === match.uit_score) { p += (5 * fac); ex++; }
+            else if (echt === pred) { p += (3 * fac); wc++; }
+            else f++;
           }
         });
-        return { ...sp, totaal_score: punten, exact, winnaarCorrect, fout, jokerIngezet };
+        return { ...sp, totaal_score: p, exact: ex, winnaarCorrect: wc, fout: f, jokerIngezet: jk };
       });
       setKlassement(stats.sort((a, b) => b.totaal_score - a.totaal_score));
     }
@@ -305,57 +259,40 @@ export default function Home() {
     haalKlassementOp();
   };
 
-  const ontgrendel = async (e: React.FormEvent) => {
+  const verstuurChat = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { data: speler } = await supabase.from('spelers').select('*').ilike('naam', ontgrendelNaam.trim()).single();
-    if (speler && String(speler.code) === String(invoerCode)) {
-      localStorage.setItem('wk_speler_id', speler.id.toString());
-      setActieveSpeler(speler);
-    } else setStatus('Naam of code fout! 🚩');
+    if (!nieuwBericht.trim()) return;
+    const { error } = await supabase.from('kleedkamer').insert([{ speler_id: actieveSpeler.id, bericht: nieuwBericht.trim() }]);
+    if (!error) { setNieuwBericht(''); haalChatOp(); }
   };
 
+  // --- COMPUTED DATA ---
   const tellersData = useMemo(() => {
-    let totaleGoals = 0; let totaleGeleKaarten = 0; let totaleRodeKaarten = 0;
-    const teamGoalsVoor: Record<string, number> = {};
-    const teamGoalsTegen: Record<string, number> = {};
-
+    let g = 0; let y = 0; let r = 0;
+    const v: any = {}; const t: any = {};
     matchen.forEach(m => {
-      if (m.thuis_score !== null && m.uit_score !== null) {
-        totaleGoals += (m.thuis_score + m.uit_score);
-        totaleGeleKaarten += (m.gele_kaarten || 0);
-        totaleRodeKaarten += (m.rode_kaarten || 0);
-        
-        teamGoalsVoor[m.thuisploeg] = (teamGoalsVoor[m.thuisploeg] || 0) + m.thuis_score;
-        teamGoalsVoor[m.uitploeg] = (teamGoalsVoor[m.uitploeg] || 0) + m.uit_score;
-        
-        teamGoalsTegen[m.thuisploeg] = (teamGoalsTegen[m.thuisploeg] || 0) + m.uit_score;
-        teamGoalsTegen[m.uitploeg] = (teamGoalsTegen[m.uitploeg] || 0) + m.thuis_score;
+      if (m.thuis_score !== null) {
+        g += (m.thuis_score + m.uit_score); y += (m.gele_kaarten || 0); r += (m.rode_kaarten || 0);
+        v[m.thuisploeg] = (v[m.thuisploeg] || 0) + m.thuis_score; v[m.uitploeg] = (v[m.uitploeg] || 0) + m.uit_score;
+        t[m.thuisploeg] = (t[m.thuisploeg] || 0) + m.uit_score; t[m.uitploeg] = (t[m.uitploeg] || 0) + m.thuis_score;
       }
     });
-
-    const meestScorendTeam = Object.entries(teamGoalsVoor).sort((a, b) => b[1] - a[1])[0] || ['N.v.t.', 0];
-    const minstTegenTeam = Object.entries(teamGoalsTegen).sort((a, b) => a[1] - b[1])[0] || ['N.v.t.', 0];
-
-    return { totaleGoals, totaleGeleKaarten, totaleRodeKaarten, meestScorendTeam, minstTegenTeam };
+    const mS = Object.entries(v).sort((a:any, b:any) => b[1] - a[1])[0] || ['-', 0];
+    const mT = Object.entries(t).sort((a:any, b:any) => a[1] - b[1])[0] || ['-', 0];
+    return { g, y, r, mS, mT };
   }, [matchen]);
 
   const gefilterdeMatchen = useMemo(() => {
-    if (filterRonde === 'Alle') return matchen;
-    if (filterRonde === 'Nog in te vullen') {
-      return matchen.filter(m => {
-        const v = matchVoorspellingen[m.id];
-        return (!v || v.thuis === '' || v.uit === '' || v.thuis === undefined || v.uit === undefined) && (nu < new Date(m.datum).getTime());
-      });
-    }
-    return matchen.filter(m => m.ronde === filterRonde);
+    let basis = matchen;
+    if (filterRonde === 'Nog in te vullen') return basis.filter(m => (!matchVoorspellingen[m.id] || matchVoorspellingen[m.id].thuis === '') && (nu < new Date(m.datum).getTime()));
+    if (filterRonde !== 'Alle') basis = basis.filter(m => m.ronde === filterRonde);
+    return basis;
   }, [matchen, filterRonde, matchVoorspellingen, nu]);
 
   return (
     <main className="main-container">
-      {/* CSS STYLING */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@600;800;900&display=swap');
-
         :root { --crayola: #3772FF; --magenta: #F038FF; --rose: #EF709D; --lime: #E2EF70; --aqua: #70E4EF; }
 
         html, body {
@@ -371,247 +308,267 @@ export default function Home() {
         body::after { width: 350px; height: 350px; bottom: -80px; right: -80px; background: var(--aqua); animation: blob-movement-b 15s linear infinite; }
 
         .glass-card {
-          background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(15px); padding: 25px 20px; border-radius: 24px;
+          background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(15px); padding: 20px; border-radius: 24px;
           width: 100%; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 3px solid rgba(255, 255, 255, 0.4); margin-bottom: 20px;
         }
 
         .title { font-family: 'Bebas Neue', sans-serif; font-size: 4.5rem; text-align: center; color: #FFF; line-height: 1; text-shadow: 3px 3px 0px var(--magenta); margin: 0; animation: title-glow 3s linear infinite; }
         
-        /* INFO BANNER */
-        .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
-        .info-toggle-btn:hover { background: var(--crayola); color: white; }
+        /* MENU - FLOATING DOCK */
+        .tab-container {
+          display: flex; background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(15px); border-radius: 22px; padding: 6px;
+          margin-bottom: 25px; overflow-x: auto; scrollbar-width: none; gap: 6px; border: 1px solid rgba(255, 255, 255, 0.1);
+          position: sticky; top: 10px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .tab-container::-webkit-scrollbar { display: none; }
+
+        .tab {
+          flex: 1; min-width: 85px; text-align: center; padding: 10px 5px; font-size: 0.6rem; font-weight: 900;
+          border-radius: 16px; cursor: pointer; color: #9CA3AF; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          display: flex; flex-direction: column; align-items: center; gap: 4px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .tab-icon { font-size: 1.3rem; transition: transform 0.3s ease; }
+        .tab.active { background: var(--crayola); color: #FFF; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(55, 114, 255, 0.4); }
+        .tab.active .tab-icon { transform: scale(1.2); }
+
+        .unread-badge {
+          position: absolute; top: 8px; right: 15px; width: 8px; height: 8px; background: var(--rose);
+          border-radius: 50%; box-shadow: 0 0 10px var(--rose); animation: pulse-red 2s infinite;
+        }
+
+        /* INFO & ADMIN */
+        .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
         .info-content { background: rgba(255,255,255,0.9); padding: 15px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; margin-bottom: 20px; border-left: 4px solid var(--magenta); line-height: 1.5; }
-        .info-content h4 { color: var(--magenta); margin-top: 0; font-size: 1rem; margin-bottom: 8px; text-transform: uppercase; font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; }
+        .admin-btn { background: #111827; color: #fff; border: none; padding: 10px 20px; borderRadius: 12px; font-weight: 900; cursor: pointer; fontSize: 0.8rem; margin: 0 auto 15px; display: block; }
 
-        .timer { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
-        .timer-box { background: var(--magenta); color: #FFF; padding: 8px 12px; border-radius: 12px; text-align: center; font-weight: 900; line-height: 1.1; box-shadow: 0 4px 10px rgba(240, 56, 255, 0.3); }
-        .timer-value { font-size: 1.5rem; }
-        .timer-label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.8; }
-
-        .tab-container { display: flex; background: rgba(240, 244, 248, 0.8); border-radius: 16px; padding: 5px; margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; backdrop-filter: blur(5px); }
-        .tab { flex: 1; min-width: 80px; text-align: center; padding: 12px 5px; font-size: 0.65rem; font-weight: 800; border-radius: 12px; cursor: pointer; color: #6C757D; transition: 0.3s; position: relative; }
-        .tab.active { background: var(--crayola); color: #FFF; transform: scale(1.05); box-shadow: 0 4px 10px rgba(55, 114, 255, 0.3); }
-        .unread-badge { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; background: var(--rose); border-radius: 50%; }
-
-        .filter-scroll { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
-        .filter-chip { padding: 8px 14px; border-radius: 20px; background: #E9ECEF; font-size: 0.75rem; font-weight: 800; cursor: pointer; border: 2px solid transparent; white-space: nowrap; color: #495057; transition: 0.2s; }
-        .filter-chip.active { border-color: var(--crayola); color: var(--crayola); background: #eef2ff; transform: scale(1.05); }
-        .filter-chip.urgent { background: #ffe3e3; color: #e03131; border-color: #ffa8a8; }
-        .filter-chip.urgent.active { background: #e03131; color: #fff; border-color: #c92a2a; }
-
-        .match-card { background: rgba(255, 255, 255, 0.95); border-radius: 16px; margin-bottom: 12px; border: 3px solid #E9ECEF; overflow: hidden; transition: 0.3s; position: relative; }
-        .match-card.locked { border-color: var(--rose); cursor: pointer; } 
-        .match-header { background: var(--lime); padding: 10px 15px; font-size: 0.7rem; font-weight: 900; color: #111827; display: flex; justify-content: space-between; align-items: center; position: relative; }
+        /* MATCH CARDS */
+        .match-card { background: rgba(255, 255, 255, 0.95); border-radius: 16px; margin-bottom: 12px; border: 3px solid #E9ECEF; overflow: hidden; position: relative; }
+        .match-header { background: var(--lime); padding: 10px 15px; font-size: 0.7rem; font-weight: 900; color: #111827; display: flex; justify-content: space-between; align-items: center; }
         .match-body { display: flex; align-items: center; padding: 15px; }
-        .team-naam { font-weight: 900; flex: 1; text-align: center; font-size: 0.95rem; }
-        .score-invoer { width: 45px; height: 50px; text-align: center; font-size: 1.5rem; font-family: 'Bebas Neue', sans-serif; border-radius: 12px; border: 2px solid #DEE2E6; outline: none; transition: 0.2s; }
-        .score-invoer:focus { border-color: var(--aqua); box-shadow: 0 0 10px rgba(112, 228, 239, 0.3); }
-        .score-invoer:disabled { background: #f8f9fa; color: #666; cursor: not-allowed; }
-        
+        .score-invoer { width: 45px; height: 50px; text-align: center; font-size: 1.5rem; font-family: 'Bebas Neue'; border-radius: 12px; border: 2px solid #DEE2E6; outline: none; }
+        .save-indicator { position: absolute; right: 50px; top: 10px; font-size: 0.65rem; font-weight: 900; opacity: 0; transition: 0.3s; }
+        .save-indicator.saving { opacity: 1; color: var(--magenta); }
+        .save-indicator.saved { opacity: 1; color: #2ECC40; }
         .joker-btn { width: 38px; height: 38px; border-radius: 50%; border: 2px solid #DEE2E6; background: #FFF; font-size: 1.2rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; filter: grayscale(1); opacity: 0.5; }
         .joker-btn.active { background: #FFD700; border-color: #FFA500; filter: grayscale(0); opacity: 1; transform: scale(1.15); box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); }
 
-        .save-indicator { position: absolute; right: 50px; top: 10px; font-size: 0.65rem; font-weight: 900; padding: 4px 8px; border-radius: 10px; transition: 0.3s; opacity: 0; }
-        .save-indicator.saving { background: rgba(240, 56, 255, 0.2); color: var(--magenta); opacity: 1; }
-        .save-indicator.saved { background: rgba(46, 204, 64, 0.2); color: #2ECC40; opacity: 1; }
-
-        .filled-container { display: flex; align-items: center; gap: 8px; padding: 10px 15px; border-top: 1px dashed #DEE2E6; justify-content: center; background: #F8F9FA; }
-        .filled-avatars { display: flex; }
-        .filled-avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--crayola); color: white; font-size: 0.55rem; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 2px solid white; margin-left: -8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .filled-avatar:first-child { margin-left: 0; }
-        .filled-text { font-size: 0.65rem; font-weight: 800; color: #ADB5BD; }
-
-        .click-to-expand { text-align: center; font-size: 0.7rem; font-weight: 900; color: var(--rose); padding-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
-        .predictions-dropdown { background: rgba(240, 244, 248, 0.9); padding: 15px; border-top: 2px solid #E9ECEF; }
-        .pred-title { font-weight: 900; color: var(--crayola); font-size: 0.75rem; margin-bottom: 10px; border-bottom: 2px solid #DEE2E6; padding-bottom: 5px; }
-        .pred-row { display: flex; justify-content: space-between; font-weight: 800; font-size: 0.85rem; padding: 6px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .pred-row:last-child { border-bottom: none; }
-        .pred-score { color: var(--magenta); font-family: 'Bebas Neue'; font-size: 1.2rem; }
-
-        .ranking-item { position: relative; overflow: hidden; background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 15px; margin-bottom: 12px; border: 2px solid #E9ECEF; display: flex; align-items: center; gap: 15px; transition: 0.2s; }
-        .ranking-item:hover { transform: translateY(-3px); }
-        .ranking-item.rank-1 { border-color: #FFD700; background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 255, 255, 0.9)); box-shadow: 0 10px 20px rgba(255,215,0,0.2); }
-        .ranking-item.rank-2 { border-color: #C0C0C0; background: linear-gradient(135deg, rgba(192, 192, 192, 0.15), rgba(255, 255, 255, 0.9)); }
-        .ranking-item.rank-3 { border-color: #CD7F32; background: linear-gradient(135deg, rgba(205, 127, 50, 0.15), rgba(255, 255, 255, 0.9)); }
-        
+        /* RANKING */
+        .ranking-item { background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 15px; margin-bottom: 12px; border: 2px solid #E9ECEF; display: flex; align-items: center; gap: 15px; }
         .rank-badge { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue'; font-size: 1.8rem; color: white; background: var(--crayola); }
-        .rank-1 .rank-badge { background: #FFD700; box-shadow: 0 0 15px rgba(255,215,0,0.6); color: #111827; }
-        .rank-2 .rank-badge { background: #C0C0C0; color: #111827; }
-        .rank-3 .rank-badge { background: #CD7F32; color: #111827; }
+        .rank-1 { border-color: #FFD700; background: linear-gradient(135deg, rgba(255,215,0,0.1), #fff); }
+        .rank-1 .rank-badge { background: #FFD700; color: #111827; }
+        .betaal-badge { font-size: 0.6rem; padding: 3px 6px; border-radius: 6px; font-weight: 900; margin-top: 5px; display: inline-block; }
+        .is-betaald { background: #d3f9d8; color: #2b8a3e; }
+        .niet-betaald { background: #ffe3e3; color: #e03131; }
 
-        .ranking-main { flex: 1; }
-        .ranking-naam { font-weight: 900; text-transform: uppercase; display: flex; align-items: center; gap: 6px; font-size: 1.1rem; }
-        .ranking-stats { font-size: 0.75rem; color: #6C757D; font-weight: 800; margin-top: 4px; }
-        .ranking-score { font-family: 'Bebas Neue'; font-size: 2.5rem; color: var(--magenta); }
+        /* INPUTS & BUTTONS */
+        .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; font-weight: 800; font-size: 1rem; margin-bottom: 10px; }
+        .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); }
 
-        /* BETALEN BADGES & BUTTONS */
-        .betaal-badge { display: inline-block; font-size: 0.65rem; padding: 4px 8px; border-radius: 8px; font-weight: 800; }
-        .betaal-btn { font-size: 0.65rem; padding: 4px 8px; border-radius: 8px; font-weight: 900; border: none; cursor: pointer; transition: 0.2s; }
-        .betaal-btn:active { transform: scale(0.95); }
-        .is-betaald { background: #d3f9d8; color: #2b8a3e; border: 1px solid #b2f2bb; }
-        .niet-betaald { background: #ffe3e3; color: #e03131; border: 1px solid #ffc9c9; }
-
-        .teller-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
-        .teller-card { background: var(--crayola); color: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        /* TELLER GRID */
+        .teller-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .teller-card { background: var(--crayola); color: white; padding: 20px; border-radius: 16px; text-align: center; }
         .teller-val { font-family: 'Bebas Neue'; font-size: 3rem; line-height: 1; }
-        .teller-label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin-top: 5px; opacity: 0.9; }
 
-        .antwoord-sectie { background: rgba(255, 255, 255, 0.8); border-radius: 16px; padding: 15px; margin-bottom: 15px; border: 2px solid #E9ECEF; }
-        .antwoord-header { font-weight: 900; color: var(--crayola); margin-bottom: 10px; font-size: 1rem; text-transform: uppercase; border-bottom: 2px solid #E9ECEF; padding-bottom: 5px; }
-
-        .input-group { margin-bottom: 15px; text-align: left; }
-        .input-label { display: block; font-size: 0.75rem; font-weight: 900; margin-bottom: 5px; color: #495057; text-transform: uppercase; }
-        .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; outline: none; box-sizing: border-box; font-weight: 800; font-size: 1rem; transition: 0.2s; }
-        .full-input:focus { border-color: var(--magenta); box-shadow: 0 0 10px rgba(240, 56, 255, 0.3); }
-
-        .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); transition: 0.2s; }
-        .btn-primary:active { transform: translateY(2px); box-shadow: 0 2px 8px rgba(240, 56, 255, 0.3); }
-
-        .chat-container { height: 350px; overflow-y: auto; padding-right: 5px; margin-bottom: 15px; }
-        .chat-bericht { background: rgba(248, 249, 250, 0.9); padding: 12px; border-radius: 16px; border-bottom-left-radius: 4px; margin-bottom: 10px; font-size: 0.9rem; font-weight: 700; border: 1px solid #E9ECEF; }
-        .chat-eigen { background: var(--aqua); border-color: #61cbd6; border-bottom-left-radius: 16px; border-bottom-right-radius: 4px; }
-        
-        .autocomplete-dropdown { position: absolute; z-index: 100; background: #FFF; width: 100%; border: 2px solid #E9ECEF; border-radius: 12px; max-height: 200px; overflow-y: auto; padding: 0; list-style: none; margin-top: 5px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .autocomplete-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #F8F9FA; font-weight: 800; font-size: 0.9rem; }
-
-        .main-container { padding: 25px 15px 80px 15px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
-
+        /* ANIMATIONS */
         @keyframes background-fade { 0%, 100% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } }
         @keyframes blob-movement-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(50px, 80px) scale(1.1); } }
         @keyframes blob-movement-b { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-40px, -60px) scale(0.9); } }
         @keyframes title-glow { 0%, 100% { text-shadow: 3px 3px 0px var(--magenta); } 50% { text-shadow: 3px 3px 20px rgba(240, 56, 255, 0.8), 3px 3px 0px var(--magenta); } }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+        .main-container { padding: 25px 15px 80px 15px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
       `}</style>
 
-      {showConfetti && (
-        <div style={{position:'fixed', top:0, left:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:999, display:'flex', justifyContent:'center', alignItems:'center'}}>
-          <div style={{fontSize:'5rem', animation:'bounce 1s infinite'}}>🎉🌟⚽</div>
-        </div>
-      )}
+      {showConfetti && <div style={{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:999,textAlign:'center',fontSize:'5rem'}}>🎉🌟⚽</div>}
 
       <div className="glass-card">
         <h1 className="title">WK 2026</h1>
 
-        {/* UITKLAPBARE INFO BANNER */}
+        {/* INFO BANNER */}
         <button className="info-toggle-btn" onClick={() => setInfoOpen(!infoOpen)}>
-          <span>ℹ️ Praktische Info & Betalen</span>
+          <span>ℹ️ Info & Betalen</span>
           <span>{infoOpen ? '▲' : '▼'}</span>
         </button>
-
         {infoOpen && (
           <div className="info-content">
-            <h4>📲 App Installeren op je GSM</h4>
-            <p style={{marginBottom:15}}>
-              <strong>iPhone (Safari):</strong> Klik onderaan op het 'Deel'-icoontje (vierkant met pijltje omhoog) en kies <em>'Zet op beginscherm'</em>.<br/>
-              <strong>Android (Chrome):</strong> Klik rechtsboven op de drie puntjes en kies <em>'Toevoegen aan startscherm'</em>.
-            </p>
-            <h4>💰 Inleggeld Betalen</h4>
-            <p>
-              Deelname kost <strong>€ [BEDRAG]</strong>. Stuur dit via Payconiq of schrijf over naar:<br/>
-              <strong>IBAN:</strong> [JOUW REKENINGNUMMER HIER]<br/>
-              <strong>Naam:</strong> Jorden Ricour<br/>
-              <em>Vermeld je spelersnaam in de mededeling!</em>
-            </p>
+            <h4>📲 App Installeren</h4>
+            <p><strong>iPhone:</strong> Tik op Deel &gt; <em>Zet op beginscherm</em>.<br/><strong>Android:</strong> Tik op drie puntjes &gt; <em>Toevoegen aan startscherm</em>.</p>
+            <p>Inleggeld: <strong>€10</strong> t.a.v. Jorden Ricour.</p>
           </div>
         )}
 
-        {/* =========================================
-            DE NIEUWE ADMIN SYNC KNOP
-            ========================================= */}
+        {/* ADMIN SYNC */}
         {isAdmin && (
-          <div style={{ textAlign: 'center', marginBottom: '15px' }}>
-            <button 
-              onClick={syncMetSpreadsheet} 
-              style={{ 
-                background: '#111827', color: '#fff', border: 'none', padding: '10px 20px', 
-                borderRadius: '12px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.3)', transition: '0.2s'
-              }}
-            >
-              🔄 UPDATE UIT GOOGLE SHEETS
-            </button>
-            {syncStatus && (
-              <div style={{ fontSize: '0.75rem', color: '#111827', marginTop: '8px', fontWeight: 900, backgroundColor: 'rgba(255,255,255,0.8)', padding: '4px', borderRadius: '5px' }}>
-                {syncStatus}
-              </div>
-            )}
-          </div>
+          <button onClick={syncMetSpreadsheet} className="admin-btn">🔄 {syncStatus || 'SYNC MET GOOGLE SHEETS'}</button>
         )}
-
-        {!isGesloten && actieveSpeler && <CountdownTimer tijdOver={tijdOver} />}
 
         {actieveSpeler ? (
           <div>
+            {/* FLOATING MENU */}
             <div className="tab-container">
-              <div className={`tab ${actieveTab === 'matchen' ? 'active' : ''}`} onClick={() => veranderTab('matchen')}>MATCHEN</div>
-              <div className={`tab ${actieveTab === 'bonus' ? 'active' : ''}`} onClick={() => veranderTab('bonus')}>BONUS</div>
-              <div className={`tab ${actieveTab === 'antwoorden' ? 'active' : ''}`} onClick={() => veranderTab('antwoorden')}>ANTWOORDEN</div>
-              <div className={`tab ${actieveTab === 'ranking' ? 'active' : ''}`} onClick={() => veranderTab('ranking')}>RANKING</div>
-              <div className={`tab ${actieveTab === 'tellers' ? 'active' : ''}`} onClick={() => veranderTab('tellers')}>TELLERS</div>
-              <div className={`tab ${actieveTab === 'kleedkamer' ? 'active' : ''}`} onClick={() => veranderTab('kleedkamer')}>CHAT {ongelezenBerichten && <span className="unread-badge" />}</div>
+              {[
+                {id:'matchen', i:'⚽', n:'Matchen'},
+                {id:'bonus', i:'💎', n:'Bonus'},
+                {id:'antwoorden', i:'👁️', n:'Antw.'},
+                {id:'ranking', i:'🏆', n:'Rank'},
+                {id:'tellers', i:'📊', n:'Data'},
+                {id:'kleedkamer', i:'💬', n:'Chat'}
+              ].map(t => (
+                <div key={t.id} className={`tab ${actieveTab === t.id ? 'active' : ''}`} onClick={() => veranderTab(t.id)}>
+                  <span className="tab-icon">{t.i}</span>
+                  <span>{t.n}</span>
+                  {t.id === 'kleedkamer' && ongelezenBerichten && <span className="unread-badge" />}
+                </div>
+              ))}
             </div>
 
+            {/* TAB: MATCHEN */}
             {actieveTab === 'matchen' && (
-              <MatchenTab 
-                gefilterdeMatchen={gefilterdeMatchen} 
-                nu={nu} 
-                matchVoorspellingen={matchVoorspellingen} 
-                matchSaveStatus={matchSaveStatus} 
-                alleMatchVoorspellingen={alleMatchVoorspellingen} 
-                actieveSpeler={actieveSpeler} 
-                alleSpelers={alleSpelers} 
-                handleScore={handleScore} 
-                toggleJoker={toggleJoker} 
-                slaMatchOp={slaMatchOp} 
-                filterRonde={filterRonde} 
-                setFilterRonde={setFilterRonde} 
-                expandedMatchId={expandedMatchId} 
-                setExpandedMatchId={setExpandedMatchId} 
-              />
+              <div>
+                <div className="filter-scroll">
+                  <span className={`filter-chip ${filterRonde === 'Nog in te vullen' ? 'active' : ''}`} onClick={() => setFilterRonde('Nog in te vullen')}>✍️ INVULLEN</span>
+                  {['Alle', 'Groepsfase', 'Ronde van 32', 'Finale'].map(r => (
+                    <span key={r} className={`filter-chip ${filterRonde === r ? 'active' : ''}`} onClick={() => setFilterRonde(r)}>{r}</span>
+                  ))}
+                </div>
+                {gefilterdeMatchen.map(m => {
+                  const gestart = nu > new Date(m.datum).getTime();
+                  const v = matchVoorspellingen[m.id] || { thuis: '', uit: '', joker: false };
+                  const save = matchSaveStatus[m.id] || 'idle';
+                  const pVoorMatch = alleMatchVoorspellingen.filter(av => av.match_id === m.id);
+                  const heeftUitslag = m.thuis_score !== null;
+
+                  return (
+                    <div key={m.id} className={`match-card ${gestart ? 'locked' : ''}`} onClick={() => gestart && setExpandedMatchId(expandedMatchId === m.id ? null : m.id)}>
+                      <div className="match-header" style={{background: heeftUitslag ? 'var(--magenta)' : 'var(--lime)', color: heeftUitslag ? '#fff' : '#111827'}}>
+                        <span>{heeftUitslag ? '🏆 EINDSTAND' : `${m.ronde} • ${new Date(m.datum).toLocaleDateString('nl-BE', {day:'2-digit',month:'short'})}`}</span>
+                        <span className={`save-indicator ${save}`}>{save === 'saving' ? '⏳' : '✅'}</span>
+                        <button className={`joker-btn ${v.joker ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); if(!gestart) toggleJoker(m.id); }}>🌟</button>
+                      </div>
+                      
+                      {heeftUitslag && (
+                        <div style={{textAlign:'center', padding:10, borderBottom:'1px solid #eee', fontWeight:900, fontSize:'2rem'}}>{m.thuis_score} - {m.uit_score}</div>
+                      )}
+
+                      <div className="match-body">
+                        <span className="team-naam">{m.thuisploeg}</span>
+                        <div style={{display:'flex', gap:5, alignItems:'center'}}>
+                          <input className="score-invoer" type="tel" value={v.thuis} disabled={gestart} onChange={e => handleScore(m.id, 'thuis', e.target.value)} onClick={e=>e.stopPropagation()}/>
+                          <span>-</span>
+                          <input className="score-invoer" type="tel" value={v.uit} disabled={gestart} onChange={e => handleScore(m.id, 'uit', e.target.value)} onClick={e=>e.stopPropagation()}/>
+                        </div>
+                        <span className="team-naam">{m.uitploeg}</span>
+                      </div>
+
+                      {!gestart && (
+                        <div style={{padding: '0 15px 10px', fontSize:'0.6rem', color:'#999', display:'flex', flexWrap:'wrap', gap:4}}>
+                           {pVoorMatch.length} spelers vulden in: {pVoorMatch.map(av => <span key={av.speler_id} style={{background:'#eee', padding:'2px 5px', borderRadius:4}}>{av.spelers?.naam.split(' ')[0]}</span>)}
+                        </div>
+                      )}
+
+                      {gestart && expandedMatchId === m.id && (
+                        <div style={{background:'#f9f9f9', padding:15, borderTop:'1px solid #eee'}}>
+                          {pVoorMatch.map(av => (
+                            <div key={av.id} style={{display:'flex', justifyContent:'space-between', fontSize:'0.8rem', fontWeight:800, padding:'4px 0'}}>
+                              <span>{av.spelers?.naam} {av.gouden_bal ? '🌟' : ''}</span>
+                              <span style={{color:'var(--magenta)'}}>{av.thuis_score} - {av.uit_score}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {gestart && expandedMatchId !== m.id && <div style={{textAlign:'center', fontSize:'0.6rem', paddingBottom:5, color:'var(--rose)', fontWeight:900}}>KLIK VOOR VOORSPELLINGEN 👁️</div>}
+                    </div>
+                  );
+                })}
+              </div>
             )}
 
+            {/* TAB: BONUS */}
             {actieveTab === 'bonus' && (
-              <BonusTab 
-                winnaar={winnaar} setWinnaar={setWinnaar} 
-                hf={hf} setHf={setHf} 
-                meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} 
-                besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} 
-                eindstation={eindstation} setEindstation={setEindstation} 
-                totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} 
-                totaalRood={totaalRood} setTotaalRood={setTotaalRood} 
-                isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} 
-              />
+              <div>
+                <label className="input-label">Wereldkampioen?</label>
+                <Autocomplete options={WK_LANDEN} value={winnaar} onChange={setWinnaar} disabled={isGesloten} />
+                <label className="input-label">Halve Finalisten?</label>
+                {hf.map((h, i) => <Autocomplete key={i} options={WK_LANDEN} value={h} onChange={(v:string)=>{const n=[...hf]; n[i]=v; setHf(n);}} disabled={isGesloten} />)}
+                <label className="input-label">Meeste Goals?</label>
+                <Autocomplete options={WK_LANDEN} value={meesteGoalsLand} onChange={setMeesteGoalsLand} disabled={isGesloten} />
+                <div style={{display:'flex', gap:10}}>
+                  <div style={{flex:1}}><label className="input-label">Geel</label><input className="full-input" type="number" value={totaalGeel} onChange={e=>setTotaalGeel(e.target.value)} disabled={isGesloten}/></div>
+                  <div style={{flex:1}}><label className="input-label">Rood</label><input className="full-input" type="number" value={totaalRood} onChange={e=>setTotaalRood(e.target.value)} disabled={isGesloten}/></div>
+                </div>
+                {!isGesloten && <button className="btn-primary" onClick={slaBonusOp}>BONUS OPSLAAN</button>}
+              </div>
             )}
 
-            {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} />}
-
+            {/* TAB: RANKING */}
             {actieveTab === 'ranking' && (
-              <RankingTab 
-                klassement={klassement} 
-                actieveSpeler={actieveSpeler} 
-                toggleBetaald={toggleBetaald} 
-              />
+              <div>
+                {klassement.map((s, i) => (
+                  <div key={s.id} className={`ranking-item ${i===0?'rank-1':''}`}>
+                    <div className="rank-badge">{i+1}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontWeight:900}}>{s.naam} {s.jokerIngezet?'🌑':'🌟'}</div>
+                      <div style={{fontSize:'0.6rem', color:'#666'}}>✅{s.exact} • 🏆{s.winnaarCorrect} • ❌{s.fout}</div>
+                      {isAdmin ? (
+                        <button onClick={()=>toggleBetaald(s.id, s.betaald)} className={`betaal-badge ${s.betaald?'is-betaald':'niet-betaald'}`}>{s.betaald?'✅ Betaald':'❌ Klik om betaald'}</button>
+                      ) : (
+                        <span className={`betaal-badge ${s.betaald?'is-betaald':'niet-betaald'}`}>{s.betaald?'💰 Betaald':'⏳ Betaling verwerken'}</span>
+                      )}
+                    </div>
+                    <div className="ranking-score">{s.totaal_score}</div>
+                  </div>
+                ))}
+              </div>
             )}
 
-            {actieveTab === 'tellers' && <TellersTab tellersData={tellersData} />}
+            {/* TAB: TELLERS */}
+            {actieveTab === 'tellers' && (
+              <div className="teller-grid">
+                <div className="teller-card" style={{gridColumn:'span 2'}}><div className="teller-val">{tellersData.g}</div><div>Totaal Goals</div></div>
+                <div className="teller-card" style={{background:'#FFD700', color:'#000'}}><div className="teller-val">{tellersData.y}</div><div>Geel</div></div>
+                <div className="teller-card" style={{background:'#FF4136'}}><div className="teller-val">{tellersData.r}</div><div>Rood</div></div>
+                <div className="teller-card" style={{gridColumn:'span 2', background:'#40C057'}}><div style={{fontSize:'0.8rem'}}>MEESTE GOALS</div><div className="teller-val" style={{fontSize:'1.8rem'}}>{tellersData.mS[0]}</div><div>({tellersData.mS[1]})</div></div>
+                <div className="teller-card" style={{gridColumn:'span 2', background:'#228BE6'}}><div style={{fontSize:'0.8rem'}}>MINSTE TEGEN</div><div className="teller-val" style={{fontSize:'1.8rem'}}>{tellersData.mT[0]}</div><div>({tellersData.mT[1]})</div></div>
+              </div>
+            )}
 
+            {/* TAB: ANTWOORDEN */}
+            {actieveTab === 'antwoorden' && (
+              <div>
+                {nu < DEADLINE_DATE ? <p style={{textAlign:'center', padding:40, fontWeight:900, color:'#999'}}>🔒 Geheime antwoorden worden onthuld op 11 juni.</p> : (
+                  <div>
+                    <div className="glass-card" style={{background:'#fff', marginBottom:10}}>
+                      <div style={{fontWeight:900, color:'var(--crayola)', marginBottom:10}}>TROFEE VOORSPELLINGEN</div>
+                      {alleToernooiV.map(v => <div key={v.id} style={{display:'flex', justifyContent:'space-between', fontSize:'0.8rem', borderBottom:'1px solid #eee', padding:'5px 0'}}><span>{v.spelers?.naam}</span><span style={{fontWeight:900, color:'var(--magenta)'}}>{v.winnaar}</span></div>)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB: CHAT */}
             {actieveTab === 'kleedkamer' && (
-              <ChatTab 
-                chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} chatEindeRef={chatEindeRef} 
-                nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} 
-              />
+              <div>
+                <div style={{height:300, overflowY:'auto', marginBottom:10}}>
+                  {chatBerichten.map(b => (
+                    <div key={b.id} style={{background: b.speler_id===actieveSpeler.id?'var(--aqua)':'#fff', padding:10, borderRadius:12, marginBottom:5, border:'1px solid #eee'}}>
+                      <div style={{fontSize:'0.6rem', fontWeight:900, opacity:0.5}}>{b.spelers?.naam}</div>
+                      <div style={{fontWeight:800}}>{b.bericht}</div>
+                    </div>
+                  ))}
+                  <div ref={chatEindeRef} />
+                </div>
+                <form onSubmit={verstuurChat} style={{display:'flex', gap:5}}><input className="full-input" style={{marginBottom:0}} value={nieuwBericht} onChange={e=>setNieuwBericht(e.target.value)} /><button className="btn-primary" style={{width:60, padding:0}}>➤</button></form>
+              </div>
             )}
-            
-            <div style={{textAlign:'center', marginTop:20}}>
-              <button style={{background:'none', border:'none', color:'#111827', fontWeight:900, cursor:'pointer', opacity: 0.6}} onClick={() => {localStorage.removeItem('wk_speler_id'); window.location.reload();}}>UITLOGGEN</button>
-            </div>
+
+            <button style={{width:'100%', marginTop:20, opacity:0.5, border:'none', background:'none', cursor:'pointer', fontWeight:900}} onClick={()=>{localStorage.removeItem('wk_speler_id'); window.location.reload();}}>UITLOGGEN</button>
           </div>
         ) : (
-          <form onSubmit={ontgrendel}>
-            <div className="input-group"><input className="full-input" placeholder="Je Naam" value={ontgrendelNaam} onChange={e=>setOntgrendelNaam(e.target.value)} /></div>
-            <div className="input-group"><input className="full-input" type="password" placeholder="Pincode" value={invoerCode} onChange={e=>setInvoerCode(e.target.value)} /></div>
+          <form onSubmit={(e)=>{ e.preventDefault(); const s = alleSpelers.find(x=>x.naam.toLowerCase()===ontgrendelNaam.toLowerCase() && String(x.code)===invoerCode); if(s){setActieveSpeler(s); localStorage.setItem('wk_speler_id', s.id.toString());} else setStatus('Fout! 🚩');}}>
+            <input className="full-input" placeholder="Je Naam" value={ontgrendelNaam} onChange={e=>setOntgrendelNaam(e.target.value)} />
+            <input className="full-input" type="password" placeholder="Pincode" value={invoerCode} onChange={e=>setInvoerCode(e.target.value)} />
             <button className="btn-primary" type="submit">HET VELD OP</button>
-            <p style={{color:'var(--rose)', fontWeight:900, textAlign:'center'}}>{status}</p>
+            <p style={{color:'red', textAlign:'center', fontWeight:900}}>{status}</p>
           </form>
         )}
       </div>
