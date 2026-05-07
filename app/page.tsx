@@ -9,7 +9,6 @@ const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
 const Autocomplete = ({ options, value, onChange, placeholder, disabled }: { options: string[], value: string, onChange: (val: string) => void, placeholder: string, disabled: boolean }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
-
   const filtered = options.filter(o => o.toLowerCase().includes(value.toLowerCase()));
 
   useEffect(() => {
@@ -22,20 +21,11 @@ const Autocomplete = ({ options, value, onChange, placeholder, disabled }: { opt
 
   return (
     <div ref={wrapperRef} style={{ position: 'relative' }}>
-      <input
-        className="input-field"
-        value={value}
-        onChange={(e) => { onChange(e.target.value); setIsOpen(true); }}
-        onFocus={() => setIsOpen(true)}
-        disabled={disabled}
-        placeholder={placeholder}
-      />
+      <input className="input-field" value={value} onChange={(e) => { onChange(e.target.value); setIsOpen(true); }} onFocus={() => setIsOpen(true)} disabled={disabled} placeholder={placeholder} />
       {isOpen && !disabled && (
         <ul className="autocomplete-dropdown">
           {filtered.length > 0 ? filtered.map(opt => (
-            <li key={opt} className="autocomplete-item" onClick={() => { onChange(opt); setIsOpen(false); }}>
-              {opt}
-            </li>
+            <li key={opt} className="autocomplete-item" onClick={() => { onChange(opt); setIsOpen(false); }}>{opt}</li>
           )) : <li className="autocomplete-item" style={{ color: 'var(--wk-red)' }}>Ongekende speler...</li>}
         </ul>
       )}
@@ -50,11 +40,12 @@ export default function Home() {
   const [status, setStatus] = useState('');
   const [spelers, setSpelers] = useState<any[]>([]);
   const [actieveSpeler, setActieveSpeler] = useState<any>(null);
-  const [actieveTab, setActieveTab] = useState('toernooi');
+  const [actieveTab, setActieveTab] = useState('matchen');
   
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
   const actieveTabRef = useRef(actieveTab);
   
+  // TOERNOOI STATE
   const [voorspellingStatus, setVoorspellingStatus] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
   const [winnaar, setWinnaar] = useState('');
@@ -68,6 +59,11 @@ export default function Home() {
   const [lv2, setLv2] = useState('');
   const [lv3, setLv3] = useState('');
   const [lv4, setLv4] = useState('');
+
+  // MATCHEN STATE
+  const [matchen, setMatchen] = useState<any[]>([]);
+  const [matchVoorspellingen, setMatchVoorspellingen] = useState<Record<number, {thuis: string, uit: string, goudenBal: boolean}>>({});
+  const [matchOpslaanStatus, setMatchOpslaanStatus] = useState('');
 
   const [tijdOver, setTijdOver] = useState({ dagen: 0, uren: 0, minuten: 0, seconden: 0 });
   const [isGesloten, setIsGesloten] = useState(false);
@@ -85,17 +81,13 @@ export default function Home() {
     const opgeslagenId = localStorage.getItem('wk_speler_id');
     haalSpelersOp(opgeslagenId);
 
-    if ("Notification" in window) {
-      Notification.requestPermission();
-    }
+    if ("Notification" in window) Notification.requestPermission();
 
     const klokInterval = setInterval(() => {
       const nu = new Date().getTime();
       const verschil = DEADLINE_DATE - nu;
-      if (verschil <= 0) {
-        setIsGesloten(true);
-        clearInterval(klokInterval);
-      } else {
+      if (verschil <= 0) { setIsGesloten(true); clearInterval(klokInterval); } 
+      else {
         setTijdOver({
           dagen: Math.floor(verschil / (1000 * 60 * 60 * 24)),
           uren: Math.floor((verschil % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
@@ -105,31 +97,21 @@ export default function Home() {
       }
     }, 1000);
 
-    const chatSubscription = supabase
-      .channel('kleedkamer_berichten')
+    const chatSubscription = supabase.channel('kleedkamer_berichten')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kleedkamer' }, (payload) => {
         haalChatOp();
-        
-        if (actieveTabRef.current !== 'kleedkamer') {
-          setOngelezenBerichten(true);
-        }
-
+        if (actieveTabRef.current !== 'kleedkamer') setOngelezenBerichten(true);
         if (document.hidden && Notification.permission === "granted") {
-          new Notification("Nieuw bericht in de Kleedkamer! ⚽", {
-            body: payload.new.bericht,
-          });
+          new Notification("Nieuw bericht in de Kleedkamer! ⚽", { body: payload.new.bericht });
         }
-      })
-      .subscribe();
+      }).subscribe();
 
-    return () => {
-      clearInterval(klokInterval);
-      supabase.removeChannel(chatSubscription);
-    };
+    return () => { clearInterval(klokInterval); supabase.removeChannel(chatSubscription); };
   }, []);
 
   useEffect(() => {
     if (actieveSpeler) {
+      if (actieveTab === 'matchen') haalMatchenOp();
       if (actieveTab === 'toernooi') haalToernooiVoorspellingOp();
       if (actieveTab === 'ranking') haalKlassementOp();
       if (actieveTab === 'antwoorden') haalAlleVoorspellingenOp();
@@ -139,9 +121,7 @@ export default function Home() {
 
   const veranderTab = (tab: string) => {
     setActieveTab(tab);
-    if (tab === 'kleedkamer') {
-      setOngelezenBerichten(false);
-    }
+    if (tab === 'kleedkamer') setOngelezenBerichten(false);
   };
 
   const haalSpelersOp = async (checkId?: string | null) => {
@@ -180,6 +160,85 @@ export default function Home() {
     if (!error && data) setAlleVoorspellingen(data);
   };
 
+  // --- NIEUW: MATCHEN LOGICA ---
+  const haalMatchenOp = async () => {
+    const { data: matchenData } = await supabase.from('matchen').select('*').order('datum', { ascending: true });
+    
+    // Als er nog geen matchen zijn (API niet gekoppeld), toon test-data
+    if (!matchenData || matchenData.length === 0) {
+      setMatchen([
+        { id: 998, thuisploeg: '🇲🇽 Mexico', uitploeg: '🇿🇦 Zuid-Afrika', datum: '2026-06-11T21:00:00Z', status: 'gepland' },
+        { id: 999, thuisploeg: '🇧🇪 België', uitploeg: '🇨🇦 Canada', datum: '2026-06-12T18:00:00Z', status: 'gepland' }
+      ]);
+    } else {
+      setMatchen(matchenData);
+    }
+
+    const { data: voorspellingenData } = await supabase.from('match_voorspellingen').select('*').eq('speler_id', actieveSpeler.id);
+    if (voorspellingenData) {
+      const stateObj: any = {};
+      voorspellingenData.forEach(v => {
+        stateObj[v.match_id] = { thuis: v.thuis_score.toString(), uit: v.uit_score.toString(), goudenBal: v.gouden_bal };
+      });
+      setMatchVoorspellingen(stateObj);
+    }
+  };
+
+  const handleMatchScoreChange = (matchId: number, veld: 'thuis'|'uit', waarde: string) => {
+    setMatchVoorspellingen(prev => ({
+      ...prev,
+      [matchId]: { ...prev[matchId], [veld]: waarde, goudenBal: prev[matchId]?.goudenBal || false }
+    }));
+  };
+
+  const toggleGoudenBal = (matchId: number) => {
+    // Check of gouden bal al ergens anders aan staat in deze sessie (simpel: 1 per opslag voor nu)
+    setMatchVoorspellingen(prev => {
+      const geselecteerd = prev[matchId]?.goudenBal || false;
+      const newState = { ...prev };
+      // Zet alle andere gouden ballen uit in de UI
+      Object.keys(newState).forEach(key => newState[Number(key)].goudenBal = false);
+      // Zet deze aan (of uit)
+      newState[matchId] = { ...prev[matchId], goudenBal: !geselecteerd, thuis: prev[matchId]?.thuis || '', uit: prev[matchId]?.uit || '' };
+      return newState;
+    });
+  };
+
+  const slaMatchenOp = async () => {
+    setMatchOpslaanStatus('Bezig... ⚽');
+    const inserts: any[] = [];
+    
+    Object.keys(matchVoorspellingen).forEach(mId => {
+      const id = Number(mId);
+      const v = matchVoorspellingen[id];
+      if (v.thuis !== '' && v.uit !== '') {
+        inserts.push({
+          speler_id: actieveSpeler.id,
+          match_id: id,
+          thuis_score: parseInt(v.thuis),
+          uit_score: parseInt(v.uit),
+          gouden_bal: v.goudenBal
+        });
+      }
+    });
+
+    if (inserts.length > 0) {
+      // Upsert: vervang de oude score als die er al was
+      const { error } = await supabase.from('match_voorspellingen').upsert(inserts, { onConflict: 'speler_id, match_id' });
+      if (error) setMatchOpslaanStatus('Oeps! 🚩 Probeer opnieuw.');
+      else {
+        setMatchOpslaanStatus('Voorspellingen opgeslagen! 🌟');
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 3000);
+        setTimeout(() => setMatchOpslaanStatus(''), 3000);
+      }
+    } else {
+      setMatchOpslaanStatus('Vul minstens 1 score in!');
+      setTimeout(() => setMatchOpslaanStatus(''), 3000);
+    }
+  };
+  // --- EINDE MATCHEN LOGICA ---
+
   const haalToernooiVoorspellingOp = async () => {
     const { data } = await supabase.from('toernooi_voorspellingen').select('*').eq('speler_id', actieveSpeler.id).single();
     if (data) {
@@ -198,15 +257,8 @@ export default function Home() {
   const slaToernooiVoorspellingOp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isGesloten) return;
-
-    if (!TOP_SPELERS.includes(topschutter)) {
-      setVoorspellingStatus('Oeps! 🚩 Kies een geldige topschutter uit de lijst.');
-      return;
-    }
-    if (!TOP_KEEPERS.includes(besteKeeper)) {
-      setVoorspellingStatus('Oeps! 🚩 Kies een geldige keeper uit de lijst.');
-      return;
-    }
+    if (!TOP_SPELERS.includes(topschutter)) { setVoorspellingStatus('Oeps! 🚩 Kies een geldige topschutter.'); return; }
+    if (!TOP_KEEPERS.includes(besteKeeper)) { setVoorspellingStatus('Oeps! 🚩 Kies een geldige keeper.'); return; }
 
     setVoorspellingStatus('Bezig met opslaan... ⚽');
     const laatsteVierArray = [lv1, lv2, lv3, lv4].filter(land => land.trim() !== '');
@@ -222,7 +274,7 @@ export default function Home() {
     if (bestaand) error = (await supabase.from('toernooi_voorspellingen').update(voorspellingData).eq('speler_id', actieveSpeler.id)).error;
     else error = (await supabase.from('toernooi_voorspellingen').insert([voorspellingData])).error;
 
-    if (error) setVoorspellingStatus('Oeps! 🚩 Er ging iets mis. Probeer opnieuw.');
+    if (error) setVoorspellingStatus('Oeps! 🚩 Er ging iets mis.');
     else {
       setVoorspellingStatus('Gelukt! 🌟');
       setShowConfetti(true);
@@ -293,25 +345,26 @@ export default function Home() {
         .tab.active { background: var(--crayola); color: #FFF; box-shadow: 0 4px 10px rgba(55, 114, 255, 0.3); }
 
         .unread-badge { position: absolute; top: 6px; right: 10px; width: 10px; height: 10px; background-color: var(--wk-red); border-radius: 50%; box-shadow: 0 0 8px var(--wk-red); animation: pulse-dot 1.5s infinite; }
-        @keyframes pulse-dot { 
-          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(227, 0, 47, 0.7); } 
-          70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(227, 0, 47, 0); } 
-          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(227, 0, 47, 0); } 
-        }
+        @keyframes pulse-dot { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(227, 0, 47, 0.7); } 70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(227, 0, 47, 0); } 100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(227, 0, 47, 0); } }
         
         .prijzen-banner { background: linear-gradient(135deg, var(--aqua), var(--crayola)); color: #FFF; padding: 15px; border-radius: 20px; text-align: center; font-weight: 900; margin-bottom: 20px; font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 1.5px; box-shadow: 0 8px 20px rgba(112, 228, 239, 0.4); animation: pulse 2s infinite; border: 3px solid #FFF; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
         
-        /* UITGELIJND EN COMPACTER KLASSEMENT */
-        .ranking-item { 
-          background: #FFFFFF; border-radius: 20px; padding: 16px 16px; margin: 0 auto 16px auto; 
-          border: 2px solid #E9ECEF; display: flex; flex-direction: column; position: relative; 
-          box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: transform 0.2s; 
-          width: 94%; max-width: 420px; 
-        }
+        /* MATCHEN LAYOUT (NIEUW) */
+        .match-card { background: #FFF; border-radius: 20px; margin-bottom: 15px; border: 2px solid #E9ECEF; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: 0.2s; }
+        .match-card:hover { border-color: var(--aqua); }
+        .match-header { background: #F8F9FA; padding: 10px 15px; font-size: 0.7rem; font-weight: 800; color: #ADB5BD; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #E9ECEF; display: flex; justify-content: space-between; align-items: center; }
+        .match-body { display: flex; align-items: center; justify-content: space-between; padding: 15px; }
+        .ploeg-naam { font-weight: 900; font-size: 1.1rem; color: var(--text-dark); flex: 1; text-align: center; }
+        .score-invoer { width: 45px; height: 50px; text-align: center; font-size: 1.5rem; font-family: 'Bebas Neue', sans-serif; border-radius: 12px; border: 2px solid #DEE2E6; background: #F4F7F6; color: var(--wk-blue); outline: none; transition: 0.2s; }
+        .score-invoer:focus { border-color: var(--magenta); background: #FFF; box-shadow: 0 0 10px rgba(240, 56, 255, 0.2); }
+        .score-divider { font-weight: 900; color: #ADB5BD; margin: 0 10px; }
+        
+        .gouden-bal-btn { background: transparent; border: 2px solid #E9ECEF; border-radius: 50%; width: 35px; height: 35px; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: 0.2s; filter: grayscale(1); opacity: 0.4; font-size: 1.2rem; }
+        .gouden-bal-btn.active { border-color: #FFD700; background: rgba(255, 215, 0, 0.1); filter: grayscale(0); opacity: 1; box-shadow: 0 0 15px rgba(255, 215, 0, 0.4); transform: scale(1.1); }
+
+        .ranking-item { background: #FFFFFF; border-radius: 20px; padding: 16px 16px; margin: 0 auto 16px auto; border: 2px solid #E9ECEF; display: flex; flex-direction: column; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: transform 0.2s; width: 94%; max-width: 420px; }
         .ranking-item:hover { transform: translateY(-2px); border-color: var(--aqua); }
         .ranking-item.is-me { border-color: var(--crayola); border-width: 2px; background: #F8FBFF; box-shadow: 0 4px 15px rgba(55, 114, 255, 0.15); }
-        
         .ranking-hoofd { display: flex; align-items: center; width: 100%; margin-bottom: 12px; }
         .ranking-pos { width: 35px; font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; color: #ADB5BD; line-height: 1; }
         .pos-1 { color: #FFD700; text-shadow: 0 2px 4px rgba(212, 175, 55, 0.3); font-size: 2.2rem; } 
@@ -319,24 +372,13 @@ export default function Home() {
         .pos-3 { color: #CD7F32; }
         .ranking-naam { flex: 1; font-size: 1.1rem; font-weight: 900; color: var(--text-dark); text-align: left; text-transform: uppercase; letter-spacing: 0.5px; }
         .ranking-totaal { font-family: 'Bebas Neue', sans-serif; font-size: 2.6rem; color: var(--wk-red); min-width: 45px; text-align: right; line-height: 1; }
-        
-        /* PERFECT UITGELIJNDE GRID VOOR PILLS */
         .ranking-breakdown { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; margin-bottom: 14px; }
-        .score-pill { 
-          padding: 8px 4px; border-radius: 12px; display: flex; flex-direction: column; 
-          justify-content: center; align-items: center; text-align: center; gap: 2px; 
-        }
+        .score-pill { padding: 8px 4px; border-radius: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 2px; }
         .pill-matchen { background: rgba(55, 114, 255, 0.08); color: var(--crayola); border: 1px solid rgba(55, 114, 255, 0.2); }
         .pill-bonus { background: rgba(240, 56, 255, 0.08); color: var(--magenta); border: 1px solid rgba(240, 56, 255, 0.2); }
         .pill-label { font-size: 0.65rem; font-weight: 900; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; }
         .pill-score { font-size: 1rem; font-weight: 900; }
-        
-        /* PERFECT UITGELIJNDE GRID VOOR STATS */
-        .ranking-stats { 
-          display: grid; grid-template-columns: repeat(3, 1fr); justify-items: center; align-items: center; 
-          width: 100%; font-size: 0.75rem; font-weight: 800; color: #6C757D; 
-          border-top: 2px dashed #E9ECEF; padding-top: 12px; 
-        }
+        .ranking-stats { display: grid; grid-template-columns: repeat(3, 1fr); justify-items: center; align-items: center; width: 100%; font-size: 0.75rem; font-weight: 800; color: #6C757D; border-top: 2px dashed #E9ECEF; padding-top: 12px; }
         .ranking-stats span { display: flex; align-items: center; gap: 5px; }
         
         .chat-container { display: flex; flex-direction: column; height: 450px; background: #F8F9FA; border-radius: 20px; border: 2px solid #E9ECEF; overflow: hidden; }
@@ -347,7 +389,6 @@ export default function Home() {
         .chat-naam { font-size: 0.65rem; font-weight: 900; color: #ADB5BD; margin-bottom: 4px; padding: 0 5px; text-transform: uppercase; }
         .chat-invoer { display: flex; padding: 12px; background: #FFFFFF; border-top: 2px solid #E9ECEF; align-items: center; }
         .chat-input { flex: 1; background: #F4F7F6; border: 2px solid #E9ECEF; padding: 14px; border-radius: 20px; color: var(--text-dark); font-family: 'Nunito', sans-serif; font-weight: 700; outline: none; transition: 0.2s; }
-        .chat-input:focus { border-color: var(--crayola); }
         .chat-send { background: var(--magenta); color: white; border: none; width: 48px; height: 48px; border-radius: 50%; margin-left: 8px; cursor: pointer; font-size: 1.2rem; box-shadow: 0 4px 10px rgba(240, 56, 255, 0.3); transition: 0.2s; }
         .chat-send:active { transform: scale(0.9); }
         
@@ -380,7 +421,6 @@ export default function Home() {
         .tijd-label { font-size: 0.5rem; text-transform: uppercase; color: #ADB5BD; font-weight: 900; letter-spacing: 0.5px; }
         
         .cat-card { background: #FFF; border-radius: 20px; margin-bottom: 18px; border: 2px solid #E9ECEF; overflow: hidden; text-align: left; transition: 0.2s; }
-        .cat-card:hover { border-color: var(--aqua); box-shadow: 0 5px 20px rgba(112, 228, 239, 0.2); }
         .cat-header { background: #F8F9FA; padding: 15px 20px; border-bottom: 2px solid #E9ECEF; display: flex; justify-content: space-between; align-items: center; }
         .cat-titel { font-size: 0.85rem; font-weight: 900; color: var(--crayola); text-transform: uppercase; margin: 0; }
         .cat-stand { font-size: 0.65rem; font-weight: 900; background: var(--wk-green); color: white; padding: 5px 10px; border-radius: 10px; }
@@ -431,12 +471,67 @@ export default function Home() {
               </div>
             </div>
 
+            {/* NIEUW: MATCHEN TABBLAD */}
+            {actieveTab === 'matchen' && (
+              <div style={{ animation: 'fadeIn 0.3s' }}>
+                <p style={{ textAlign: 'center', fontSize: '0.75rem', opacity: 0.8, margin: '0 0 15px 0' }}>Voorspel de score. Zet je Gouden Bal (🌟) in voor dubbele punten!</p>
+                
+                {matchen.length === 0 ? <div className="bouncing-ball-loader">⚽</div> : matchen.map((match) => {
+                  const voorspelling = matchVoorspellingen[match.id] || { thuis: '', uit: '', goudenBal: false };
+                  const datumText = new Date(match.datum).toLocaleDateString('nl-BE', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+                  return (
+                    <div key={match.id} className="match-card">
+                      <div className="match-header">
+                        <span>{datumText}</span>
+                        {/* Gouden Bal Knop */}
+                        <button 
+                          type="button" 
+                          className={`gouden-bal-btn ${voorspelling.goudenBal ? 'active' : ''}`} 
+                          onClick={() => toggleGoudenBal(match.id)}
+                          title="Zet Gouden Bal in (x2 punten)"
+                        >
+                          🌟
+                        </button>
+                      </div>
+                      
+                      <div className="match-body">
+                        <div className="ploeg-naam" style={{ textAlign: 'right' }}>{match.thuisploeg}</div>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', margin: '0 15px' }}>
+                          <input 
+                            className="score-invoer" 
+                            type="tel" 
+                            maxLength={2}
+                            value={voorspelling.thuis} 
+                            onChange={e => handleMatchScoreChange(match.id, 'thuis', e.target.value.replace(/[^0-9]/g, ''))} 
+                          />
+                          <span className="score-divider">-</span>
+                          <input 
+                            className="score-invoer" 
+                            type="tel" 
+                            maxLength={2}
+                            value={voorspelling.uit} 
+                            onChange={e => handleMatchScoreChange(match.id, 'uit', e.target.value.replace(/[^0-9]/g, ''))} 
+                          />
+                        </div>
+
+                        <div className="ploeg-naam" style={{ textAlign: 'left' }}>{match.uitploeg}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <button className="btn-primary" style={{marginTop: '10px'}} onClick={slaMatchenOp}>MATCHEN OPSLAAN</button>
+                <div style={{color:'var(--aqua)', marginTop:'15px', fontWeight:900, textAlign:'center', fontSize:'1.1rem'}}>{matchOpslaanStatus}</div>
+              </div>
+            )}
+
             {actieveTab === 'ranking' && (
               <div style={{ animation: 'fadeIn 0.3s' }}>
                 <div className="prijzen-banner">🏆 TOTALE PRIJZENPOT: €{prijzenPot}</div>
                 {klassement.length === 0 ? <div className="bouncing-ball-loader">⚽</div> : klassement.map((s, i) => (
                   <div key={s.id} className={`ranking-item ${s.id === actieveSpeler.id ? 'is-me' : ''}`}>
-                    
                     <div className="ranking-hoofd">
                       <div className={`ranking-pos pos-${i+1}`}>{i + 1}</div>
                       <div className="ranking-naam">{s.naam}</div>
@@ -459,7 +554,6 @@ export default function Home() {
                       <span title="Juiste winnaar">✅ 0 Juist</span>
                       <span title="Fout voorspeld">❌ 0 Fout</span>
                     </div>
-
                   </div>
                 ))}
               </div>
@@ -548,14 +642,6 @@ export default function Home() {
                     </div>
                   </div>
                 ))}
-              </div>
-            )}
-            
-            {actieveTab === 'matchen' && (
-              <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.7 }}>
-                <div style={{fontSize: '3rem', marginBottom: '10px'}}>🏟️</div>
-                <h3 style={{color: 'var(--crayola)', margin: 0}}>De grasmat wordt gekeurd...</h3>
-                <p style={{ fontSize: '0.85rem' }}>De kalender en de wedstrijden worden binnenkort vrijgegeven!</p>
               </div>
             )}
             
