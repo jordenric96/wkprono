@@ -4,6 +4,14 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { WK_LANDEN } from '../lib/data';
 
+import { CountdownTimer } from '../components/Shared';
+import MatchenTab from '../components/MatchenTab';
+import BonusTab from '../components/BonusTab';
+import AntwoordenTab from '../components/AntwoordenTab';
+import RankingTab from '../components/RankingTab';
+import TellersTab from '../components/TellersTab';
+import ChatTab from '../components/ChatTab';
+
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
 
 // --- HULP COMPONENT: AUTOCOMPLETE ---
@@ -35,10 +43,10 @@ const Autocomplete = ({ options, value, onChange, placeholder, disabled }: any) 
 };
 
 export default function Home() {
-  // --- AUTH & NAV ---
   const [ontgrendelNaam, setOntgrendelNaam] = useState('');
   const [invoerCode, setInvoerCode] = useState('');
   const [status, setStatus] = useState('');
+  
   const [actieveSpeler, setActieveSpeler] = useState<any>(null);
   const [alleSpelers, setAlleSpelers] = useState<any[]>([]); 
   const [actieveTab, setActieveTab] = useState('matchen');
@@ -46,20 +54,20 @@ export default function Home() {
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
   const actieveTabRef = useRef(actieveTab);
 
-  // --- ADMIN & INFO ---
   const [infoOpen, setInfoOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState('');
   const isAdmin = actieveSpeler?.naam?.toLowerCase() === 'jorden ricour'.toLowerCase();
 
-  // --- MATCHES & VOORSPELLINGEN ---
   const [matchen, setMatchen] = useState<any[]>([]);
   const [matchVoorspellingen, setMatchVoorspellingen] = useState<Record<number, {thuis: string, uit: string, joker: boolean}>>({});
   const [alleMatchVoorspellingen, setAlleMatchVoorspellingen] = useState<any[]>([]); 
   const [matchSaveStatus, setMatchSaveStatus] = useState<Record<number, 'idle' | 'saving' | 'saved'>>({});
+  const [alleToernooiV, setAlleToernooiV] = useState<any[]>([]);
+  const [opslaanStatus, setOpslaanStatus] = useState('');
+  const [showConfetti, setShowConfetti] = useState(false);
   const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null);
   const saveTimeoutRef = useRef<Record<number, any>>({});
 
-  // --- BONUS ---
   const [winnaar, setWinnaar] = useState('');
   const [hf, setHf] = useState(['', '', '', '']);
   const [meesteGoalsLand, setMeesteGoalsLand] = useState('');
@@ -67,22 +75,22 @@ export default function Home() {
   const [eindstation, setEindstation] = useState('');
   const [totaalGeel, setTotaalGeel] = useState('');
   const [totaalRood, setTotaalRood] = useState('');
-  const [alleToernooiV, setAlleToernooiV] = useState<any[]>([]);
-  const [opslaanStatus, setOpslaanStatus] = useState('');
 
-  // --- RANKING & CHAT ---
   const [klassement, setKlassement] = useState<any[]>([]);
   const [chatBerichten, setChatBerichten] = useState<any[]>([]);
   const [nieuwBericht, setNieuwBericht] = useState('');
   const chatEindeRef = useRef<HTMLDivElement>(null);
 
-  // --- TIMER ---
   const [nu, setNu] = useState(new Date().getTime());
   const [tijdOver, setTijdOver] = useState({ dagen: 0, uren: 0, minuten: 0, seconden: 0 });
   const [isGesloten, setIsGesloten] = useState(false); 
-  const [showConfetti, setShowConfetti] = useState(false);
 
-  // 1. INITIALISEREN
+  // --- FUNCTIE: TABWISSEL ---
+  const veranderTab = (tab: string) => {
+    setActieveTab(tab);
+    if (tab === 'kleedkamer') setOngelezenBerichten(false);
+  };
+
   useEffect(() => {
     actieveTabRef.current = actieveTab;
     const opgeslagenId = localStorage.getItem('wk_speler_id');
@@ -111,7 +119,6 @@ export default function Home() {
     return () => { clearInterval(klokInterval); supabase.removeChannel(chatSub); };
   }, []);
 
-  // 2. DATA LADEN BIJ TABWISSEL
   useEffect(() => {
     if (actieveSpeler) {
       if (actieveTab === 'matchen') haalMatchenOp();
@@ -166,6 +173,10 @@ export default function Home() {
   };
 
   const triggerAutoSave = (mId: number, data: { thuis: string, uit: string, joker: boolean }) => {
+    // Blokkeer opslaan als de match gestart is
+    const m = matchen.find(x => x.id === mId);
+    if (m && nu >= new Date(m.datum).getTime()) return;
+
     if (data.thuis === '' || data.uit === '') return;
     if (saveTimeoutRef.current[mId]) clearTimeout(saveTimeoutRef.current[mId]);
     setMatchSaveStatus(prev => ({ ...prev, [mId]: 'saving' }));
@@ -198,6 +209,7 @@ export default function Home() {
   };
 
   const slaBonusOp = async () => {
+    if (isGesloten) return;
     setOpslaanStatus('Bezig...');
     await supabase.from('toernooi_voorspellingen').upsert({
       speler_id: actieveSpeler.id, winnaar, halve_finalist_1: hf[0], halve_finalist_2: hf[1], halve_finalist_3: hf[2], halve_finalist_4: hf[3],
@@ -266,7 +278,22 @@ export default function Home() {
     if (!error) { setNieuwBericht(''); haalChatOp(); }
   };
 
-  // --- COMPUTED DATA ---
+  // --- HULPFUNCTIE: COUNTDOWN ---
+  const getMatchCountdown = (matchTime: string) => {
+    const diff = new Date(matchTime).getTime() - nu;
+    if (diff <= 0) return "🔒 GESLOTEN";
+    const h = Math.floor(diff / (1000 * 60 * 60));
+    const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const s = Math.floor((diff % (1000 * 60)) / 1000);
+    const isUrgent = diff < (1000 * 60 * 60); // Minder dan 1 uur
+    
+    return (
+      <span style={{ color: isUrgent ? '#FA5252' : 'inherit', fontWeight: 900 }}>
+        ⏱️ {h > 0 ? `${h}u ` : ''}{m}m {h === 0 ? `${s}s` : ''}
+      </span>
+    );
+  };
+
   const tellersData = useMemo(() => {
     let g = 0; let y = 0; let r = 0;
     const v: any = {}; const t: any = {};
@@ -314,7 +341,6 @@ export default function Home() {
 
         .title { font-family: 'Bebas Neue', sans-serif; font-size: 4.5rem; text-align: center; color: #FFF; line-height: 1; text-shadow: 3px 3px 0px var(--magenta); margin: 0; animation: title-glow 3s linear infinite; }
         
-        /* MENU - FLOATING DOCK */
         .tab-container {
           display: flex; background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(15px); border-radius: 22px; padding: 6px;
           margin-bottom: 25px; overflow-x: auto; scrollbar-width: none; gap: 6px; border: 1px solid rgba(255, 255, 255, 0.1);
@@ -336,24 +362,23 @@ export default function Home() {
           border-radius: 50%; box-shadow: 0 0 10px var(--rose); animation: pulse-red 2s infinite;
         }
 
-        /* INFO & ADMIN */
         .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
         .info-content { background: rgba(255,255,255,0.9); padding: 15px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; margin-bottom: 20px; border-left: 4px solid var(--magenta); line-height: 1.5; }
-        .admin-btn { background: #111827; color: #fff; border: none; padding: 10px 20px; borderRadius: 12px; font-weight: 900; cursor: pointer; fontSize: 0.8rem; margin: 0 auto 15px; display: block; }
+        .admin-btn { background: #111827; color: #fff; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 900; cursor: pointer; font-size: 0.8rem; margin: 0 auto 15px; display: block; }
 
-        /* MATCH CARDS */
         .match-card { background: rgba(255, 255, 255, 0.95); border-radius: 16px; margin-bottom: 12px; border: 3px solid #E9ECEF; overflow: hidden; position: relative; }
         .match-header { background: var(--lime); padding: 10px 15px; font-size: 0.7rem; font-weight: 900; color: #111827; display: flex; justify-content: space-between; align-items: center; }
         .match-body { display: flex; align-items: center; padding: 15px; }
         .score-invoer { width: 45px; height: 50px; text-align: center; font-size: 1.5rem; font-family: 'Bebas Neue'; border-radius: 12px; border: 2px solid #DEE2E6; outline: none; }
+        .score-invoer:disabled { background: #f1f3f5; color: #adb5bd; cursor: not-allowed; }
+        
         .save-indicator { position: absolute; right: 50px; top: 10px; font-size: 0.65rem; font-weight: 900; opacity: 0; transition: 0.3s; }
         .save-indicator.saving { opacity: 1; color: var(--magenta); }
         .save-indicator.saved { opacity: 1; color: #2ECC40; }
         .joker-btn { width: 38px; height: 38px; border-radius: 50%; border: 2px solid #DEE2E6; background: #FFF; font-size: 1.2rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; filter: grayscale(1); opacity: 0.5; }
         .joker-btn.active { background: #FFD700; border-color: #FFA500; filter: grayscale(0); opacity: 1; transform: scale(1.15); box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); }
 
-        /* RANKING */
-        .ranking-item { background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 15px; margin-bottom: 12px; border: 2px solid #E9ECEF; display: flex; align-items: center; gap: 15px; }
+        .ranking-item { background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 15px; margin-bottom: 12px; border: 2px solid #E9ECEF; display: flex; align-items: center; gap: 15px; transition: 0.2s; }
         .rank-badge { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue'; font-size: 1.8rem; color: white; background: var(--crayola); }
         .rank-1 { border-color: #FFD700; background: linear-gradient(135deg, rgba(255,215,0,0.1), #fff); }
         .rank-1 .rank-badge { background: #FFD700; color: #111827; }
@@ -361,16 +386,13 @@ export default function Home() {
         .is-betaald { background: #d3f9d8; color: #2b8a3e; }
         .niet-betaald { background: #ffe3e3; color: #e03131; }
 
-        /* INPUTS & BUTTONS */
         .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; font-weight: 800; font-size: 1rem; margin-bottom: 10px; }
         .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); }
 
-        /* TELLER GRID */
         .teller-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .teller-card { background: var(--crayola); color: white; padding: 20px; border-radius: 16px; text-align: center; }
         .teller-val { font-family: 'Bebas Neue'; font-size: 3rem; line-height: 1; }
 
-        /* ANIMATIONS */
         @keyframes background-fade { 0%, 100% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } }
         @keyframes blob-movement-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(50px, 80px) scale(1.1); } }
         @keyframes blob-movement-b { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-40px, -60px) scale(0.9); } }
@@ -383,7 +405,6 @@ export default function Home() {
       <div className="glass-card">
         <h1 className="title">WK 2026</h1>
 
-        {/* INFO BANNER */}
         <button className="info-toggle-btn" onClick={() => setInfoOpen(!infoOpen)}>
           <span>ℹ️ Info & Betalen</span>
           <span>{infoOpen ? '▲' : '▼'}</span>
@@ -391,19 +412,17 @@ export default function Home() {
         {infoOpen && (
           <div className="info-content">
             <h4>📲 App Installeren</h4>
-            <p><strong>iPhone:</strong> Tik op Deel &gt; <em>Zet op beginscherm</em>.<br/><strong>Android:</strong> Tik op drie puntjes &gt; <em>Toevoegen aan startscherm</em>.</p>
+            <p><strong>iPhone:</strong> Tik op Deel-icoon &gt; <em>Zet op beginscherm</em>.<br/><strong>Android:</strong> Tik op drie puntjes &gt; <em>Toevoegen aan startscherm</em>.</p>
             <p>Inleggeld: <strong>€10</strong> t.a.v. Jorden Ricour.</p>
           </div>
         )}
 
-        {/* ADMIN SYNC */}
         {isAdmin && (
           <button onClick={syncMetSpreadsheet} className="admin-btn">🔄 {syncStatus || 'SYNC MET GOOGLE SHEETS'}</button>
         )}
 
         {actieveSpeler ? (
           <div>
-            {/* FLOATING MENU */}
             <div className="tab-container">
               {[
                 {id:'matchen', i:'⚽', n:'Matchen'},
@@ -421,7 +440,6 @@ export default function Home() {
               ))}
             </div>
 
-            {/* TAB: MATCHEN */}
             {actieveTab === 'matchen' && (
               <div>
                 <div className="filter-scroll">
@@ -440,7 +458,7 @@ export default function Home() {
                   return (
                     <div key={m.id} className={`match-card ${gestart ? 'locked' : ''}`} onClick={() => gestart && setExpandedMatchId(expandedMatchId === m.id ? null : m.id)}>
                       <div className="match-header" style={{background: heeftUitslag ? 'var(--magenta)' : 'var(--lime)', color: heeftUitslag ? '#fff' : '#111827'}}>
-                        <span>{heeftUitslag ? '🏆 EINDSTAND' : `${m.ronde} • ${new Date(m.datum).toLocaleDateString('nl-BE', {day:'2-digit',month:'short'})}`}</span>
+                        <span>{heeftUitslag ? '🏆 EINDSTAND' : getMatchCountdown(m.datum)}</span>
                         <span className={`save-indicator ${save}`}>{save === 'saving' ? '⏳' : '✅'}</span>
                         <button className={`joker-btn ${v.joker ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); if(!gestart) toggleJoker(m.id); }}>🌟</button>
                       </div>
@@ -482,86 +500,28 @@ export default function Home() {
               </div>
             )}
 
-            {/* TAB: BONUS */}
             {actieveTab === 'bonus' && (
-              <div>
-                <label className="input-label">Wereldkampioen?</label>
-                <Autocomplete options={WK_LANDEN} value={winnaar} onChange={setWinnaar} disabled={isGesloten} />
-                <label className="input-label">Halve Finalisten?</label>
-                {hf.map((h, i) => <Autocomplete key={i} options={WK_LANDEN} value={h} onChange={(v:string)=>{const n=[...hf]; n[i]=v; setHf(n);}} disabled={isGesloten} />)}
-                <label className="input-label">Meeste Goals?</label>
-                <Autocomplete options={WK_LANDEN} value={meesteGoalsLand} onChange={setMeesteGoalsLand} disabled={isGesloten} />
-                <div style={{display:'flex', gap:10}}>
-                  <div style={{flex:1}}><label className="input-label">Geel</label><input className="full-input" type="number" value={totaalGeel} onChange={e=>setTotaalGeel(e.target.value)} disabled={isGesloten}/></div>
-                  <div style={{flex:1}}><label className="input-label">Rood</label><input className="full-input" type="number" value={totaalRood} onChange={e=>setTotaalRood(e.target.value)} disabled={isGesloten}/></div>
-                </div>
-                {!isGesloten && <button className="btn-primary" onClick={slaBonusOp}>BONUS OPSLAAN</button>}
-              </div>
+              <BonusTab 
+                winnaar={winnaar} setWinnaar={setWinnaar} hf={hf} setHf={setHf} 
+                meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} 
+                besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} 
+                eindstation={eindstation} setEindstation={setEindstation} 
+                totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} 
+                isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} 
+              />
             )}
 
-            {/* TAB: RANKING */}
-            {actieveTab === 'ranking' && (
-              <div>
-                {klassement.map((s, i) => (
-                  <div key={s.id} className={`ranking-item ${i===0?'rank-1':''}`}>
-                    <div className="rank-badge">{i+1}</div>
-                    <div style={{flex:1}}>
-                      <div style={{fontWeight:900}}>{s.naam} {s.jokerIngezet?'🌑':'🌟'}</div>
-                      <div style={{fontSize:'0.6rem', color:'#666'}}>✅{s.exact} • 🏆{s.winnaarCorrect} • ❌{s.fout}</div>
-                      {isAdmin ? (
-                        <button onClick={()=>toggleBetaald(s.id, s.betaald)} className={`betaal-badge ${s.betaald?'is-betaald':'niet-betaald'}`}>{s.betaald?'✅ Betaald':'❌ Klik om betaald'}</button>
-                      ) : (
-                        <span className={`betaal-badge ${s.betaald?'is-betaald':'niet-betaald'}`}>{s.betaald?'💰 Betaald':'⏳ Betaling verwerken'}</span>
-                      )}
-                    </div>
-                    <div className="ranking-score">{s.totaal_score}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* TAB: TELLERS */}
-            {actieveTab === 'tellers' && (
-              <div className="teller-grid">
-                <div className="teller-card" style={{gridColumn:'span 2'}}><div className="teller-val">{tellersData.g}</div><div>Totaal Goals</div></div>
-                <div className="teller-card" style={{background:'#FFD700', color:'#000'}}><div className="teller-val">{tellersData.y}</div><div>Geel</div></div>
-                <div className="teller-card" style={{background:'#FF4136'}}><div className="teller-val">{tellersData.r}</div><div>Rood</div></div>
-                <div className="teller-card" style={{gridColumn:'span 2', background:'#40C057'}}><div style={{fontSize:'0.8rem'}}>MEESTE GOALS</div><div className="teller-val" style={{fontSize:'1.8rem'}}>{tellersData.mS[0]}</div><div>({tellersData.mS[1]})</div></div>
-                <div className="teller-card" style={{gridColumn:'span 2', background:'#228BE6'}}><div style={{fontSize:'0.8rem'}}>MINSTE TEGEN</div><div className="teller-val" style={{fontSize:'1.8rem'}}>{tellersData.mT[0]}</div><div>({tellersData.mT[1]})</div></div>
-              </div>
-            )}
-
-            {/* TAB: ANTWOORDEN */}
-            {actieveTab === 'antwoorden' && (
-              <div>
-                {nu < DEADLINE_DATE ? <p style={{textAlign:'center', padding:40, fontWeight:900, color:'#999'}}>🔒 Geheime antwoorden worden onthuld op 11 juni.</p> : (
-                  <div>
-                    <div className="glass-card" style={{background:'#fff', marginBottom:10}}>
-                      <div style={{fontWeight:900, color:'var(--crayola)', marginBottom:10}}>TROFEE VOORSPELLINGEN</div>
-                      {alleToernooiV.map(v => <div key={v.id} style={{display:'flex', justifyContent:'space-between', fontSize:'0.8rem', borderBottom:'1px solid #eee', padding:'5px 0'}}><span>{v.spelers?.naam}</span><span style={{fontWeight:900, color:'var(--magenta)'}}>{v.winnaar}</span></div>)}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* TAB: CHAT */}
+            {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} />}
+            {actieveTab === 'ranking' && <RankingTab klassement={klassement} actieveSpeler={actieveSpeler} toggleBetaald={toggleBetaald} />}
+            {actieveTab === 'tellers' && <TellersTab tellersData={tellersData} />}
             {actieveTab === 'kleedkamer' && (
-              <div>
-                <div style={{height:300, overflowY:'auto', marginBottom:10}}>
-                  {chatBerichten.map(b => (
-                    <div key={b.id} style={{background: b.speler_id===actieveSpeler.id?'var(--aqua)':'#fff', padding:10, borderRadius:12, marginBottom:5, border:'1px solid #eee'}}>
-                      <div style={{fontSize:'0.6rem', fontWeight:900, opacity:0.5}}>{b.spelers?.naam}</div>
-                      <div style={{fontWeight:800}}>{b.bericht}</div>
-                    </div>
-                  ))}
-                  <div ref={chatEindeRef} />
-                </div>
-                <form onSubmit={verstuurChat} style={{display:'flex', gap:5}}><input className="full-input" style={{marginBottom:0}} value={nieuwBericht} onChange={e=>setNieuwBericht(e.target.value)} /><button className="btn-primary" style={{width:60, padding:0}}>➤</button></form>
-              </div>
+              <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} chatEindeRef={chatEindeRef} 
+                       nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} />
             )}
-
-            <button style={{width:'100%', marginTop:20, opacity:0.5, border:'none', background:'none', cursor:'pointer', fontWeight:900}} onClick={()=>{localStorage.removeItem('wk_speler_id'); window.location.reload();}}>UITLOGGEN</button>
+            
+            <div style={{textAlign:'center', marginTop:20}}>
+              <button style={{background:'none', border:'none', color:'#111827', fontWeight:900, cursor:'pointer', opacity: 0.6}} onClick={() => {localStorage.removeItem('wk_speler_id'); window.location.reload();}}>UITLOGGEN</button>
+            </div>
           </div>
         ) : (
           <form onSubmit={(e)=>{ e.preventDefault(); const s = alleSpelers.find(x=>x.naam.toLowerCase()===ontgrendelNaam.toLowerCase() && String(x.code)===invoerCode); if(s){setActieveSpeler(s); localStorage.setItem('wk_speler_id', s.id.toString());} else setStatus('Fout! 🚩');}}>
