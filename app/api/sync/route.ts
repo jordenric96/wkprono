@@ -15,45 +15,33 @@ export async function GET(request: Request) {
   }
 
   try {
-    // We gebruiken nu de meest directe zoekopdracht: League 1 & Seizoen 2026
-    const url = 'https://v3.football.api-sports.io/fixtures?league=1&season=2026';
-    
-    const res = await fetch(url, {
-      headers: {
-        'x-apisports-key': process.env.API_FOOTBALL_KEY!
-      },
-      next: { revalidate: 0 }
-    });
+    // 1. Haal de data op uit JOUW Google Sheet (via de Vercel variabele)
+    const res = await fetch(process.env.GOOGLE_SHEETS_CSV_URL!, { cache: 'no-store' });
+    const csvData = await res.text();
 
-    const data = await res.json();
+    // 2. Hak de tekst in rijen en sla de titel-rij over
+    const rijen = csvData.split('\n').map(rij => rij.split(','));
+    const rijenZonderHeader = rijen.slice(1);
 
-    // Debugging: Dit zie je in je Vercel logs als er niets gevonden wordt
-    if (!data.response || data.response.length === 0) {
-      console.log("API Response was leeg voor League 1 Season 2026. Error info:", data.errors);
-      return NextResponse.json({ 
-        message: 'Geen matchen gevonden bij de API.', 
-        debug: data.errors,
-        tips: 'Check of je API-key nog gratis credits heeft (100 per dag).'
-      });
-    }
-
-    const matchenOmOpTeSlaan = data.response.map((match: any) => {
-      let statusNL = 'gepland';
-      const s = match.fixture.status.short;
-      if (['1H', 'HT', '2H', 'ET', 'P', 'LIVE'].includes(s)) statusNL = 'bezig';
-      if (['FT', 'AET', 'PEN'].includes(s)) statusNL = 'afgelopen';
+    // 3. Koppel de kolommen aan de database velden
+    const matchenOmOpTeSlaan = rijenZonderHeader.map(rij => {
+      // Check of de rij wel data bevat (9 kolommen)
+      if (rij.length < 9 || !rij[0]) return null;
 
       return {
-        id: match.fixture.id,
-        thuisploeg: match.teams.home.name,
-        uitploeg: match.teams.away.name,
-        datum: match.fixture.date,
-        thuis_score: match.goals.home !== null ? match.goals.home : null,
-        uit_score: match.goals.away !== null ? match.goals.away : null,
-        status: statusNL
+        id: parseInt(rij[0].trim()),
+        thuisploeg: rij[1].trim(),
+        uitploeg: rij[2].trim(),
+        datum: rij[3].trim(),
+        thuis_score: rij[4].trim() !== '' ? parseInt(rij[4].trim()) : null,
+        uit_score: rij[5].trim() !== '' ? parseInt(rij[5].trim()) : null,
+        gele_kaarten: rij[6].trim() !== '' ? parseInt(rij[6].trim()) : 0,
+        rode_kaarten: rij[7].trim() !== '' ? parseInt(rij[7].trim()) : 0,
+        ronde: rij[8].trim() // De nieuwe kolom die we hebben toegevoegd!
       };
-    });
+    }).filter(match => match !== null);
 
+    // 4. Stuur alles naar Supabase
     const { error } = await supabase
       .from('matchen')
       .upsert(matchenOmOpTeSlaan, { onConflict: 'id' });
@@ -62,10 +50,11 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ 
       succes: true, 
-      bericht: `${matchenOmOpTeSlaan.length} matchen voor WK 2026 succesvol gesynchroniseerd!` 
+      bericht: `${matchenOmOpTeSlaan.length} matchen succesvol gesynchroniseerd vanuit Google Sheets!` 
     });
 
   } catch (error: any) {
-    return NextResponse.json({ error: 'Sync Error', details: error.message }, { status: 500 });
+    console.error('Sync Error:', error);
+    return NextResponse.json({ error: 'Er is iets misgegaan', details: error.message }, { status: 500 });
   }
 }
