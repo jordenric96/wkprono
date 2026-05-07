@@ -3,26 +3,69 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
+// --- VASTE LIJSTEN OM FOUTEN TE VOORKOMEN ---
+const WK_LANDEN = [
+  'Argentinië', 'Australië', 'België', 'Brazilië', 'Canada', 'Chili', 'Colombia', 
+  'Costa Rica', 'Denemarken', 'Duitsland', 'Ecuador', 'Engeland', 'Frankrijk', 
+  'Ghana', 'Italië', 'Ivoorkust', 'Japan', 'Kameroen', 'Kroatië', 'Marokko', 
+  'Mexico', 'Nederland', 'Nigeria', 'Oekraïne', 'Oostenrijk', 'Peru', 'Polen', 
+  'Portugal', 'Qatar', 'Saudi-Arabië', 'Senegal', 'Servië', 'Spanje', 'Turkije', 
+  'Uruguay', 'Verenigde Staten', 'Wales', 'Zuid-Korea', 'Zweden', 'Zwitserland'
+].sort();
+
+// Gigantische lijst met spelers
+const TOP_SPELERS = [
+  // --- NEDERLAND (Oranje) ---
+  'Virgil van Dijk', 'Matthijs de Ligt', 'Nathan Aké', 'Denzel Dumfries', 'Jeremie Frimpong', 
+  'Ian Maatsen', 'Stefan de Vrij', 'Micky van de Ven', 'Lutsharel Geertruida', 'Daley Blind',
+  'Frenkie de Jong', 'Teun Koopmeiners', 'Tijjani Reijnders', 'Jerdy Schouten', 'Xavi Simons', 
+  'Joey Veerman', 'Ryan Gravenberch', 'Georginio Wijnaldum', 'Marten de Roon',
+  'Cody Gakpo', 'Memphis Depay', 'Donyell Malen', 'Wout Weghorst', 'Brian Brobbey', 
+  'Joshua Zirkzee', 'Steven Bergwijn', 'Noa Lang',
+
+  // --- BELGIË (Rode Duivels) ---
+  'Kevin De Bruyne', 'Romelu Lukaku', 'Lois Openda', 'Jeremy Doku', 'Leandro Trossard', 
+  'Charles De Ketelaere', 'Johan Bakayoko', 'Amadou Onana', 'Youri Tielemans', 'Orel Mangala', 
+  'Arthur Vermeeren', 'Aster Vranckx', 'Dodi Lukebakio', 'Timothy Castagne', 'Wout Faes', 
+  'Zeno Debast', 'Arthur Theate', 'Maxim De Cuyper', 'Thomas Meunier',
+
+  // --- WERELDTOP (Gemixt) ---
+  'Kylian Mbappé', 'Erling Haaland', 'Harry Kane', 'Vinícius Júnior', 'Jude Bellingham', 
+  'Lionel Messi', 'Cristiano Ronaldo', 'Antoine Griezmann', 'Bukayo Saka', 'Phil Foden', 
+  'Jamal Musiala', 'Florian Wirtz', 'Rodrygo', 'Raphinha', 'Lautaro Martínez', 'Julián Álvarez', 
+  'Victor Osimhen', 'Rafael Leão', 'Bernardo Silva', 'Bruno Fernandes', 'Leroy Sané', 
+  'Kai Havertz', 'Alvaro Morata', 'Lamine Yamal', 'Pedri', 'Gavi', 'Robert Lewandowski', 
+  'Dusan Vlahovic', 'Heung-min Son', 'Mohamed Salah', 'Luis Díaz', 'Darwin Núñez', 
+  'Federico Valverde', 'Ollie Watkins', 'Cole Palmer', 'Marcus Rashford', 'Jack Grealish',
+  'Declan Rice', 'Rodri', 'Aurelien Tchouameni', 'Eduardo Camavinga', 'Ousmane Dembélé',
+  'Olivier Giroud', 'Marcus Thuram', 'Randal Kolo Muani', 'Neymar', 'Endrick', 'Lucas Paquetá'
+].sort();
+
+// Uitgebreide lijst met keepers
+const TOP_KEEPERS = [
+  'Thibaut Courtois', 'Koen Casteels', 'Matz Sels', 'Thomas Kaminski',
+  'Bart Verbruggen', 'Justin Bijlow', 'Mark Flekken', 'Nick Olij',
+  'Alisson Becker', 'Ederson', 'Mike Maignan', 'Emiliano Martínez', 
+  'Gianluigi Donnarumma', 'Jordan Pickford', 'Manuel Neuer', 'Marc-André ter Stegen', 
+  'Jan Oblak', 'Diogo Costa', 'Unai Simón', 'Yann Sommer', 'Wojciech Szczęsny', 
+  'Dominik Livaković', 'Yassine Bounou', 'Guglielmo Vicario', 'David Raya', 'Aaron Ramsdale'
+].sort();
+
 export default function Home() {
-  // --- STATE VOOR INLOGGEN ---
   const [ontgrendelNaam, setOntgrendelNaam] = useState('');
   const [inschrijfNaam, setInschrijfNaam] = useState('');
   const [invoerCode, setInvoerCode] = useState('');
   const [status, setStatus] = useState('');
   const [spelers, setSpelers] = useState<any[]>([]);
   const [actieveSpeler, setActieveSpeler] = useState<any>(null);
-
-  // --- STATE VOOR HET DASHBOARD ---
   const [actieveTab, setActieveTab] = useState('toernooi');
   
-  // --- STATE VOOR TOERNOOI VOORSPELLINGEN ---
   const [voorspellingStatus, setVoorspellingStatus] = useState('');
   const [winnaar, setWinnaar] = useState('');
   const [topschutter, setTopschutter] = useState('');
   const [besteKeeper, setBesteKeeper] = useState('');
   const [eindstation, setEindstation] = useState('');
   const [totaalGoals, setTotaalGoals] = useState('');
-  // Laatste 4 als aparte velden voor makkelijke invoer
   const [lv1, setLv1] = useState('');
   const [lv2, setLv2] = useState('');
   const [lv3, setLv3] = useState('');
@@ -33,11 +76,8 @@ export default function Home() {
     haalSpelersOp(opgeslagenId);
   }, []);
 
-  // Als er een actieve speler is, haal zijn bestaande voorspellingen op
   useEffect(() => {
-    if (actieveSpeler) {
-      haalToernooiVoorspellingOp();
-    }
+    if (actieveSpeler) haalToernooiVoorspellingOp();
   }, [actieveSpeler]);
 
   const haalSpelersOp = async (checkId?: string | null) => {
@@ -53,12 +93,7 @@ export default function Home() {
 
   const haalToernooiVoorspellingOp = async () => {
     if (!actieveSpeler) return;
-    const { data, error } = await supabase
-      .from('toernooi_voorspellingen')
-      .select('*')
-      .eq('speler_id', actieveSpeler.id)
-      .single();
-
+    const { data } = await supabase.from('toernooi_voorspellingen').select('*').eq('speler_id', actieveSpeler.id).single();
     if (data) {
       setWinnaar(data.winnaar || '');
       setTopschutter(data.topschutter || '');
@@ -75,22 +110,14 @@ export default function Home() {
   const slaToernooiVoorspellingOp = async (e: React.FormEvent) => {
     e.preventDefault();
     setVoorspellingStatus('Bezig met opslaan...');
-    
     const laatsteVierArray = [lv1, lv2, lv3, lv4].filter(land => land.trim() !== '');
-    
     const voorspellingData = {
-      speler_id: actieveSpeler.id,
-      winnaar: winnaar.trim(),
-      topschutter: topschutter.trim(),
-      beste_keeper: besteKeeper.trim(),
-      eindstation_belgie: eindstation.trim(),
-      totaal_goals_tornooi: parseInt(totaalGoals) || 0,
-      laatste_vier: laatsteVierArray
+      speler_id: actieveSpeler.id, winnaar: winnaar.trim(), topschutter: topschutter.trim(),
+      beste_keeper: besteKeeper.trim(), eindstation_belgie: eindstation.trim(),
+      totaal_goals_tornooi: parseInt(totaalGoals) || 0, laatste_vier: laatsteVierArray
     };
 
-    // We controleren eerst of de speler al een rij heeft
     const { data: bestaand } = await supabase.from('toernooi_voorspellingen').select('id').eq('speler_id', actieveSpeler.id).single();
-
     let error;
     if (bestaand) {
       const { error: updateError } = await supabase.from('toernooi_voorspellingen').update(voorspellingData).eq('speler_id', actieveSpeler.id);
@@ -100,12 +127,10 @@ export default function Home() {
       error = insertError;
     }
 
-    if (error) {
-      console.error(error);
-      setVoorspellingStatus('❌ Fout bij opslaan.');
-    } else {
-      setVoorspellingStatus('✅ Voorspellingen succesvol opgeslagen!');
-      setTimeout(() => setVoorspellingStatus(''), 3000); // Wis melding na 3 seconden
+    if (error) setVoorspellingStatus('❌ Fout bij opslaan.');
+    else {
+      setVoorspellingStatus('✅ Succesvol opgeslagen!');
+      setTimeout(() => setVoorspellingStatus(''), 3000);
     }
   };
 
@@ -114,22 +139,18 @@ export default function Home() {
     setStatus('Bezig...');
     const { error } = await supabase.from('spelers').insert([{ naam: inschrijfNaam.trim(), totaal_score: 0 }]);
     if (error) setStatus('Naam bestaat al of er is een fout.');
-    else { setStatus('Gelukt! Vraag Jorden om je code.'); setInschrijfNaam(''); haalSpelersOp(); }
+    else { setStatus('Gelukt! Vraag de beheerder om je code.'); setInschrijfNaam(''); haalSpelersOp(); }
   };
 
   const ontgrendel = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus('Verificatie...');
     const { data: speler, error } = await supabase.from('spelers').select('*').ilike('naam', ontgrendelNaam.trim()).single();
-    
     if (error || !speler) { setStatus('Naam niet gevonden.'); return; }
-    
     if (String(speler.code).trim() === String(invoerCode).trim()) {
       localStorage.setItem('wk_speler_id', speler.id.toString());
       setActieveSpeler(speler); setStatus(''); setInvoerCode(''); setOntgrendelNaam('');
-    } else {
-      setStatus('De code is onjuist.');
-    }
+    } else setStatus('De code is onjuist.');
   };
 
   return (
@@ -138,27 +159,28 @@ export default function Home() {
         html, body { margin: 0; padding: 0; width: 100%; min-height: 100%; background: #C46D5E; overflow-x: hidden; }
         .main-container { margin: 0; padding: 15px 15px 80px 15px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; font-family: 'Inter', -apple-system, sans-serif; background: linear-gradient(-45deg, #F3C98B, #DAA588, #C46D5E, #F56960); background-size: 400% 400%; animation: gradientBG 15s ease infinite; color: white; box-sizing: border-box; }
         @keyframes gradientBG { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-        
         .glass-card { background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); padding: 35px 25px; border-radius: 32px; border: 1px solid rgba(255, 255, 255, 0.18); width: 100%; max-width: 480px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); box-sizing: border-box; }
-        
         .title { font-size: 2.8rem; font-weight: 900; margin: 0; letter-spacing: -1.5px; text-align: center; }
         .subtitle { font-size: 0.75rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 20px; color: rgba(255,255,255,0.6); text-align: center; }
-        
-        /* TABS */
         .tab-container { display: flex; background: rgba(0,0,0,0.2); border-radius: 16px; padding: 5px; margin-bottom: 25px; }
         .tab { flex: 1; text-align: center; padding: 12px 5px; font-size: 0.8rem; font-weight: 700; border-radius: 12px; cursor: pointer; transition: all 0.3s; opacity: 0.6; }
         .tab.active { background: #9CF6F6; color: #1A3C40; opacity: 1; }
-
         .input-group { text-align: left; margin-bottom: 15px; }
         .label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; margin-left: 12px; margin-bottom: 6px; display: block; opacity: 0.8; color: #9CF6F6; }
-        .input-field { width: 100%; padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); color: white; font-size: 1rem; outline: none; box-sizing: border-box; }
+        .input-field { width: 100%; padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); color: white; font-size: 1rem; outline: none; box-sizing: border-box; -webkit-appearance: none; }
         .input-field:focus { border-color: #9CF6F6; background: rgba(255,255,255,0.1); }
-        
+        .input-field option { background: #C46D5E; color: white; }
         .btn-primary { width: 100%; padding: 18px; border-radius: 18px; border: none; background: #9CF6F6; color: #1A3C40; font-weight: 800; cursor: pointer; font-size: 0.95rem; box-shadow: 0 10px 20px -5px rgba(156, 246, 246, 0.35); }
         .btn-secondary { width: 100%; padding: 14px; margin-top: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.25); background: transparent; color: white; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
-        
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
       `}</style>
+
+      <datalist id="top-spelers">
+        {TOP_SPELERS.map(speler => <option key={speler} value={speler} />)}
+      </datalist>
+      <datalist id="top-keepers">
+        {TOP_KEEPERS.map(keeper => <option key={keeper} value={keeper} />)}
+      </datalist>
 
       <div className="glass-card">
         <h1 className="title">WK'26</h1>
@@ -166,38 +188,36 @@ export default function Home() {
 
         {actieveSpeler ? (
           <div>
-            {/* TABS MENU */}
             <div className="tab-container">
               <div className={`tab ${actieveTab === 'matchen' ? 'active' : ''}`} onClick={() => setActieveTab('matchen')}>MATCHEN</div>
               <div className={`tab ${actieveTab === 'toernooi' ? 'active' : ''}`} onClick={() => setActieveTab('toernooi')}>TOERNOOI</div>
               <div className={`tab ${actieveTab === 'ranking' ? 'active' : ''}`} onClick={() => setActieveTab('ranking')}>RANKING</div>
             </div>
 
-            {/* TAB INHOUD: TOERNOOI */}
             {actieveTab === 'toernooi' && (
               <form onSubmit={slaToernooiVoorspellingOp} style={{ animation: 'fadeIn 0.4s' }}>
-                <p style={{ fontSize: '0.85rem', opacity: 0.8, marginBottom: '20px', textAlign: 'center' }}>
-                  Vul deze in vóór de start van de eerste wedstrijd.
-                </p>
-
+                
                 <div className="input-group">
                   <label className="label">Eindwinnaar WK</label>
-                  <input className="input-field" placeholder="Bv. Brazilië" value={winnaar} onChange={e => setWinnaar(e.target.value)} />
+                  <select className="input-field" value={winnaar} onChange={e => setWinnaar(e.target.value)} required>
+                    <option value="" disabled>Kies een land...</option>
+                    {WK_LANDEN.map(land => <option key={land} value={land}>{land}</option>)}
+                  </select>
                 </div>
 
                 <div className="input-group">
-                  <label className="label">Topschutter (Speler)</label>
-                  <input className="input-field" placeholder="Bv. Kylian Mbappé" value={topschutter} onChange={e => setTopschutter(e.target.value)} />
+                  <label className="label">Topschutter</label>
+                  <input className="input-field" list="top-spelers" placeholder="Begin te typen..." value={topschutter} onChange={e => setTopschutter(e.target.value)} required />
                 </div>
 
                 <div className="input-group">
                   <label className="label">Beste Keeper</label>
-                  <input className="input-field" placeholder="Bv. Thibaut Courtois" value={besteKeeper} onChange={e => setBesteKeeper(e.target.value)} />
+                  <input className="input-field" list="top-keepers" placeholder="Begin te typen..." value={besteKeeper} onChange={e => setBesteKeeper(e.target.value)} required />
                 </div>
 
                 <div className="input-group">
                   <label className="label">Eindstation Rode Duivels</label>
-                  <select className="input-field" value={eindstation} onChange={e => setEindstation(e.target.value)}>
+                  <select className="input-field" value={eindstation} onChange={e => setEindstation(e.target.value)} required>
                     <option value="" disabled>Kies een ronde...</option>
                     <option value="Groepsfase">Groepsfase</option>
                     <option value="1/16e Finale">1/16e Finale</option>
@@ -210,22 +230,34 @@ export default function Home() {
                 </div>
 
                 <div className="input-group">
-                  <label className="label">De Laatste Vier (Halve Finalisten)</label>
+                  <label className="label">De Laatste Vier</label>
                   <div className="grid-2">
-                    <input className="input-field" placeholder="Land 1" value={lv1} onChange={e => setLv1(e.target.value)} />
-                    <input className="input-field" placeholder="Land 2" value={lv2} onChange={e => setLv2(e.target.value)} />
-                    <input className="input-field" placeholder="Land 3" value={lv3} onChange={e => setLv3(e.target.value)} />
-                    <input className="input-field" placeholder="Land 4" value={lv4} onChange={e => setLv4(e.target.value)} />
+                    <select className="input-field" value={lv1} onChange={e => setLv1(e.target.value)} required>
+                      <option value="" disabled>Land 1</option>
+                      {WK_LANDEN.map(land => <option key={land} value={land}>{land}</option>)}
+                    </select>
+                    <select className="input-field" value={lv2} onChange={e => setLv2(e.target.value)} required>
+                      <option value="" disabled>Land 2</option>
+                      {WK_LANDEN.map(land => <option key={land} value={land}>{land}</option>)}
+                    </select>
+                    <select className="input-field" value={lv3} onChange={e => setLv3(e.target.value)} required>
+                      <option value="" disabled>Land 3</option>
+                      {WK_LANDEN.map(land => <option key={land} value={land}>{land}</option>)}
+                    </select>
+                    <select className="input-field" value={lv4} onChange={e => setLv4(e.target.value)} required>
+                      <option value="" disabled>Land 4</option>
+                      {WK_LANDEN.map(land => <option key={land} value={land}>{land}</option>)}
+                    </select>
                   </div>
                 </div>
 
                 <div className="input-group">
-                  <label className="label">Tie-breaker: Totaal aantal goals WK</label>
-                  <input className="input-field" type="number" placeholder="Bv. 172" value={totaalGoals} onChange={e => setTotaalGoals(e.target.value)} />
+                  <label className="label">Tie-breaker: Totaal goals WK</label>
+                  <input className="input-field" type="number" placeholder="Bv. 172" value={totaalGoals} onChange={e => setTotaalGoals(e.target.value)} required />
                 </div>
 
                 {voorspellingStatus && (
-                  <div style={{ textAlign: 'center', marginBottom: '15px', fontSize: '0.9rem', fontWeight: 'bold' }}>
+                  <div style={{ textAlign: 'center', margin: '15px 0', fontSize: '0.9rem', fontWeight: 'bold' }}>
                     {voorspellingStatus}
                   </div>
                 )}
@@ -235,7 +267,6 @@ export default function Home() {
               </form>
             )}
 
-            {/* TIJDELIJKE MELDING VOOR ANDERE TABS */}
             {(actieveTab === 'matchen' || actieveTab === 'ranking') && (
               <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.7 }}>
                 <h3>Komt Binnenkort</h3>
@@ -243,10 +274,8 @@ export default function Home() {
                 <button className="btn-secondary" onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>Uitloggen</button>
               </div>
             )}
-
           </div>
         ) : (
-          // --- LOGIN & INSCHRIJF SCHERM ---
           <div>
             <form onSubmit={ontgrendel}>
               <div className="input-group">
