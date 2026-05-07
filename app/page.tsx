@@ -211,28 +211,25 @@ export default function Home() {
         .btn-secondary { width: 100%; padding: 14px; margin-top: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.25); background: transparent; color: white; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-        /* RANKING CSS & STATS DASHBOARD */
-        .ranking-item { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; }
+        /* AANGEPAST: COMPACT KLASSEMENT CSS */
+        .ranking-item { background: rgba(255,255,255,0.08); border-radius: 12px; padding: 10px 12px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; }
         .ranking-item.is-me { border-color: #9CF6F6; background: rgba(156, 246, 246, 0.1); }
-        .ranking-hoofd { display: flex; align-items: center; margin-bottom: 10px; }
-        .ranking-pos { width: 35px; font-size: 1.3rem; font-weight: 900; opacity: 0.8; text-align: left; }
+        .ranking-hoofd { display: flex; align-items: center; margin-bottom: 4px; }
+        .ranking-pos { width: 28px; font-size: 1.1rem; font-weight: 900; opacity: 0.8; text-align: left; }
         .pos-1 { color: #FFD700; opacity: 1; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
         .pos-2 { color: #C0C0C0; opacity: 1; }
         .pos-3 { color: #CD7F32; opacity: 1; }
-        .ranking-naam { flex: 1; font-size: 1.1rem; font-weight: 800; margin: 0; text-align: left; }
-        .ranking-totaal { font-size: 1.6rem; font-weight: 900; color: #9CF6F6; text-align: right; min-width: 50px; }
+        .ranking-naam { flex: 1; font-size: 0.95rem; font-weight: 800; margin: 0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ranking-totaal { font-size: 1.2rem; font-weight: 900; color: #9CF6F6; text-align: right; min-width: 40px; }
         
-        .ranking-details { background: rgba(0,0,0,0.15); padding: 10px; border-radius: 12px; margin-bottom: 8px; }
-        .detail-rij { display: flex; justify-content: space-between; font-size: 0.75rem; color: rgba(255,255,255,0.85); margin-bottom: 6px; }
-        .detail-rij:last-child { margin-bottom: 0; }
-        .detail-rij span:last-child { font-weight: 900; color: #9CF6F6; }
-        
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
-        .stat-box { background: rgba(0,0,0,0.2); border-radius: 8px; padding: 8px 4px; text-align: center; }
-        .stat-icoon { font-size: 1.2rem; margin-bottom: 2px; }
-        .stat-waarde { font-size: 1rem; font-weight: 900; color: white; line-height: 1.1; }
-        .stat-label { font-size: 0.55rem; text-transform: uppercase; color: rgba(255,255,255,0.6); letter-spacing: 0.5px; }
+        .ranking-sub { display: flex; justify-content: space-between; align-items: center; font-size: 0.65rem; color: rgba(255,255,255,0.7); }
+        .ranking-punten { display: flex; gap: 8px; }
+        .ranking-punten span { font-weight: 700; color: #9CF6F6; margin-left: 3px; }
+        .ranking-stats { display: flex; gap: 6px; }
+        .stat-mini { display: flex; align-items: center; gap: 3px; background: rgba(0,0,0,0.2); padding: 3px 6px; border-radius: 6px; }
+        .stat-mini span { font-weight: 800; color: white; }
 
+        /* ANTWOORDEN CSS */
         .cat-card { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 0; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; }
         .cat-header { background: rgba(0,0,0,0.2); padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .cat-titel { font-size: 1rem; font-weight: 800; color: #9CF6F6; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px; }
@@ -282,6 +279,7 @@ export default function Home() {
                 <div className="input-group"><label className="label">Eindwinnaar WK</label><select className="input-field" value={winnaar} onChange={e => setWinnaar(e.target.value)} required disabled={isGesloten}><option value="" disabled>Kies een land...</option>{WK_LANDEN.map(land => <option key={land} value={land}>{land}</option>)}</select></div>
                 <div className="input-group"><label className="label">Topschutter</label><input className="input-field" list="top-spelers" placeholder="Begin te typen..." value={topschutter} onChange={e => setTopschutter(e.target.value)} required disabled={isGesloten} /></div>
                 <div className="input-group"><label className="label">Beste Keeper</label><input className="input-field" list="top-keepers" placeholder="Begin te typen..." value={besteKeeper} onChange={e => setBesteKeeper(e.target.value)} required disabled={isGesloten} /></div>
+                
                 <div className="input-group">
                   <label className="label">Eindstation Rode Duivels</label>
                   <select className="input-field" value={eindstation} onChange={e => setEindstation(e.target.value)} required disabled={isGesloten}>
@@ -295,6 +293,7 @@ export default function Home() {
                     <option value="Wereldkampioen">Wereldkampioen</option>
                   </select>
                 </div>
+
                 <div className="input-group">
                   <label className="label">De Laatste Vier</label>
                   <div className="grid-2">
@@ -304,6 +303,7 @@ export default function Home() {
                     <select className="input-field" value={lv4} onChange={e => setLv4(e.target.value)} required disabled={isGesloten}><option value="" disabled>Land 4</option>{WK_LANDEN.map(land => <option key={land} value={land}>{land}</option>)}</select>
                   </div>
                 </div>
+
                 <div className="input-group"><label className="label">Tie-breaker: Totaal goals WK</label><input className="input-field" type="number" placeholder="Bv. 172" value={totaalGoals} onChange={e => setTotaalGoals(e.target.value)} required disabled={isGesloten} /></div>
                 <div className="grid-2">
                   <div className="input-group"><label className="label">Gele Kaarten</label><input className="input-field" type="number" placeholder="Bv. 220" value={geelKaarten} onChange={e => setGeelKaarten(e.target.value)} required disabled={isGesloten} /></div>
@@ -348,9 +348,10 @@ export default function Home() {
               </div>
             )}
 
+            {/* AANGEPAST: COMPACT RANKING */}
             {actieveTab === 'ranking' && (
               <div style={{ animation: 'fadeIn 0.4s' }}>
-                <p style={{ textAlign: 'center', fontSize: '0.8rem', opacity: 0.8, marginBottom: '20px' }}>Inclusief live updates voor je bonusvragen!</p>
+                <p style={{ textAlign: 'center', fontSize: '0.75rem', opacity: 0.8, margin: '0 0 15px 0' }}>Inclusief live updates voor je bonusvragen!</p>
                 {klassement.length === 0 ? (
                   <p style={{ textAlign: 'center', opacity: 0.5 }}>Laden...</p>
                 ) : (
@@ -360,33 +361,22 @@ export default function Home() {
                     
                     return (
                       <div key={speler.id} className={`ranking-item ${isMijzelf ? 'is-me' : ''}`}>
+                        
                         <div className="ranking-hoofd">
                           <div className={`ranking-pos ${positieKlasse}`}>{index + 1}</div>
-                          <h3 className="ranking-naam">{speler.naam} {isMijzelf && '(Jij)'}</h3>
+                          <h3 className="ranking-naam">{speler.naam}</h3>
                           <div className="ranking-totaal">{speler.totaal_score || 0}</div>
                         </div>
                         
-                        <div className="ranking-details">
-                          <div className="detail-rij"><span>⚽ Punten uit wedstrijden:</span><span>0 pt</span></div>
-                          <div className="detail-rij"><span title="Bijv. Topschutter of Eindwinnaar">🏆 Live Toernooivragen:</span><span>0 pt</span></div>
-                        </div>
-
-                        {/* NIEUW: HET PRECISIE-DASHBOARD (Aantal exact/juist/fout) */}
-                        <div className="stats-grid">
-                          <div className="stat-box">
-                            <div className="stat-icoon">🎯</div>
-                            <div className="stat-waarde">0</div>
-                            <div className="stat-label">Exact</div>
+                        <div className="ranking-sub">
+                          <div className="ranking-punten" title="Punten uit Matchen & Bonus">
+                            <div>⚽ <span>0</span></div>
+                            <div>🏆 <span>0</span></div>
                           </div>
-                          <div className="stat-box">
-                            <div className="stat-icoon">✅</div>
-                            <div className="stat-waarde">0</div>
-                            <div className="stat-label">Juiste Ploeg</div>
-                          </div>
-                          <div className="stat-box">
-                            <div className="stat-icoon">❌</div>
-                            <div className="stat-waarde">0</div>
-                            <div className="stat-label">Fout</div>
+                          <div className="ranking-stats">
+                            <div className="stat-mini" title="Exacte score">🎯 <span>0</span></div>
+                            <div className="stat-mini" title="Juiste ploeg">✅ <span>0</span></div>
+                            <div className="stat-mini" title="Helemaal fout">❌ <span>0</span></div>
                           </div>
                         </div>
 
@@ -394,7 +384,7 @@ export default function Home() {
                     );
                   })
                 )}
-                <button className="btn-secondary" style={{ marginTop: '30px' }} onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>Uitloggen</button>
+                <button className="btn-secondary" style={{ marginTop: '20px' }} onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>Uitloggen</button>
               </div>
             )}
 
