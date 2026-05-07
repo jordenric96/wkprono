@@ -26,7 +26,7 @@ const Autocomplete = ({ options, value, onChange, placeholder, disabled }: { opt
         <ul className="autocomplete-dropdown">
           {filtered.length > 0 ? filtered.map(opt => (
             <li key={opt} className="autocomplete-item" onClick={() => { onChange(opt); setIsOpen(false); }}>{opt}</li>
-          )) : <li className="autocomplete-item" style={{ color: '#F038FF' }}>Onbekend land...</li>}
+          )) : <li className="autocomplete-item" style={{ color: '#F038FF' }}>Ongekend land...</li>}
         </ul>
       )}
     </div>
@@ -44,25 +44,17 @@ export default function Home() {
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
   const actieveTabRef = useRef(actieveTab);
 
-  // DATA STATES
+  // MATCHEN & VOORSPELLINGEN
   const [matchen, setMatchen] = useState<any[]>([]);
   const [matchVoorspellingen, setMatchVoorspellingen] = useState<Record<number, {thuis: string, uit: string, joker: boolean}>>({});
-  const [matchSaveStatus, setMatchSaveStatus] = useState<Record<number, 'idle' | 'saving' | 'saved'>>({});
-  const [alleAntwoorden, setAlleAntwoorden] = useState<any[]>([]);
   const [opslaanStatus, setOpslaanStatus] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
 
-  // BONUSVRAGEN STATES
+  // BONUSVRAGEN
   const [winnaar, setWinnaar] = useState('');
-  const [hf1, setHf1] = useState('');
-  const [hf2, setHf2] = useState('');
-  const [hf3, setHf3] = useState('');
-  const [hf4, setHf4] = useState('');
   const [meesteGoalsLand, setMeesteGoalsLand] = useState('');
   const [besteVerdedigingLand, setBesteVerdedigingLand] = useState('');
   const [eindstation, setEindstation] = useState('');
-  const [totaalGeel, setTotaalGeel] = useState('');
-  const [totaalRood, setTotaalRood] = useState('');
 
   // KLASSEMENT & CHAT
   const [klassement, setKlassement] = useState<any[]>([]);
@@ -113,7 +105,6 @@ export default function Home() {
       if (actieveTab === 'bonus') haalToernooiVoorspellingOp();
       if (actieveTab === 'ranking') haalKlassementOp();
       if (actieveTab === 'kleedkamer') haalChatOp();
-      if (actieveTab === 'antwoorden') haalAlleAntwoordenOp();
     }
   }, [actieveSpeler, actieveTab]);
 
@@ -160,7 +151,6 @@ export default function Home() {
   };
 
   const handleScore = (mId: number, veld: 'thuis'|'uit', waarde: string) => {
-    setMatchSaveStatus(prev => ({...prev, [mId]: 'idle'}));
     setMatchVoorspellingen(prev => ({
       ...prev,
       [mId]: { ...prev[mId], [veld]: waarde, joker: prev[mId]?.joker || false }
@@ -177,48 +167,30 @@ export default function Home() {
       nieuwStaat[mId] = { ...prev[mId], joker: !isNuJoker, thuis: prev[mId]?.thuis || '', uit: prev[mId]?.uit || '' };
       return nieuwStaat;
     });
-    setMatchSaveStatus(prev => ({...prev, [mId]: 'idle'}));
   };
 
-  // NIEUW: Bewaar per match met visuele indicatie
-  const slaMatchOp = async (mId: number) => {
-    const v = matchVoorspellingen[mId];
-    if (!v || v.thuis === '' || v.uit === '') return;
-
-    setMatchSaveStatus(prev => ({...prev, [mId]: 'saving'}));
-
-    const { error } = await supabase.from('match_voorspellingen').upsert({
-      speler_id: actieveSpeler.id, 
-      match_id: mId, 
-      thuis_score: parseInt(v.thuis), 
-      uit_score: parseInt(v.uit), 
-      gouden_bal: v.joker
-    }, { onConflict: 'speler_id, match_id' });
-
-    if (!error) {
-      setMatchSaveStatus(prev => ({...prev, [mId]: 'saved'}));
-    } else {
-      setMatchSaveStatus(prev => ({...prev, [mId]: 'idle'}));
-    }
-  };
-
-  const slaBonusOp = async () => {
+  const slaAllesOp = async () => {
     setOpslaanStatus('Bezig... ⚽');
+    
+    // Matchen opslaan
+    const inserts: any[] = [];
+    Object.keys(matchVoorspellingen).forEach(mId => {
+      const v = matchVoorspellingen[Number(mId)];
+      if (v.thuis !== '' && v.uit !== '') {
+        inserts.push({ speler_id: actieveSpeler.id, match_id: Number(mId), thuis_score: parseInt(v.thuis), uit_score: parseInt(v.uit), gouden_bal: v.joker });
+      }
+    });
+
+    if (inserts.length > 0) {
+      await supabase.from('match_voorspellingen').upsert(inserts, { onConflict: 'speler_id, match_id' });
+    }
+
+    // Bonus opslaan (we hergebruiken tijdelijk topschutter/beste_keeper kolommen voor de nieuwe vragen)
     await supabase.from('toernooi_voorspellingen').upsert({
-      speler_id: actieveSpeler.id, 
-      winnaar, 
-      halve_finalist_1: hf1,
-      halve_finalist_2: hf2,
-      halve_finalist_3: hf3,
-      halve_finalist_4: hf4,
-      topschutter: meesteGoalsLand, 
-      beste_keeper: besteVerdedigingLand, 
-      eindstation_belgie: eindstation,
-      totaal_gele_kaarten: parseInt(totaalGeel) || 0,
-      totaal_rode_kaarten: parseInt(totaalRood) || 0
+      speler_id: actieveSpeler.id, winnaar, topschutter: meesteGoalsLand, beste_keeper: besteVerdedigingLand, eindstation_belgie: eindstation
     }, { onConflict: 'speler_id' });
 
-    setOpslaanStatus('Bonusvragen Opgeslagen! 🌟');
+    setOpslaanStatus('Alles opgeslagen! 🌟');
     setShowConfetti(true);
     setTimeout(() => { setShowConfetti(false); setOpslaanStatus(''); }, 3000);
   };
@@ -226,22 +198,9 @@ export default function Home() {
   const haalToernooiVoorspellingOp = async () => {
     const { data } = await supabase.from('toernooi_voorspellingen').select('*').eq('speler_id', actieveSpeler.id).single();
     if (data) {
-      setWinnaar(data.winnaar || ''); 
-      setHf1(data.halve_finalist_1 || '');
-      setHf2(data.halve_finalist_2 || '');
-      setHf3(data.halve_finalist_3 || '');
-      setHf4(data.halve_finalist_4 || '');
-      setMeesteGoalsLand(data.topschutter || '');
-      setBesteVerdedigingLand(data.beste_keeper || ''); 
-      setEindstation(data.eindstation_belgie || '');
-      setTotaalGeel(data.totaal_gele_kaarten?.toString() || '');
-      setTotaalRood(data.totaal_rode_kaarten?.toString() || '');
+      setWinnaar(data.winnaar || ''); setMeesteGoalsLand(data.topschutter || '');
+      setBesteVerdedigingLand(data.beste_keeper || ''); setEindstation(data.eindstation_belgie || '');
     }
-  };
-
-  const haalAlleAntwoordenOp = async () => {
-    const { data } = await supabase.from('toernooi_voorspellingen').select('*, spelers(naam)');
-    if (data) setAlleAntwoorden(data);
   };
 
   const haalKlassementOp = async () => {
@@ -286,30 +245,6 @@ export default function Home() {
     } else setStatus('Naam of code fout! 🚩');
   };
 
-  // TELLERS BEREKENING
-  const tellersData = useMemo(() => {
-    let totaleGoals = 0; let totaleGeleKaarten = 0; let totaleRodeKaarten = 0;
-    const teamGoalsVoor: Record<string, number> = {};
-    const teamGoalsTegen: Record<string, number> = {};
-
-    matchen.forEach(m => {
-      if (m.thuis_score !== null && m.uit_score !== null) {
-        totaleGoals += (m.thuis_score + m.uit_score);
-        totaleGeleKaarten += (m.gele_kaarten || 0);
-        totaleRodeKaarten += (m.rode_kaarten || 0);
-        teamGoalsVoor[m.thuisploeg] = (teamGoalsVoor[m.thuisploeg] || 0) + m.thuis_score;
-        teamGoalsVoor[m.uitploeg] = (teamGoalsVoor[m.uitploeg] || 0) + m.uit_score;
-        teamGoalsTegen[m.thuisploeg] = (teamGoalsTegen[m.thuisploeg] || 0) + m.uit_score;
-        teamGoalsTegen[m.uitploeg] = (teamGoalsTegen[m.uitploeg] || 0) + m.thuis_score;
-      }
-    });
-
-    const meestScorendTeam = Object.entries(teamGoalsVoor).sort((a, b) => b[1] - a[1])[0] || ['N.v.t.', 0];
-    const minstTegenTeam = Object.entries(teamGoalsTegen).sort((a, b) => a[1] - b[1])[0] || ['N.v.t.', 0];
-
-    return { totaleGoals, totaleGeleKaarten, totaleRodeKaarten, meestScorendTeam, minstTegenTeam };
-  }, [matchen]);
-
   const gefilterdeMatchen = useMemo(() => {
     if (filterRonde === 'Alle') return matchen;
     if (filterRonde === 'Nog in te vullen') {
@@ -323,74 +258,251 @@ export default function Home() {
 
   return (
     <main className="main-container">
+      {/* ========================================================================
+        VERBETERDE STYLING: DYNAMISCH, LEUK, SPEELS & BEWEEGELIJK (UITGEBREIDE STYLING)
+        ========================================================================
+      */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@600;800;900&display=swap');
-        :root { --crayola: #3772FF; --magenta: #F038FF; --lime: #E2EF70; --aqua: #70E4EF; --rose: #EF709D; }
-        html, body { margin: 0; padding: 0; width: 100%; min-height: 100%; background: linear-gradient(135deg, var(--crayola), var(--aqua)); font-family: 'Nunito', sans-serif; color: #111827; }
-        .main-container { padding: 25px 15px 80px 15px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
-        .glass-card { background: rgba(255, 255, 255, 0.96); padding: 25px 20px; border-radius: 24px; width: 100%; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 3px solid rgba(255,255,255,0.5); }
-        .title { font-family: 'Bebas Neue', sans-serif; font-size: 4.5rem; text-align: center; color: #FFF; line-height: 1; text-shadow: 3px 3px 0px var(--magenta); margin: 0; }
+
+        :root {
+          /* Jouw Kleurenpaletvariabelen */
+          --crayola: #3772FF;
+          --magenta: #F038FF;
+          --rose: #EF709D;
+          --lime: #E2EF70;
+          --aqua: #70E4EF;
+        }
+
+        /* 1. DYNAMISCHE, BEWEEGELIJKE ACHTERGROND */
+        html, body {
+          margin: 0;
+          padding: 0;
+          width: 100%;
+          min-height: 100%;
+          font-family: 'Nunito', sans-serif;
+          color: #111827;
+          /* Achtergrond met organische vormen en fadende gradient */
+          background: radial-gradient(circle at 30% 20%, var(--rose), transparent 30%),
+                      radial-gradient(circle at 70% 80%, var(--lime), transparent 30%),
+                      linear-gradient(135deg, var(--crayola), var(--aqua));
+          background-size: 200% 200%;
+          animation: background-fade 10s ease-in-out infinite;
+          overflow-x: hidden;
+        }
+
+        /* Bewegelijke pseudo-elementen voor organische "blobs" */
+        body::before, body::after {
+          content: '';
+          position: fixed;
+          border-radius: 50%;
+          filter: blur(50px);
+          opacity: 0.5;
+          z-index: -1;
+          pointer-events: none;
+        }
+
+        body::before {
+          width: 400px; height: 400px;
+          top: -100px; left: -100px;
+          background: var(--magenta);
+          animation: blob-movement-a 12s linear infinite;
+        }
+
+        body::after {
+          width: 350px; height: 350px;
+          bottom: -80px; right: -80px;
+          background: var(--aqua);
+          animation: blob-movement-b 15s linear infinite;
+        }
+
+        /* 2. VERBETERDE MODERNE GLASS-CARD */
+        .glass-card {
+          background: rgba(255, 255, 255, 0.6); /* Semi-transparant voor frosteffect */
+          backdrop-filter: blur(12px); /* Frosteffect */
+          padding: 25px 20px;
+          border-radius: 24px;
+          width: 100%;
+          max-width: 500px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.15); /* Verfijnde schaduw */
+          border: 3px solid rgba(255, 255, 255, 0.4); /* Subtiele rand */
+          margin-top: 10px;
+          margin-bottom: 20px;
+        }
+
+        /* 3. SPEELSE TITEL */
+        .title {
+          font-family: 'Bebas Neue', sans-serif;
+          font-size: 4.5rem;
+          text-align: center;
+          color: #FFF;
+          line-height: 1;
+          text-shadow: 3px 3px 0px var(--magenta); /* Magenta schaduw */
+          margin: 0;
+          animation: title-glow 3s linear infinite; /* Subtiele glow */
+        }
         
-        .timer { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
-        .timer-box { background: var(--magenta); color: #FFF; padding: 8px 12px; border-radius: 12px; text-align: center; font-weight: 900; line-height: 1.1; box-shadow: 0 4px 10px rgba(240, 56, 255, 0.3); }
+        /* 4. VERBETERDE TIMER MET NEON-GLOW */
+        .timer {
+          display: flex;
+          justify-content: center;
+          gap: 10px;
+          margin-bottom: 20px;
+        }
+        .timer-box {
+          background: var(--magenta);
+          color: #FFF;
+          padding: 8px 12px;
+          border-radius: 12px;
+          text-align: center;
+          font-weight: 900;
+          line-height: 1.1;
+          box-shadow: 0 4px 10px rgba(240, 56, 255, 0.3); /* Subtiele glow */
+        }
         .timer-value { font-size: 1.5rem; }
         .timer-label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.8; }
 
-        .tab-container { display: flex; background: #F0F4F8; border-radius: 16px; padding: 5px; margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; gap: 5px; }
-        .tab { flex: 1; min-width: auto; text-align: center; padding: 12px 10px; font-size: 0.65rem; font-weight: 800; border-radius: 12px; cursor: pointer; color: #6C757D; position: relative; white-space: nowrap; }
-        .tab.active { background: var(--crayola); color: #FFF; }
+        /* 5. VERBETERDE SPEELSE TABS */
+        .tab-container {
+          display: flex;
+          background: rgba(240, 244, 248, 0.8); /* Semi-transparant */
+          border-radius: 16px;
+          padding: 5px;
+          margin-bottom: 20px;
+          overflow-x: auto;
+          scrollbar-width: none;
+          backdrop-filter: blur(5px);
+        }
+        .tab {
+          flex: 1; min-width: 80px; text-align: center; padding: 12px 5px; font-size: 0.65rem; font-weight: 800; border-radius: 12px; cursor: pointer; color: #6C757D; position: relative; transition: 0.3s;
+        }
+        .tab.active {
+          background: var(--crayola);
+          color: #FFF;
+          transform: scale(1.05); /* Speels schalingseffect */
+          box-shadow: 0 4px 10px rgba(55, 114, 255, 0.3);
+        }
+        .tab:hover:not(.active) { color: var(--crayola); } /* Hover-kleur */
         .unread-badge { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; background: var(--rose); border-radius: 50%; }
 
+        /* 6. VERBETERDE SPEELSE FILTERCHIPS */
         .filter-scroll { display: flex; gap: 8px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
-        .filter-chip { padding: 8px 14px; border-radius: 20px; background: #E9ECEF; font-size: 0.75rem; font-weight: 800; cursor: pointer; border: 2px solid transparent; white-space: nowrap; color: #495057; }
-        .filter-chip.active { border-color: var(--crayola); color: var(--crayola); background: #eef2ff; }
+        .filter-chip { padding: 8px 14px; border-radius: 20px; background: #E9ECEF; font-size: 0.75rem; font-weight: 800; cursor: pointer; border: 2px solid transparent; white-space: nowrap; color: #495057; transition: 0.2s; }
+        .filter-chip.active { border-color: var(--crayola); color: var(--crayola); background: #eef2ff; transform: scale(1.05); }
         .filter-chip.urgent { background: #ffe3e3; color: #e03131; border-color: #ffa8a8; }
         .filter-chip.urgent.active { background: #e03131; color: #fff; border-color: #c92a2a; }
+        .filter-chip:hover:not(.active) { background: #dee2e6; }
 
-        .match-card { background: #FFF; border-radius: 16px; margin-bottom: 12px; border: 2px solid #E9ECEF; overflow: hidden; transition: 0.3s border-color, 0.3s box-shadow; position: relative; }
-        .match-card.is-saved { border-color: #2ECC40; box-shadow: 0 0 15px rgba(46, 204, 64, 0.3); }
-        .match-header { background: #F8F9FA; padding: 10px 15px; font-size: 0.7rem; font-weight: 800; color: #ADB5BD; display: flex; justify-content: space-between; align-items: center; }
+        /* 7. VERBETERDE SPEELSE MATCHES CARDS */
+        .match-card {
+          background: rgba(255, 255, 255, 0.8);
+          border-radius: 16px;
+          margin-bottom: 12px;
+          border: 2px solid #E9ECEF;
+          overflow: hidden;
+          transition: 0.3s transform, 0.3s box-shadow;
+        }
+        .match-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); } /* Speelse hover */
+        .match-header {
+          background: var(--lime); /* Lime achtergrond */
+          padding: 10px 15px; font-size: 0.7rem; font-weight: 800; color: #111827; display: flex; justify-content: space-between; align-items: center;
+        }
         .match-body { display: flex; align-items: center; padding: 15px; }
         .team-naam { font-weight: 900; flex: 1; text-align: center; font-size: 0.95rem; }
-        .score-invoer { width: 45px; height: 50px; text-align: center; font-size: 1.5rem; font-family: 'Bebas Neue', sans-serif; border-radius: 12px; border: 2px solid #DEE2E6; outline: none; }
-        
+        .score-invoer { width: 45px; height: 50px; text-align: center; font-size: 1.5rem; font-family: 'Bebas Neue', sans-serif; border-radius: 12px; border: 2px solid #DEE2E6; outline: none; transition: 0.2s; }
+        .score-invoer:focus { border-color: var(--aqua); box-shadow: 0 0 10px rgba(112, 228, 239, 0.3); }
+
+        /* NEON-GLOW JOKER-KNOP */
         .joker-btn { width: 38px; height: 38px; border-radius: 50%; border: 2px solid #DEE2E6; background: #FFF; font-size: 1.2rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; filter: grayscale(1); opacity: 0.5; }
-        .joker-btn.active { background: #FFD700; border-color: #FFA500; filter: grayscale(0); opacity: 1; transform: scale(1.15); box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); }
+        .joker-btn.active {
+          background: #FFD700;
+          border-color: #FFA500;
+          filter: grayscale(0); opacity: 1;
+          transform: scale(1.15); /* Speelse schaling */
+          box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); /* Goudglow */
+        }
+        .joker-btn:hover:not(.active) { filter: grayscale(0); opacity: 0.8; }
 
-        .save-match-btn { position: absolute; right: 15px; bottom: 15px; background: var(--crayola); color: white; border: none; border-radius: 10px; width: 40px; height: 40px; font-size: 1rem; cursor: pointer; font-weight: 900; display: flex; align-items: center; justify-content: center; }
-        .save-match-btn.saved { background: #2ECC40; }
-
-        .ranking-item { background: #FFF; border-radius: 16px; padding: 15px; margin-bottom: 12px; border: 2px solid #E9ECEF; display: flex; align-items: center; gap: 15px; }
+        /* 8. VERBETERD MODERNE KLASSEMENT & CHAT CARDS */
+        .ranking-item {
+          background: rgba(255, 255, 255, 0.8);
+          border-radius: 16px; padding: 15px; margin-bottom: 12px; border: 2px solid #E9ECEF; display: flex; align-items: center; gap: 15px; transition: 0.2s;
+        }
+        .ranking-item:hover { transform: translateY(-3px); }
         .ranking-pos { font-family: 'Bebas Neue'; font-size: 1.8rem; color: var(--crayola); width: 30px; text-align: center; }
         .ranking-main { flex: 1; }
         .ranking-naam { font-weight: 900; text-transform: uppercase; display: flex; align-items: center; gap: 6px; font-size: 1.1rem; }
         .ranking-stats { font-size: 0.75rem; color: #6C757D; font-weight: 800; margin-top: 4px; }
-        .ranking-score { font-family: 'Bebas Neue'; font-size: 2.5rem; color: var(--magenta); }
-
-        .teller-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
-        .teller-card { background: var(--crayola); color: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        .teller-val { font-family: 'Bebas Neue'; font-size: 3rem; line-height: 1; }
-        .teller-label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin-top: 5px; opacity: 0.9; }
+        .ranking-score { font-family: 'Bebas Neue'; font-size: 2.5rem; color: var(--magenta); animation: score-pulse 1.5s ease-out infinite; }
 
         .chat-container { height: 350px; overflow-y: auto; padding-right: 5px; margin-bottom: 15px; }
-        .chat-bericht { background: #F8F9FA; padding: 12px; border-radius: 16px; border-bottom-left-radius: 4px; margin-bottom: 10px; font-size: 0.9rem; font-weight: 700; border: 1px solid #E9ECEF; }
-        .chat-eigen { background: var(--lime); border-color: #d4e062; border-bottom-left-radius: 16px; border-bottom-right-radius: 4px; }
+        .chat-bericht {
+          background: rgba(248, 249, 250, 0.8); padding: 12px; border-radius: 16px; border-bottom-left-radius: 4px; margin-bottom: 10px; font-size: 0.9rem; font-weight: 700; border: 1px solid #E9ECEF; transition: 0.2s;
+        }
+        .chat-bericht:hover { background: rgba(240, 244, 248, 1); }
+        .chat-eigen { background: var(--aqua); border-color: #61cbd6; border-bottom-left-radius: 16px; border-bottom-right-radius: 4px; }
 
+        /* 9. VERBETERDE SPEELSE INVOEREN EN KNOPPEN */
         .input-group { margin-bottom: 15px; text-align: left; }
         .input-label { display: block; font-size: 0.75rem; font-weight: 900; margin-bottom: 5px; color: #495057; text-transform: uppercase; }
-        .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; outline: none; box-sizing: border-box; font-weight: 800; font-size: 1rem; }
-        .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); transition: 0.2s; }
-        .btn-primary:active { transform: translateY(2px); }
+        .full-input {
+          width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; outline: none; box-sizing: border-box; font-weight: 800; font-size: 1rem; transition: 0.2s;
+        }
+        .full-input:focus { border-color: var(--magenta); box-shadow: 0 0 10px rgba(240, 56, 255, 0.3); }
 
+        .btn-primary {
+          width: 100%; padding: 18px; border-radius: 16px;
+          background: var(--magenta);
+          color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer;
+          box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); /* Glow */
+          transition: 0.2s;
+        }
+        .btn-primary:active { transform: translateY(2px); box-shadow: 0 2px 8px rgba(240, 56, 255, 0.3); }
+        .btn-primary:hover { background: #cf2fdc; }
+
+        /* AUTOCOMPLETE */
         .autocomplete-dropdown { position: absolute; z-index: 100; background: #FFF; width: 100%; border: 2px solid #E9ECEF; border-radius: 12px; max-height: 200px; overflow-y: auto; padding: 0; list-style: none; margin-top: 5px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
         .autocomplete-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #F8F9FA; font-weight: 800; font-size: 0.9rem; }
         .autocomplete-item:hover { background: #F8F9FA; color: var(--crayola); }
 
-        .antwoord-sectie { background: #F8F9FA; border-radius: 16px; padding: 15px; margin-bottom: 15px; border: 1px solid #E9ECEF; }
-        .antwoord-header { font-weight: 900; color: var(--crayola); margin-bottom: 10px; font-size: 1.1rem; text-transform: uppercase; border-bottom: 2px solid #E9ECEF; padding-bottom: 5px; }
-        .antwoord-rij { display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 800; padding: 6px 0; border-bottom: 1px solid #eee; }
-        .antwoord-rij:last-child { border-bottom: none; }
-        .antwoord-waarde { color: var(--magenta); }
+        /* MAIN CONTAINER */
+        .main-container { padding: 25px 15px 80px 15px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
+
+        /* ============================ ANIMATIES ============================ */
+        
+        /* Bewegelijke, organische organische blobs achtergrond */
+        @keyframes background-fade {
+          0%, 100% { background-position: 0% 0%; }
+          50% { background-position: 100% 100%; }
+        }
+
+        @keyframes blob-movement-a {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(50px, 80px) scale(1.1); }
+        }
+
+        @keyframes blob-movement-b {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(-40px, -60px) scale(0.9); }
+        }
+
+        @keyframes title-glow {
+          0%, 100% { text-shadow: 3px 3px 0px var(--magenta); }
+          50% { text-shadow: 3px 3px 20px rgba(240, 56, 255, 0.8), 3px 3px 0px var(--magenta); }
+        }
+
+        @keyframes score-pulse {
+          0% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.1); opacity: 0.8; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-20px); }
+        }
+
+        /* EINDE STYLING */
       `}</style>
 
       {showConfetti && (
@@ -416,9 +528,7 @@ export default function Home() {
             <div className="tab-container">
               <div className={`tab ${actieveTab === 'matchen' ? 'active' : ''}`} onClick={() => veranderTab('matchen')}>MATCHEN</div>
               <div className={`tab ${actieveTab === 'bonus' ? 'active' : ''}`} onClick={() => veranderTab('bonus')}>BONUS</div>
-              <div className={`tab ${actieveTab === 'antwoorden' ? 'active' : ''}`} onClick={() => veranderTab('antwoorden')}>ANTWOORDEN</div>
               <div className={`tab ${actieveTab === 'ranking' ? 'active' : ''}`} onClick={() => veranderTab('ranking')}>RANKING</div>
-              <div className={`tab ${actieveTab === 'tellers' ? 'active' : ''}`} onClick={() => veranderTab('tellers')}>TELLERS</div>
               <div className={`tab ${actieveTab === 'kleedkamer' ? 'active' : ''}`} onClick={() => veranderTab('kleedkamer')}>CHAT {ongelezenBerichten && <span className="unread-badge" />}</div>
             </div>
 
@@ -432,38 +542,29 @@ export default function Home() {
                 </div>
 
                 {gefilterdeMatchen.length === 0 ? (
-                  <p style={{textAlign:'center', fontWeight:800, color:'#ADB5BD', margin:'40px 0'}}>Alle wedstrijden in deze ronde zijn ingevuld!</p>
+                  <p style={{textAlign:'center', fontWeight:800, color:'#ADB5BD', margin:'40px 0'}}>Geen matchen gevonden in deze categorie.</p>
                 ) : (
                   gefilterdeMatchen.map(m => {
                     const v = matchVoorspellingen[m.id] || { thuis: '', uit: '', joker: false };
-                    const saveStatus = matchSaveStatus[m.id] || 'idle';
-                    
                     return (
-                      <div key={m.id} className={`match-card ${saveStatus === 'saved' ? 'is-saved' : ''}`}>
+                      <div key={m.id} className="match-card">
                         <div className="match-header">
                           <span>{m.ronde} • {new Date(m.datum).toLocaleDateString('nl-BE', {day:'2-digit', month:'short'})}</span>
                           <button className={`joker-btn ${v.joker ? 'active' : ''}`} onClick={() => toggleJoker(m.id)}>🌟</button>
                         </div>
-                        <div className="match-body" style={{paddingBottom: (v.thuis !== '' && v.uit !== '') ? '40px' : '15px'}}>
+                        <div className="match-body">
                           <span className="team-naam">{m.thuisploeg}</span>
-                          <input className="score-invoer" type="tel" value={v.thuis} onChange={e => handleScore(m.id, 'thuis', e.target.value)} disabled={isGesloten} />
+                          <input className="score-invoer" type="tel" value={v.thuis} onChange={e => handleScore(m.id, 'thuis', e.target.value)} />
                           <span style={{margin:'0 10px', fontWeight:900, color:'#ADB5BD'}}>-</span>
-                          <input className="score-invoer" type="tel" value={v.uit} onChange={e => handleScore(m.id, 'uit', e.target.value)} disabled={isGesloten} />
+                          <input className="score-invoer" type="tel" value={v.uit} onChange={e => handleScore(m.id, 'uit', e.target.value)} />
                           <span className="team-naam">{m.uitploeg}</span>
                         </div>
-                        
-                        {!isGesloten && v.thuis !== '' && v.uit !== '' && (
-                          <button 
-                            className={`save-match-btn ${saveStatus === 'saved' ? 'saved' : ''}`} 
-                            onClick={() => slaMatchOp(m.id)}
-                          >
-                            {saveStatus === 'saving' ? '⏳' : saveStatus === 'saved' ? '✅' : '💾'}
-                          </button>
-                        )}
                       </div>
                     );
                   })
                 )}
+                <button className="btn-primary" onClick={slaAllesOp}>OPSLAAN</button>
+                <p style={{textAlign:'center', fontWeight:900, color:'var(--crayola)'}}>{opslaanStatus}</p>
               </div>
             )}
 
@@ -473,17 +574,6 @@ export default function Home() {
                   <label className="input-label">Wereldkampioen?</label>
                   <Autocomplete options={WK_LANDEN} value={winnaar} onChange={setWinnaar} placeholder="Typ een land..." disabled={isGesloten} />
                 </div>
-
-                <div className="input-group">
-                  <label className="input-label" style={{color:'var(--magenta)'}}>Welke 4 landen bereiken de Halve Finale?</label>
-                  <div style={{display:'flex', flexDirection:'column', gap:8}}>
-                    <Autocomplete options={WK_LANDEN} value={hf1} onChange={setHf1} placeholder="Halve finalist 1..." disabled={isGesloten} />
-                    <Autocomplete options={WK_LANDEN} value={hf2} onChange={setHf2} placeholder="Halve finalist 2..." disabled={isGesloten} />
-                    <Autocomplete options={WK_LANDEN} value={hf3} onChange={setHf3} placeholder="Halve finalist 3..." disabled={isGesloten} />
-                    <Autocomplete options={WK_LANDEN} value={hf4} onChange={setHf4} placeholder="Halve finalist 4..." disabled={isGesloten} />
-                  </div>
-                </div>
-
                 <div className="input-group">
                   <label className="input-label">Land met meeste goals (totaal)?</label>
                   <Autocomplete options={WK_LANDEN} value={meesteGoalsLand} onChange={setMeesteGoalsLand} placeholder="Typ een land..." disabled={isGesloten} />
@@ -499,77 +589,7 @@ export default function Home() {
                     {['Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale', 'Wereldkampioen'].map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
-                <div className="input-group">
-                  <label className="input-label">Totaal aantal gele kaarten?</label>
-                  <input className="full-input" type="number" value={totaalGeel} onChange={e => setTotaalGeel(e.target.value)} disabled={isGesloten} />
-                </div>
-                <div className="input-group">
-                  <label className="input-label">Totaal aantal rode kaarten?</label>
-                  <input className="full-input" type="number" value={totaalRood} onChange={e => setTotaalRood(e.target.value)} disabled={isGesloten} />
-                </div>
-                {!isGesloten && (
-                  <>
-                    <button className="btn-primary" onClick={slaBonusOp}>BONUS OPSLAAN</button>
-                    <p style={{textAlign:'center', fontWeight:900, color:'var(--crayola)'}}>{opslaanStatus}</p>
-                  </>
-                )}
-              </div>
-            )}
-
-            {actieveTab === 'antwoorden' && (
-              <div>
-                {!isGesloten ? (
-                  <div style={{textAlign:'center', padding:'40px 20px', background:'#F8F9FA', borderRadius:16, border:'2px dashed #ADB5BD'}}>
-                    <div style={{fontSize:'3.5rem', marginBottom:15}}>🔒</div>
-                    <h3 style={{color:'#111827', margin:0, fontFamily:'Bebas Neue', fontSize:'2rem'}}>Top Secret</h3>
-                    <p style={{color:'#6C757D', fontSize:'0.85rem', fontWeight:800, marginTop:10}}>
-                      Om afkijken te voorkomen, blijven de antwoorden van je vrienden verborgen tot de allereerste WK-match is afgetrapt (11 Juni 2026).
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="antwoord-sectie">
-                      <div className="antwoord-header">🏆 Wereldkampioen</div>
-                      {alleAntwoorden.map(v => <div key={v.id} className="antwoord-rij"><span>{v.spelers?.naam}</span> <span className="antwoord-waarde">{v.winnaar || '-'}</span></div>)}
-                    </div>
-
-                    <div className="antwoord-sectie">
-                      <div className="antwoord-header">⚔️ De 4 Halve Finalisten</div>
-                      {alleAntwoorden.map(v => (
-                        <div key={v.id} className="antwoord-rij" style={{flexDirection:'column'}}>
-                          <span style={{color:'var(--crayola)', marginBottom:4}}>{v.spelers?.naam}</span> 
-                          <span className="antwoord-waarde" style={{fontSize:'0.8rem'}}>{[v.halve_finalist_1, v.halve_finalist_2, v.halve_finalist_3, v.halve_finalist_4].filter(Boolean).join(' • ') || '-'}</span>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="antwoord-sectie">
-                      <div className="antwoord-header">⚽ Meeste Goals Voor</div>
-                      {alleAntwoorden.map(v => <div key={v.id} className="antwoord-rij"><span>{v.spelers?.naam}</span> <span className="antwoord-waarde">{v.topschutter || '-'}</span></div>)}
-                    </div>
-
-                    <div className="antwoord-sectie">
-                      <div className="antwoord-header">🛡️ Beste Verdediging (Minst Tegen)</div>
-                      {alleAntwoorden.map(v => <div key={v.id} className="antwoord-rij"><span>{v.spelers?.naam}</span> <span className="antwoord-waarde">{v.beste_keeper || '-'}</span></div>)}
-                    </div>
-
-                    <div className="antwoord-sectie">
-                      <div className="antwoord-header">🍟 Eindstation België</div>
-                      {alleAntwoorden.map(v => <div key={v.id} className="antwoord-rij"><span>{v.spelers?.naam}</span> <span className="antwoord-waarde">{v.eindstation_belgie || '-'}</span></div>)}
-                    </div>
-
-                    <div className="antwoord-sectie" style={{display:'flex', gap:10, padding:0, background:'transparent', border:'none'}}>
-                      <div style={{flex:1, background:'#F8F9FA', borderRadius:16, padding:15, border:'1px solid #E9ECEF'}}>
-                        <div className="antwoord-header" style={{color:'#EAB308'}}>🟨 Geel</div>
-                        {alleAntwoorden.map(v => <div key={v.id} className="antwoord-rij"><span>{v.spelers?.naam}</span> <span>{v.totaal_gele_kaarten || '-'}</span></div>)}
-                      </div>
-                      <div style={{flex:1, background:'#F8F9FA', borderRadius:16, padding:15, border:'1px solid #E9ECEF'}}>
-                        <div className="antwoord-header" style={{color:'#EF4444'}}>🟥 Rood</div>
-                        {alleAntwoorden.map(v => <div key={v.id} className="antwoord-rij"><span>{v.spelers?.naam}</span> <span>{v.totaal_rode_kaarten || '-'}</span></div>)}
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <button className="btn-primary" onClick={slaAllesOp} disabled={isGesloten}>BONUS OPSLAAN</button>
               </div>
             )}
 
@@ -587,37 +607,6 @@ export default function Home() {
                     <span className="ranking-score">{s.totaal_score}</span>
                   </div>
                 ))}
-              </div>
-            )}
-
-            {actieveTab === 'tellers' && (
-              <div>
-                <div className="teller-grid">
-                  <div className="teller-card" style={{gridColumn: 'span 2'}}>
-                    <div className="teller-val">{tellersData.totaleGoals}</div>
-                    <div className="teller-label">Totaal Aantal Doelpunten</div>
-                  </div>
-                  
-                  <div className="teller-card" style={{background: '#FFD43B', color: '#111827'}}>
-                    <div className="teller-val">{tellersData.totaleGeleKaarten}</div>
-                    <div className="teller-label">Gele Kaarten</div>
-                  </div>
-                  
-                  <div className="teller-card" style={{background: '#FA5252'}}>
-                    <div className="teller-val">{tellersData.totaleRodeKaarten}</div>
-                    <div className="teller-label">Rode Kaarten</div>
-                  </div>
-
-                  <div className="teller-card" style={{background: '#40C057'}}>
-                    <div className="teller-val" style={{fontSize: '2rem'}}>{tellersData.meestScorendTeam[1]} goals</div>
-                    <div className="teller-label">Meest Scorend ({tellersData.meestScorendTeam[0]})</div>
-                  </div>
-
-                  <div className="teller-card" style={{background: '#228BE6'}}>
-                    <div className="teller-val" style={{fontSize: '2rem'}}>{tellersData.minstTegenTeam[1]} goals</div>
-                    <div className="teller-label">Minst Tegen ({tellersData.minstTegenTeam[0]})</div>
-                  </div>
-                </div>
               </div>
             )}
 
