@@ -26,8 +26,10 @@ export default function Home() {
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
   const actieveTabRef = useRef(actieveTab);
 
-  // INFO BANNER STATE
+  // INFO BANNER & ADMIN STATES
   const [infoOpen, setInfoOpen] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('');
+  const isAdmin = actieveSpeler?.naam?.toLowerCase() === 'jorden ricour'.toLowerCase();
 
   // DATA STATES
   const [matchen, setMatchen] = useState<any[]>([]);
@@ -154,6 +156,29 @@ export default function Home() {
     }
   };
 
+  // ADMIN FUNCTIE: SYNC MET GOOGLE SHEETS
+  const syncMetSpreadsheet = async () => {
+    if (!isAdmin) return;
+    setSyncStatus('⏳ Data ophalen uit Google Sheets...');
+    try {
+      const res = await fetch('/api/sync?code=geheim123');
+      const data = await res.json();
+      if (data.succes) {
+        setSyncStatus('✅ ' + data.bericht);
+        // Herlaad alle data in de app!
+        haalMatchenOp();
+        haalKlassementOp();
+        setTimeout(() => setSyncStatus(''), 4000);
+      } else {
+        setSyncStatus('❌ Fout: ' + data.error);
+        setTimeout(() => setSyncStatus(''), 5000);
+      }
+    } catch (e) {
+      setSyncStatus('❌ Fout bij verbinden.');
+      setTimeout(() => setSyncStatus(''), 5000);
+    }
+  };
+
   const triggerAutoSave = (mId: number, data: { thuis: string, uit: string, joker: boolean }) => {
     if (data.thuis === '' || data.uit === '') return;
     
@@ -274,14 +299,9 @@ export default function Home() {
     }
   };
 
-  // Functie exclusief voor Jorden Ricour
   const toggleBetaald = async (spelerId: number, huidigeStatus: boolean) => {
-    if (actieveSpeler?.naam?.toLowerCase() !== 'jorden ricour'.toLowerCase()) return;
-    
-    // Update Supabase
+    if (!isAdmin) return;
     await supabase.from('spelers').update({ betaald: !huidigeStatus }).eq('id', spelerId);
-    
-    // Herlaad klassement direct zodat je de verandering ziet
     haalKlassementOp();
   };
 
@@ -450,6 +470,9 @@ export default function Home() {
         .chat-container { height: 350px; overflow-y: auto; padding-right: 5px; margin-bottom: 15px; }
         .chat-bericht { background: rgba(248, 249, 250, 0.9); padding: 12px; border-radius: 16px; border-bottom-left-radius: 4px; margin-bottom: 10px; font-size: 0.9rem; font-weight: 700; border: 1px solid #E9ECEF; }
         .chat-eigen { background: var(--aqua); border-color: #61cbd6; border-bottom-left-radius: 16px; border-bottom-right-radius: 4px; }
+        
+        .autocomplete-dropdown { position: absolute; z-index: 100; background: #FFF; width: 100%; border: 2px solid #E9ECEF; border-radius: 12px; max-height: 200px; overflow-y: auto; padding: 0; list-style: none; margin-top: 5px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .autocomplete-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #F8F9FA; font-weight: 800; font-size: 0.9rem; }
 
         .main-container { padding: 25px 15px 80px 15px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
 
@@ -484,11 +507,34 @@ export default function Home() {
             </p>
             <h4>💰 Inleggeld Betalen</h4>
             <p>
-              Deelname kost <strong>€ [10 euro]</strong> <br/>
-              <strong>Rekeningnummer:</strong> [BE85 0018 2075 8506]<br/>
+              Deelname kost <strong>€ [BEDRAG]</strong>. Stuur dit via Payconiq of schrijf over naar:<br/>
+              <strong>IBAN:</strong> [JOUW REKENINGNUMMER HIER]<br/>
               <strong>Naam:</strong> Jorden Ricour<br/>
-              <em>Vermeld "WK + naam" in de mededeling!</em>
+              <em>Vermeld je spelersnaam in de mededeling!</em>
             </p>
+          </div>
+        )}
+
+        {/* =========================================
+            DE NIEUWE ADMIN SYNC KNOP
+            ========================================= */}
+        {isAdmin && (
+          <div style={{ textAlign: 'center', marginBottom: '15px' }}>
+            <button 
+              onClick={syncMetSpreadsheet} 
+              style={{ 
+                background: '#111827', color: '#fff', border: 'none', padding: '10px 20px', 
+                borderRadius: '12px', fontWeight: 900, cursor: 'pointer', fontSize: '0.8rem',
+                boxShadow: '0 4px 10px rgba(0,0,0,0.3)', transition: '0.2s'
+              }}
+            >
+              🔄 UPDATE UIT GOOGLE SHEETS
+            </button>
+            {syncStatus && (
+              <div style={{ fontSize: '0.75rem', color: '#111827', marginTop: '8px', fontWeight: 900, backgroundColor: 'rgba(255,255,255,0.8)', padding: '4px', borderRadius: '5px' }}>
+                {syncStatus}
+              </div>
+            )}
           </div>
         )}
 
