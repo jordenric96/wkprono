@@ -23,6 +23,8 @@ export default function Home() {
   const [besteKeeper, setBesteKeeper] = useState('');
   const [eindstation, setEindstation] = useState('');
   const [totaalGoals, setTotaalGoals] = useState('');
+  const [geelKaarten, setGeelKaarten] = useState(''); // NIEUW
+  const [roodKaarten, setRoodKaarten] = useState(''); // NIEUW
   const [lv1, setLv1] = useState('');
   const [lv2, setLv2] = useState('');
   const [lv3, setLv3] = useState('');
@@ -60,7 +62,6 @@ export default function Home() {
     return () => clearInterval(klokInterval);
   }, []);
 
-  // Haal data op afhankelijk van welke tab open staat
   useEffect(() => {
     if (actieveSpeler) {
       if (actieveTab === 'toernooi') haalToernooiVoorspellingOp();
@@ -86,7 +87,6 @@ export default function Home() {
   };
 
   const haalAlleVoorspellingenOp = async () => {
-    // We hebben ALLE spelers nodig voor de lijst met antwoorden
     if (spelers.length === 0) await haalSpelersOp();
     const { data, error } = await supabase.from('toernooi_voorspellingen').select('*');
     if (!error && data) setAlleVoorspellingen(data);
@@ -99,6 +99,8 @@ export default function Home() {
       setWinnaar(data.winnaar || ''); setTopschutter(data.topschutter || '');
       setBesteKeeper(data.beste_keeper || ''); setEindstation(data.eindstation_belgie || '');
       setTotaalGoals(data.totaal_goals_tornooi?.toString() || '');
+      setGeelKaarten(data.totaal_gele_kaarten?.toString() || '');
+      setRoodKaarten(data.totaal_rode_kaarten?.toString() || '');
       if (data.laatste_vier && data.laatste_vier.length === 4) {
         setLv1(data.laatste_vier[0]); setLv2(data.laatste_vier[1]);
         setLv3(data.laatste_vier[2]); setLv4(data.laatste_vier[3]);
@@ -113,9 +115,15 @@ export default function Home() {
     setVoorspellingStatus('Bezig met opslaan...');
     const laatsteVierArray = [lv1, lv2, lv3, lv4].filter(land => land.trim() !== '');
     const voorspellingData = {
-      speler_id: actieveSpeler.id, winnaar: winnaar.trim(), topschutter: topschutter.trim(),
-      beste_keeper: besteKeeper.trim(), eindstation_belgie: eindstation.trim(),
-      totaal_goals_tornooi: parseInt(totaalGoals) || 0, laatste_vier: laatsteVierArray
+      speler_id: actieveSpeler.id, 
+      winnaar: winnaar.trim(), 
+      topschutter: topschutter.trim(),
+      beste_keeper: besteKeeper.trim(), 
+      eindstation_belgie: eindstation.trim(),
+      totaal_goals_tornooi: parseInt(totaalGoals) || 0, 
+      totaal_gele_kaarten: parseInt(geelKaarten) || 0,
+      totaal_rode_kaarten: parseInt(roodKaarten) || 0,
+      laatste_vier: laatsteVierArray
     };
 
     const { data: bestaand } = await supabase.from('toernooi_voorspellingen').select('id').eq('speler_id', actieveSpeler.id).single();
@@ -154,12 +162,22 @@ export default function Home() {
     } else setStatus('De code is onjuist.');
   };
 
-  // Hulp-component om gegevens stiekem te blurren tot de deadline
   const VeiligAntwoord = ({ toon, waarde }: { toon: boolean, waarde: string }) => {
-    if (toon) return <span className="overzicht-waarde">{waarde}</span>;
-    // We renderen het "echte" antwoord NIET als de klok nog loopt (anti-cheat).
-    return <span className="overzicht-waarde blurred-waarde">█████████</span>;
+    if (toon) return <span className="antw-text">{waarde}</span>;
+    return <span className="antw-text blurred-waarde">█████████</span>;
   };
+
+  // Categorieën opzet voor het "Antwoorden" tabblad
+  const CATEGORIEEN = [
+    { key: 'winnaar', label: 'Eindwinnaar WK', stand: 'Nog niet bekend' },
+    { key: 'topschutter', label: 'Topschutter', stand: 'Momenteel: 0 goals' },
+    { key: 'beste_keeper', label: 'Beste Keeper', stand: 'Nog niet bekend' },
+    { key: 'eindstation_belgie', label: 'Eindstation Rode Duivels', stand: 'Groepsfase bezig' },
+    { key: 'laatste_vier', label: 'De Laatste Vier', stand: 'Nog niet bekend' },
+    { key: 'totaal_goals_tornooi', label: 'Totaal Doelpunten', stand: 'Momenteel: 0 goals' },
+    { key: 'totaal_gele_kaarten', label: 'Totaal Gele Kaarten', stand: 'Momenteel: 0 kaarten' },
+    { key: 'totaal_rode_kaarten', label: 'Totaal Rode Kaarten', stand: 'Momenteel: 0 kaarten' },
+  ];
 
   return (
     <main className="main-container">
@@ -180,7 +198,7 @@ export default function Home() {
         .tijd-label { font-size: 0.5rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; }
         .gesloten-banner { background: rgba(245, 105, 96, 0.3); border: 1px solid #F56960; color: white; padding: 15px; border-radius: 16px; text-align: center; font-weight: 800; margin-bottom: 25px; letter-spacing: 1px; text-transform: uppercase; }
 
-        /* TABS CSS - NU 4 TABS */
+        /* TABS CSS */
         .tab-container { display: flex; background: rgba(0,0,0,0.2); border-radius: 16px; padding: 5px; margin-bottom: 25px; }
         .tab { flex: 1; text-align: center; padding: 12px 2px; font-size: 0.65rem; font-weight: 800; border-radius: 12px; cursor: pointer; transition: all 0.3s; opacity: 0.6; white-space: nowrap; letter-spacing: 0.5px; }
         .tab.active { background: #9CF6F6; color: #1A3C40; opacity: 1; }
@@ -197,7 +215,7 @@ export default function Home() {
         .btn-secondary { width: 100%; padding: 14px; margin-top: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.25); background: transparent; color: white; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-        /* RANKING CSS - VERBETERDE UITLEG */
+        /* RANKING CSS */
         .ranking-item { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; }
         .ranking-item.is-me { border-color: #9CF6F6; background: rgba(156, 246, 246, 0.1); }
         .ranking-hoofd { display: flex; align-items: center; margin-bottom: 10px; }
@@ -212,14 +230,19 @@ export default function Home() {
         .detail-rij:last-child { margin-bottom: 0; }
         .detail-rij span:last-child { font-weight: 900; color: #9CF6F6; }
 
-        /* OVERZICHT ANTWOORDEN CSS */
-        .overzicht-card { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); text-align: left; }
-        .overzicht-naam { font-size: 1rem; font-weight: 800; color: #9CF6F6; margin: 0 0 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; display: flex; justify-content: space-between;}
-        .overzicht-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 8px; font-size: 0.8rem; }
-        .overzicht-label { opacity: 0.6; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 2px; }
-        .overzicht-waarde { font-weight: 600; font-size: 0.85rem; }
-        .blurred-waarde { filter: blur(5px); opacity: 0.5; user-select: none; letter-spacing: 2px;}
-        .overzicht-lv { grid-column: span 2; }
+        /* NIEUWE ANTWOORDEN (PER CATEGORIE) CSS */
+        .cat-card { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 0; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; }
+        .cat-header { background: rgba(0,0,0,0.2); padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .cat-titel { font-size: 1rem; font-weight: 800; color: #9CF6F6; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px; }
+        .cat-stand { font-size: 0.75rem; color: rgba(255,255,255,0.7); font-weight: 600; display: inline-block; background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 50px; }
+        .cat-lijst { padding: 10px 15px; }
+        .cat-speler-rij { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .cat-speler-rij:last-child { border-bottom: none; }
+        .antw-naam { font-size: 0.85rem; font-weight: 600; opacity: 0.9; }
+        .antw-text { font-size: 0.85rem; font-weight: 800; text-align: right; max-width: 60%; word-break: break-word; }
+        .blurred-waarde { filter: blur(4px); opacity: 0.5; user-select: none; letter-spacing: 2px; }
+        .eigen-antw .antw-naam { color: #9CF6F6; font-weight: 800; }
+        .eigen-antw .antw-text { color: #9CF6F6; }
       `}</style>
 
       <datalist id="top-spelers">{TOP_SPELERS.map(speler => <option key={speler} value={speler} />)}</datalist>
@@ -231,7 +254,7 @@ export default function Home() {
 
         {actieveSpeler ? (
           <div>
-            {/* NIEUW TABS MENU (4 Tabs) */}
+            {/* 4 TABS MENU */}
             <div className="tab-container">
               <div className={`tab ${actieveTab === 'matchen' ? 'active' : ''}`} onClick={() => setActieveTab('matchen')}>MATCHEN</div>
               <div className={`tab ${actieveTab === 'toernooi' ? 'active' : ''}`} onClick={() => setActieveTab('toernooi')}>TOERNOOI</div>
@@ -284,7 +307,21 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="input-group"><label className="label">Tie-breaker: Totaal goals WK</label><input className="input-field" type="number" placeholder="Bv. 172" value={totaalGoals} onChange={e => setTotaalGoals(e.target.value)} required disabled={isGesloten} /></div>
+                <div className="input-group">
+                  <label className="label">Tie-breaker: Totaal goals WK</label>
+                  <input className="input-field" type="number" placeholder="Bv. 172" value={totaalGoals} onChange={e => setTotaalGoals(e.target.value)} required disabled={isGesloten} />
+                </div>
+
+                <div className="grid-2">
+                  <div className="input-group">
+                    <label className="label">Gele Kaarten (Totaal)</label>
+                    <input className="input-field" type="number" placeholder="Bv. 220" value={geelKaarten} onChange={e => setGeelKaarten(e.target.value)} required disabled={isGesloten} />
+                  </div>
+                  <div className="input-group">
+                    <label className="label">Rode Kaarten (Totaal)</label>
+                    <input className="input-field" type="number" placeholder="Bv. 12" value={roodKaarten} onChange={e => setRoodKaarten(e.target.value)} required disabled={isGesloten} />
+                  </div>
+                </div>
 
                 {voorspellingStatus && <div style={{ textAlign: 'center', margin: '15px 0', fontSize: '0.9rem', fontWeight: 'bold' }}>{voorspellingStatus}</div>}
                 {!isGesloten && <button className="btn-primary" type="submit">OPSLAAN</button>}
@@ -292,59 +329,50 @@ export default function Home() {
               </form>
             )}
 
-            {/* NIEUWE TAB: ANTWOORDEN OVERZICHT */}
+            {/* VERNIEUWDE TAB: ANTWOORDEN (PER CATEGORIE) */}
             {actieveTab === 'antwoorden' && (
               <div style={{ animation: 'fadeIn 0.4s' }}>
                 <p style={{ textAlign: 'center', fontSize: '0.8rem', opacity: 0.8, marginBottom: '20px', lineHeight: '1.4' }}>
-                  Bekijk hier de voorspellingen van je vrienden.<br/>
-                  <strong style={{color: '#9CF6F6'}}>Antwoorden zijn geblurred tot de start!</strong>
+                  Bekijk hier per vraag wat iedereen gegokt heeft.<br/>
+                  <strong style={{color: '#9CF6F6'}}>Anderen zijn geblurred tot de start!</strong>
                 </p>
 
-                {spelers.map(speler => {
-                  const v = alleVoorspellingen.find(x => x.speler_id === speler.id);
-                  const isMijzelf = speler.id === actieveSpeler.id;
-                  // Enkel tonen als de klok op 0 staat, OF als het je eigen formulier is.
-                  const toonData = isGesloten || isMijzelf;
-
-                  return (
-                    <div key={speler.id} className="overzicht-card" style={{ borderColor: isMijzelf ? '#9CF6F6' : '' }}>
-                      <h3 className="overzicht-naam">
-                        {speler.naam} {isMijzelf && <span style={{fontSize:'0.7rem', opacity:0.8}}>(Jouw lijst)</span>}
-                      </h3>
-                      
-                      {!v ? (
-                        <p style={{ fontSize: '0.8rem', opacity: 0.5, margin: 0, fontStyle: 'italic' }}>Nog niets ingevuld...</p>
-                      ) : (
-                        <div className="overzicht-grid">
-                          <div>
-                            <span className="overzicht-label">Winnaar</span>
-                            <VeiligAntwoord toon={toonData} waarde={v.winnaar} />
-                          </div>
-                          <div>
-                            <span className="overzicht-label">Topschutter</span>
-                            <VeiligAntwoord toon={toonData} waarde={v.topschutter} />
-                          </div>
-                          <div>
-                            <span className="overzicht-label">Beste Keeper</span>
-                            <VeiligAntwoord toon={toonData} waarde={v.beste_keeper} />
-                          </div>
-                          <div>
-                            <span className="overzicht-label">België (Eind)</span>
-                            <VeiligAntwoord toon={toonData} waarde={v.eindstation_belgie} />
-                          </div>
-                          <div className="overzicht-lv">
-                            <span className="overzicht-label">De Laatste Vier</span>
-                            <VeiligAntwoord toon={toonData} waarde={v.laatste_vier?.join(' • ')} />
-                          </div>
-                        </div>
-                      )}
+                {CATEGORIEEN.map((cat, idx) => (
+                  <div key={idx} className="cat-card">
+                    <div className="cat-header">
+                      <h3 className="cat-titel">{cat.label}</h3>
+                      <div className="cat-stand">{cat.stand}</div>
                     </div>
-                  );
-                })}
+                    <div className="cat-lijst">
+                      {spelers.map(speler => {
+                        const v = alleVoorspellingen.find(x => x.speler_id === speler.id);
+                        const isMijzelf = speler.id === actieveSpeler.id;
+                        const toonData = isGesloten || isMijzelf;
+
+                        let getoondeWaarde = "Nog niets ingevuld...";
+                        if (v) {
+                          if (cat.key === 'laatste_vier') getoondeWaarde = v[cat.key]?.join(', ') || '-';
+                          else getoondeWaarde = v[cat.key] || '-';
+                        }
+
+                        return (
+                          <div key={speler.id} className={`cat-speler-rij ${isMijzelf ? 'eigen-antw' : ''}`}>
+                            <span className="antw-naam">{speler.naam}</span>
+                            {v ? (
+                              <VeiligAntwoord toon={toonData} waarde={getoondeWaarde.toString()} />
+                            ) : (
+                              <span style={{ fontSize: '0.75rem', fontStyle: 'italic', opacity: 0.4 }}>Wachtend...</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
-            {/* TAB: RANKING (Met heldere uitsplitsing) */}
+            {/* TAB: RANKING */}
             {actieveTab === 'ranking' && (
               <div style={{ animation: 'fadeIn 0.4s' }}>
                 <p style={{ textAlign: 'center', fontSize: '0.8rem', opacity: 0.8, marginBottom: '20px' }}>Inclusief live updates voor je bonusvragen!</p>
@@ -363,7 +391,6 @@ export default function Home() {
                           <div className="ranking-totaal">{speler.totaal_score || 0}</div>
                         </div>
                         
-                        {/* HELDER DETAIL-OVERZICHT */}
                         <div className="ranking-details">
                           <div className="detail-rij">
                             <span>⚽ Punten uit wedstrijden:</span>
