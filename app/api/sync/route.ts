@@ -18,11 +18,12 @@ export async function GET(request: Request) {
 
   try {
     // 1. Haal data van de directe API (Test: Champions League 2023, League ID 2)
-    const res = await fetch('https://v3.football.api-sports.io/fixtures?league=2&season=2023', {
-      headers: {
-        'x-apisports-key': process.env.API_FOOTBALL_KEY!
-      }
-    });
+   // Gebruik League 1 (World Cup) en Season 2026
+const res = await fetch('https://v3.football.api-sports.io/fixtures?league=1&season=2026', {
+  headers: {
+    'x-apisports-key': process.env.API_FOOTBALL_KEY!
+  }
+});
 
     const data = await res.json();
 
