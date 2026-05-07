@@ -565,7 +565,7 @@ export default function Home() {
                     <input className="full-input" type="number" value={totaalGeel} onChange={e => setTotaalGeel(e.target.value)} disabled={isGesloten} />
                   </div>
                   <div className="input-group" style={{flex:1}}>
-                    <label className="input-label">Totaal Rood?</label>
+                    <label className="input-label">Totaal Rode kaarten?</label>
                     <input className="full-input" type="number" value={totaalRood} onChange={e => setTotaalRood(e.target.value)} disabled={isGesloten} />
                   </div>
                 </div>
