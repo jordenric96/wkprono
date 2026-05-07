@@ -6,7 +6,6 @@ import { WK_LANDEN, TOP_SPELERS, TOP_KEEPERS } from '../lib/data';
 
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
 
-// --- EIGEN SLIM KEUZEMENU (Voor Mobiel) ---
 const Autocomplete = ({ options, value, onChange, placeholder, disabled }: { options: string[], value: string, onChange: (val: string) => void, placeholder: string, disabled: boolean }) => {
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -53,7 +52,6 @@ export default function Home() {
   const [actieveSpeler, setActieveSpeler] = useState<any>(null);
   const [actieveTab, setActieveTab] = useState('toernooi');
   
-  // --- NIEUW: ONGELEZEN BERICHTEN STATE ---
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
   const actieveTabRef = useRef(actieveTab);
   
@@ -79,7 +77,6 @@ export default function Home() {
   const [nieuwBericht, setNieuwBericht] = useState('');
   const chatEindeRef = useRef<HTMLDivElement>(null);
 
-  // Zorg dat de Ref altijd de huidige tab weet (belangrijk voor inkomende berichten)
   useEffect(() => {
     actieveTabRef.current = actieveTab;
   }, [actieveTab]);
@@ -113,7 +110,6 @@ export default function Home() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kleedkamer' }, (payload) => {
         haalChatOp();
         
-        // --- NIEUW: Zet bolletje aan als je NIET in de chat zit ---
         if (actieveTabRef.current !== 'kleedkamer') {
           setOngelezenBerichten(true);
         }
@@ -143,7 +139,6 @@ export default function Home() {
 
   const veranderTab = (tab: string) => {
     setActieveTab(tab);
-    // Verberg het bolletje zodra de chat wordt geopend
     if (tab === 'kleedkamer') {
       setOngelezenBerichten(false);
     }
@@ -297,7 +292,6 @@ export default function Home() {
         .tab { position: relative; flex: 1; min-width: 80px; text-align: center; padding: 12px 5px; font-size: 0.65rem; font-weight: 800; border-radius: 12px; cursor: pointer; color: #6C757D; white-space: nowrap; transition: 0.2s; }
         .tab.active { background: var(--crayola); color: #FFF; box-shadow: 0 4px 10px rgba(55, 114, 255, 0.3); }
 
-        /* UNREAD BERICHTEN BOLLETJE */
         .unread-badge { position: absolute; top: 6px; right: 10px; width: 10px; height: 10px; background-color: var(--wk-red); border-radius: 50%; box-shadow: 0 0 8px var(--wk-red); animation: pulse-dot 1.5s infinite; }
         @keyframes pulse-dot { 
           0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(227, 0, 47, 0.7); } 
@@ -308,7 +302,13 @@ export default function Home() {
         .prijzen-banner { background: linear-gradient(135deg, var(--aqua), var(--crayola)); color: #FFF; padding: 15px; border-radius: 20px; text-align: center; font-weight: 900; margin-bottom: 20px; font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 1.5px; box-shadow: 0 8px 20px rgba(112, 228, 239, 0.4); animation: pulse 2s infinite; border: 3px solid #FFF; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
         
-        .ranking-item { background: #FFFFFF; border-radius: 20px; padding: 16px 20px; margin-bottom: 16px; border: 2px solid #E9ECEF; display: flex; flex-direction: column; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: transform 0.2s; }
+        /* UITGELIJND EN COMPACTER KLASSEMENT */
+        .ranking-item { 
+          background: #FFFFFF; border-radius: 20px; padding: 16px 16px; margin: 0 auto 16px auto; 
+          border: 2px solid #E9ECEF; display: flex; flex-direction: column; position: relative; 
+          box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: transform 0.2s; 
+          width: 94%; max-width: 420px; 
+        }
         .ranking-item:hover { transform: translateY(-2px); border-color: var(--aqua); }
         .ranking-item.is-me { border-color: var(--crayola); border-width: 2px; background: #F8FBFF; box-shadow: 0 4px 15px rgba(55, 114, 255, 0.15); }
         
@@ -320,13 +320,24 @@ export default function Home() {
         .ranking-naam { flex: 1; font-size: 1.1rem; font-weight: 900; color: var(--text-dark); text-align: left; text-transform: uppercase; letter-spacing: 0.5px; }
         .ranking-totaal { font-family: 'Bebas Neue', sans-serif; font-size: 2.6rem; color: var(--wk-red); min-width: 45px; text-align: right; line-height: 1; }
         
-        .ranking-breakdown { display: flex; gap: 10px; width: 100%; margin-bottom: 12px; }
-        .score-pill { flex: 1; padding: 8px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 900; display: flex; justify-content: space-between; align-items: center; letter-spacing: 0.5px; }
-        .pill-matchen { background: rgba(55, 114, 255, 0.1); color: var(--crayola); border: 1px solid rgba(55, 114, 255, 0.2); }
-        .pill-bonus { background: rgba(240, 56, 255, 0.1); color: var(--magenta); border: 1px solid rgba(240, 56, 255, 0.2); }
+        /* PERFECT UITGELIJNDE GRID VOOR PILLS */
+        .ranking-breakdown { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; margin-bottom: 14px; }
+        .score-pill { 
+          padding: 8px 4px; border-radius: 12px; display: flex; flex-direction: column; 
+          justify-content: center; align-items: center; text-align: center; gap: 2px; 
+        }
+        .pill-matchen { background: rgba(55, 114, 255, 0.08); color: var(--crayola); border: 1px solid rgba(55, 114, 255, 0.2); }
+        .pill-bonus { background: rgba(240, 56, 255, 0.08); color: var(--magenta); border: 1px solid rgba(240, 56, 255, 0.2); }
+        .pill-label { font-size: 0.65rem; font-weight: 900; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; }
+        .pill-score { font-size: 1rem; font-weight: 900; }
         
-        .ranking-stats { display: flex; justify-content: space-between; width: 100%; font-size: 0.7rem; font-weight: 800; color: #6C757D; border-top: 2px dashed #E9ECEF; padding-top: 10px; }
-        .ranking-stats span { display: flex; align-items: center; gap: 4px; }
+        /* PERFECT UITGELIJNDE GRID VOOR STATS */
+        .ranking-stats { 
+          display: grid; grid-template-columns: repeat(3, 1fr); justify-items: center; align-items: center; 
+          width: 100%; font-size: 0.75rem; font-weight: 800; color: #6C757D; 
+          border-top: 2px dashed #E9ECEF; padding-top: 12px; 
+        }
+        .ranking-stats span { display: flex; align-items: center; gap: 5px; }
         
         .chat-container { display: flex; flex-direction: column; height: 450px; background: #F8F9FA; border-radius: 20px; border: 2px solid #E9ECEF; overflow: hidden; }
         .chat-berichten { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
@@ -425,6 +436,7 @@ export default function Home() {
                 <div className="prijzen-banner">🏆 TOTALE PRIJZENPOT: €{prijzenPot}</div>
                 {klassement.length === 0 ? <div className="bouncing-ball-loader">⚽</div> : klassement.map((s, i) => (
                   <div key={s.id} className={`ranking-item ${s.id === actieveSpeler.id ? 'is-me' : ''}`}>
+                    
                     <div className="ranking-hoofd">
                       <div className={`ranking-pos pos-${i+1}`}>{i + 1}</div>
                       <div className="ranking-naam">{s.naam}</div>
@@ -433,12 +445,12 @@ export default function Home() {
                     
                     <div className="ranking-breakdown">
                       <div className="score-pill pill-matchen">
-                        <span>⚽ Matchen</span>
-                        <span>0 pt</span>
+                        <span className="pill-label">⚽ Matchen</span>
+                        <span className="pill-score">0 pt</span>
                       </div>
                       <div className="score-pill pill-bonus">
-                        <span>🏆 Bonusvragen</span>
-                        <span>0 pt</span>
+                        <span className="pill-label">🏆 Bonusvragen</span>
+                        <span className="pill-score">0 pt</span>
                       </div>
                     </div>
 
@@ -447,6 +459,7 @@ export default function Home() {
                       <span title="Juiste winnaar">✅ 0 Juist</span>
                       <span title="Fout voorspeld">❌ 0 Fout</span>
                     </div>
+
                   </div>
                 ))}
               </div>
