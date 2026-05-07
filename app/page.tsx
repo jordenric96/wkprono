@@ -194,75 +194,74 @@ export default function Home() {
   ];
 
   const prijzenPot = spelers.length * 10;
-  const loadingIndicator = <div className="bouncing-ball-loader">⚽</div>;
 
   return (
     <main className="main-container">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@600;800;900&display=swap');
         
+        /* OFFICIËLE WK KLEUREN & SPEELSE PALET */
         :root {
           --crayola: #3772FF;
           --magenta: #F038FF;
           --rose: #EF709D;
           --lime: #E2EF70;
           --aqua: #70E4EF;
-          --off-blue: #002D72;
-          --off-red: #E3002F;
-          --off-green: #00843D;
-          --bg-light: #FDFFFC;
-          --text-dark: #1E1E24;
+          --wk-blue: #002D72;
+          --wk-red: #E3002F;
+          --wk-green: #00843D;
+          --bg-light: #F4F7F6;
+          --text-dark: #111827;
         }
 
         html, body { margin: 0; padding: 0; width: 100%; min-height: 100%; background: var(--bg-light); overflow-x: hidden; }
         .main-container { margin: 0; padding: 15px 15px 80px 15px; min-height: 100vh; display: flex; flex-direction: column; align-items: center; font-family: 'Nunito', sans-serif; color: var(--text-dark); box-sizing: border-box; }
         
-        .glass-card { background: #FFFFFF; padding: 30px 20px; border-radius: 40px; width: 100%; max-width: 500px; box-shadow: 0 15px 40px rgba(55, 114, 255, 0.15); border: 3px solid var(--aqua); position: relative; z-index: 10; }
+        .glass-card { background: #FFFFFF; padding: 30px 20px; border-radius: 24px; width: 100%; max-width: 500px; box-shadow: 0 15px 35px rgba(0,0,0,0.06); border: 2px solid var(--aqua); position: relative; z-index: 10; }
         
-        .title { font-family: 'Bebas Neue', sans-serif; font-size: 4.5rem; letter-spacing: 3px; margin: 0; text-align: center; color: var(--crayola); line-height: 1; text-shadow: 3px 3px 0px var(--lime); animation: float 3s ease-in-out infinite; }
-        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-5px); } 100% { transform: translateY(0px); } }
-        .subtitle { font-size: 0.85rem; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 25px; color: var(--magenta); text-align: center; }
+        .title { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; letter-spacing: 2px; margin: 0; text-align: center; color: var(--crayola); line-height: 1; }
+        .subtitle { font-size: 0.75rem; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 25px; color: var(--magenta); text-align: center; }
         
-        /* TABS - SPEELS */
-        .tab-container { display: flex; background: #F0F4F8; border-radius: 25px; padding: 6px; margin-bottom: 25px; overflow-x: auto; scrollbar-width: none; width: 100%; box-shadow: inset 0 3px 10px rgba(0,0,0,0.05); }
-        .tab { flex: 1; min-width: 85px; text-align: center; padding: 14px 6px; font-size: 0.7rem; font-weight: 900; border-radius: 20px; cursor: pointer; color: #8A98A5; white-space: nowrap; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .tab:hover { transform: scale(1.05); color: var(--crayola); }
-        .tab:active { transform: scale(0.95); }
-        .tab.active { background: var(--crayola); color: #FFF; box-shadow: 0 5px 15px rgba(55, 114, 255, 0.3); }
+        .tab-container { display: flex; background: #E9ECEF; border-radius: 16px; padding: 5px; margin-bottom: 25px; overflow-x: auto; scrollbar-width: none; width: 100%; }
+        .tab { flex: 1; min-width: 80px; text-align: center; padding: 12px 5px; font-size: 0.65rem; font-weight: 800; border-radius: 12px; cursor: pointer; color: #6C757D; white-space: nowrap; transition: 0.2s; }
+        .tab.active { background: var(--crayola); color: #FFF; box-shadow: 0 4px 10px rgba(55, 114, 255, 0.3); }
         
         /* PRIJZENPOT CLOUD */
-        .prijzen-banner { background: linear-gradient(135deg, var(--aqua), var(--crayola)); color: #FFF; padding: 15px; border-radius: 30px; text-align: center; font-weight: 900; margin-bottom: 25px; font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 2px; box-shadow: 0 10px 25px rgba(112, 228, 239, 0.5); animation: pulse 2s infinite; border: 3px solid #FFF; }
+        .prijzen-banner { background: linear-gradient(135deg, var(--aqua), var(--crayola)); color: #FFF; padding: 15px; border-radius: 20px; text-align: center; font-weight: 900; margin-bottom: 20px; font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 1.5px; box-shadow: 0 8px 20px rgba(112, 228, 239, 0.4); animation: pulse 2s infinite; border: 3px solid #FFF; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
         
-        /* COMPACT RANKING */
-        .ranking-item { background: #F8F9FA; border-radius: 20px; padding: 12px 18px; margin-bottom: 12px; border: 2px solid transparent; display: flex; align-items: center; justify-content: space-between; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: default; }
-        .ranking-item:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 8px 20px rgba(55, 114, 255, 0.15); border-color: var(--lime); background: #FFF; }
-        .ranking-item.is-me { border-color: var(--crayola); background: #FFF; box-shadow: 0 0 20px rgba(55, 114, 255, 0.2); }
+        /* HELDERE SCOREKAARTEN (RANKING) */
+        .ranking-item { background: #FFFFFF; border-radius: 20px; padding: 16px 20px; margin-bottom: 16px; border: 2px solid #E9ECEF; display: flex; flex-direction: column; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: transform 0.2s; }
+        .ranking-item:hover { transform: translateY(-2px); border-color: var(--aqua); }
+        .ranking-item.is-me { border-color: var(--crayola); border-width: 2px; background: #F8FBFF; box-shadow: 0 4px 15px rgba(55, 114, 255, 0.15); }
         
-        .ranking-hoofd { display: flex; align-items: center; flex: 1; overflow: hidden; }
-        .ranking-pos { width: 35px; font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; color: var(--crayola); }
-        .pos-1 { color: #FFD700; text-shadow: 1px 1px 0px #D4AF37; font-size: 2rem; } 
+        .ranking-hoofd { display: flex; align-items: center; width: 100%; margin-bottom: 12px; }
+        .ranking-pos { width: 35px; font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; color: #ADB5BD; line-height: 1; }
+        .pos-1 { color: #FFD700; text-shadow: 0 2px 4px rgba(212, 175, 55, 0.3); font-size: 2.2rem; } 
         .pos-2 { color: #A0AEC0; } 
         .pos-3 { color: #CD7F32; }
-        .ranking-naam { font-size: 1.1rem; font-weight: 900; color: var(--text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: 5px; }
+        .ranking-naam { flex: 1; font-size: 1.1rem; font-weight: 900; color: var(--text-dark); text-align: left; text-transform: uppercase; letter-spacing: 0.5px; }
+        .ranking-totaal { font-family: 'Bebas Neue', sans-serif; font-size: 2.6rem; color: var(--wk-red); min-width: 45px; text-align: right; line-height: 1; }
         
-        .ranking-rechts { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; }
-        .ranking-totaal { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--lime); line-height: 0.9; text-shadow: 1px 1px 0px rgba(0,0,0,0.1); }
-        .ranking-stats { font-size: 0.65rem; font-weight: 800; color: var(--crayola); background: rgba(55, 114, 255, 0.1); padding: 3px 8px; border-radius: 10px; margin-top: 4px; }
+        .ranking-breakdown { display: flex; gap: 10px; width: 100%; margin-bottom: 12px; }
+        .score-pill { flex: 1; padding: 8px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 900; display: flex; justify-content: space-between; align-items: center; letter-spacing: 0.5px; }
+        .pill-matchen { background: rgba(55, 114, 255, 0.1); color: var(--crayola); border: 1px solid rgba(55, 114, 255, 0.2); }
+        .pill-bonus { background: rgba(240, 56, 255, 0.1); color: var(--magenta); border: 1px solid rgba(240, 56, 255, 0.2); }
         
-        /* CHAT BUBBELS MESSENGER STIJL */
-        .chat-container { display: flex; flex-direction: column; height: 450px; background: #FFF; border-radius: 25px; border: 3px solid var(--lime); overflow: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.02); }
-        .chat-berichten { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; scrollbar-width: thin; }
-        .chat-bericht { display: flex; flex-direction: column; align-items: flex-start; max-width: 85%; }
-        .chat-bubbel { background: var(--crayola); color: #FFF; padding: 12px 16px; border-radius: 20px; border-bottom-left-radius: 4px; font-size: 0.9rem; font-weight: 700; line-height: 1.4; box-shadow: 0 4px 10px rgba(55, 114, 255, 0.2); }
-        .chat-bericht.is-mij { align-self: flex-end; align-items: flex-end; }
-        .chat-bericht.is-mij .chat-bubbel { background: var(--rose); border-bottom-left-radius: 20px; border-bottom-right-radius: 4px; box-shadow: 0 4px 10px rgba(239, 112, 157, 0.2); }
+        .ranking-stats { display: flex; justify-content: space-between; width: 100%; font-size: 0.7rem; font-weight: 800; color: #6C757D; border-top: 2px dashed #E9ECEF; padding-top: 10px; }
+        .ranking-stats span { display: flex; align-items: center; gap: 4px; }
+        
+        /* CHAT LAYS */
+        .chat-container { display: flex; flex-direction: column; height: 450px; background: #F8F9FA; border-radius: 20px; border: 2px solid #E9ECEF; overflow: hidden; }
+        .chat-berichten { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .chat-bubbel { background: #FFFFFF; padding: 12px 16px; border-radius: 18px; border-top-left-radius: 4px; max-width: 80%; font-size: 0.9rem; font-weight: 700; position: relative; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,0.05); color: var(--text-dark); border: 1px solid #E9ECEF; }
+        .chat-bericht.is-mij { flex-direction: row-reverse; display: flex; gap: 8px; align-items: flex-start; }
+        .chat-bericht.is-mij .chat-bubbel { background: var(--crayola); color: #FFF; border: none; border-top-right-radius: 4px; border-top-left-radius: 18px; }
         .chat-naam { font-size: 0.65rem; font-weight: 900; color: #ADB5BD; margin-bottom: 4px; padding: 0 5px; text-transform: uppercase; }
-        
-        .chat-invoer { display: flex; padding: 15px; background: #F8F9FA; border-top: 2px solid #E9ECEF; align-items: center; gap: 8px; }
-        .chat-input { flex: 1; background: #FFF; border: 2px solid #DEE2E6; padding: 14px 18px; border-radius: 25px; color: var(--text-dark); outline: none; font-family: 'Nunito', sans-serif; font-weight: 700; transition: 0.2s; }
-        .chat-input:focus { border-color: var(--crayola); box-shadow: 0 0 0 4px rgba(55, 114, 255, 0.1); }
-        .chat-send { background: var(--crayola); color: white; border: none; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; font-size: 1.3rem; box-shadow: 0 5px 15px rgba(55, 114, 255, 0.3); transition: transform 0.2s; display: flex; justify-content: center; align-items: center; }
+        .chat-invoer { display: flex; padding: 12px; background: #FFFFFF; border-top: 2px solid #E9ECEF; align-items: center; }
+        .chat-input { flex: 1; background: #F4F7F6; border: 2px solid #E9ECEF; padding: 14px; border-radius: 20px; color: var(--text-dark); font-family: 'Nunito', sans-serif; font-weight: 700; outline: none; transition: 0.2s; }
+        .chat-input:focus { border-color: var(--crayola); }
+        .chat-send { background: var(--magenta); color: white; border: none; width: 48px; height: 48px; border-radius: 50%; margin-left: 8px; cursor: pointer; font-size: 1.2rem; box-shadow: 0 4px 10px rgba(240, 56, 255, 0.3); transition: 0.2s; }
         .chat-send:active { transform: scale(0.9); }
         
         /* FORMS */
@@ -273,10 +272,8 @@ export default function Home() {
         .input-field:disabled { opacity: 0.6; cursor: not-allowed; background: #E9ECEF; }
         
         .btn-primary { width: 100%; padding: 18px; border-radius: 25px; border: none; background: var(--magenta); color: #FFF; font-weight: 900; cursor: pointer; text-transform: uppercase; font-size: 1.1rem; letter-spacing: 2px; box-shadow: 0 8px 25px rgba(240, 56, 255, 0.3); transition: all 0.2s; }
-        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(240, 56, 255, 0.4); }
         .btn-primary:active { transform: scale(0.95); }
         .btn-secondary { width: 100%; padding: 15px; margin-top: 15px; border-radius: 20px; border: 3px solid var(--crayola); background: transparent; color: var(--crayola); font-weight: 900; font-size: 1rem; cursor: pointer; transition: all 0.2s; }
-        .btn-secondary:hover { background: rgba(55, 114, 255, 0.05); transform: translateY(-2px); }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         
         /* COUNTDOWN */
@@ -297,32 +294,30 @@ export default function Home() {
         .cat-card:hover { border-color: var(--aqua); box-shadow: 0 5px 20px rgba(112, 228, 239, 0.2); }
         .cat-header { background: #F8F9FA; padding: 15px 20px; border-bottom: 2px solid #E9ECEF; display: flex; justify-content: space-between; align-items: center; }
         .cat-titel { font-size: 0.85rem; font-weight: 900; color: var(--crayola); text-transform: uppercase; margin: 0; }
-        .cat-stand { font-size: 0.65rem; font-weight: 900; background: var(--off-green); color: white; padding: 5px 10px; border-radius: 10px; }
+        .cat-stand { font-size: 0.65rem; font-weight: 900; background: var(--wk-green); color: white; padding: 5px 10px; border-radius: 10px; }
         .cat-lijst { padding: 5px 20px; }
         .cat-speler-rij { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #F1F3F5; font-size: 0.9rem; }
-        .antw-naam { font-weight: 800; color: #ADB5BD; }
+        .antw-naam { font-weight: 800; color: #ADB5BD; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;}
         .antw-text { font-weight: 900; color: var(--text-dark); text-align: right; max-width: 60%; }
         .blurred-waarde { filter: blur(5px); opacity: 0.3; letter-spacing: 2px; }
         .eigen-antw .antw-text { color: var(--magenta); }
         .eigen-antw .antw-naam { color: var(--magenta); }
 
-        /* LOADING BALL & CONFETTI */
         .bouncing-ball-loader { font-size: 3rem; text-align: center; animation: bounceBall 0.8s infinite alternate cubic-bezier(0.5, 0.05, 1, 0.5); padding: 20px; }
         @keyframes bounceBall { from { transform: translateY(0); } to { transform: translateY(-30px); } }
 
-        .confetti-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; overflow: hidden; }
-        .confetti { position: absolute; width: 15px; height: 15px; background-color: var(--crayola); animation: fall linear forwards; border-radius: 4px; }
-        .confetti:nth-child(2n) { background-color: var(--magenta); width: 18px; height: 18px; border-radius: 50%; }
-        .confetti:nth-child(3n) { background-color: var(--lime); width: 10px; height: 10px; transform: rotate(45deg); }
+        .confetti-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; overflow: hidden; display: flex; justify-content: center; }
+        .confetti { position: absolute; width: 12px; height: 12px; background-color: var(--crayola); animation: fall linear forwards; border-radius: 2px; }
+        .confetti:nth-child(2n) { background-color: var(--magenta); }
+        .confetti:nth-child(3n) { background-color: var(--lime); border-radius: 50%; }
         .confetti:nth-child(4n) { background-color: var(--aqua); border-radius: 50%; }
-        .confetti:nth-child(5n) { background-color: var(--rose); }
-        @keyframes fall { 0% { transform: translateY(-10vh) rotate(0deg) scale(1); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg) scale(0.5); opacity: 0; } }
+        @keyframes fall { 0% { transform: translateY(-100px) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
       `}</style>
 
       {showConfetti && (
         <div className="confetti-container">
-          {Array.from({ length: 80 }).map((_, i) => (
-            <div key={i} className="confetti" style={{ left: `${Math.random() * 100}%`, animationDelay: `${Math.random() * 1}s`, animationDuration: `${Math.random() * 2 + 1.5}s` }}></div>
+          {Array.from({ length: 60 }).map((_, i) => (
+            <div key={i} className="confetti" style={{ left: `${Math.random() * 100}%`, animationDelay: `${Math.random() * 1.5}s` }}></div>
           ))}
         </div>
       )}
@@ -352,10 +347,24 @@ export default function Home() {
                     <div className="ranking-hoofd">
                       <div className={`ranking-pos pos-${i+1}`}>{i + 1}</div>
                       <div className="ranking-naam">{s.naam}</div>
-                    </div>
-                    <div className="ranking-rechts">
                       <div className="ranking-totaal">{s.totaal_score || 0}</div>
-                      <div className="ranking-stats">M: 0 B: 0</div>
+                    </div>
+                    
+                    <div className="ranking-breakdown">
+                      <div className="score-pill pill-matchen">
+                        <span>⚽ Matchen</span>
+                        <span>0 pt</span>
+                      </div>
+                      <div className="score-pill pill-bonus">
+                        <span>🏆 Toernooi</span>
+                        <span>0 pt</span>
+                      </div>
+                    </div>
+
+                    <div className="ranking-stats">
+                      <span title="Exacte uitslag">🎯 0 Exact</span>
+                      <span title="Juiste winnaar">✅ 0 Juist</span>
+                      <span title="Fout voorspeld">❌ 0 Fout</span>
                     </div>
                   </div>
                 ))}
@@ -403,7 +412,7 @@ export default function Home() {
                 <div className="chat-berichten">
                   {chatBerichten.length === 0 ? <div className="bouncing-ball-loader">⚽</div> : chatBerichten.map((c, idx) => (
                     <div key={idx} className={`chat-bericht ${c.speler_id === actieveSpeler.id ? 'is-mij' : ''}`}>
-                      <div className="chat-naam">{c.spelers?.naam}</div>
+                      {c.speler_id !== actieveSpeler.id && <div className="chat-naam">{c.spelers?.naam}</div>}
                       <div className="chat-bubbel">{c.bericht}</div>
                     </div>
                   ))}
