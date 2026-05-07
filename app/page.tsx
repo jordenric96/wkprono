@@ -11,11 +11,9 @@ const Autocomplete = ({ options, value, onChange, placeholder, disabled }: { opt
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Zoek direct de opties die overeenkomen met wat je typt
   const filtered = options.filter(o => o.toLowerCase().includes(value.toLowerCase()));
 
   useEffect(() => {
-    // Sluit het menu als je ergens anders op het scherm klikt
     const handleClickOutside = (e: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setIsOpen(false);
     };
@@ -55,6 +53,10 @@ export default function Home() {
   const [actieveSpeler, setActieveSpeler] = useState<any>(null);
   const [actieveTab, setActieveTab] = useState('toernooi');
   
+  // --- NIEUW: ONGELEZEN BERICHTEN STATE ---
+  const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
+  const actieveTabRef = useRef(actieveTab);
+  
   const [voorspellingStatus, setVoorspellingStatus] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
   const [winnaar, setWinnaar] = useState('');
@@ -76,6 +78,11 @@ export default function Home() {
   const [chatBerichten, setChatBerichten] = useState<any[]>([]);
   const [nieuwBericht, setNieuwBericht] = useState('');
   const chatEindeRef = useRef<HTMLDivElement>(null);
+
+  // Zorg dat de Ref altijd de huidige tab weet (belangrijk voor inkomende berichten)
+  useEffect(() => {
+    actieveTabRef.current = actieveTab;
+  }, [actieveTab]);
 
   useEffect(() => {
     const opgeslagenId = localStorage.getItem('wk_speler_id');
@@ -105,6 +112,12 @@ export default function Home() {
       .channel('kleedkamer_berichten')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kleedkamer' }, (payload) => {
         haalChatOp();
+        
+        // --- NIEUW: Zet bolletje aan als je NIET in de chat zit ---
+        if (actieveTabRef.current !== 'kleedkamer') {
+          setOngelezenBerichten(true);
+        }
+
         if (document.hidden && Notification.permission === "granted") {
           new Notification("Nieuw bericht in de Kleedkamer! ⚽", {
             body: payload.new.bericht,
@@ -127,6 +140,14 @@ export default function Home() {
       if (actieveTab === 'kleedkamer') haalChatOp();
     }
   }, [actieveSpeler, actieveTab]);
+
+  const veranderTab = (tab: string) => {
+    setActieveTab(tab);
+    // Verberg het bolletje zodra de chat wordt geopend
+    if (tab === 'kleedkamer') {
+      setOngelezenBerichten(false);
+    }
+  };
 
   const haalSpelersOp = async (checkId?: string | null) => {
     const { data, error } = await supabase.from('spelers').select('*').order('created_at', { ascending: true });
@@ -183,7 +204,6 @@ export default function Home() {
     e.preventDefault();
     if (isGesloten) return;
 
-    // --- STRIKTE VALIDATIE ---
     if (!TOP_SPELERS.includes(topschutter)) {
       setVoorspellingStatus('Oeps! 🚩 Kies een geldige topschutter uit de lijst.');
       return;
@@ -274,8 +294,16 @@ export default function Home() {
         .subtitle { font-size: 0.75rem; font-weight: 800; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 25px; color: var(--magenta); text-align: center; }
         
         .tab-container { display: flex; background: #E9ECEF; border-radius: 16px; padding: 5px; margin-bottom: 25px; overflow-x: auto; scrollbar-width: none; width: 100%; }
-        .tab { flex: 1; min-width: 80px; text-align: center; padding: 12px 5px; font-size: 0.65rem; font-weight: 800; border-radius: 12px; cursor: pointer; color: #6C757D; white-space: nowrap; transition: 0.2s; }
+        .tab { position: relative; flex: 1; min-width: 80px; text-align: center; padding: 12px 5px; font-size: 0.65rem; font-weight: 800; border-radius: 12px; cursor: pointer; color: #6C757D; white-space: nowrap; transition: 0.2s; }
         .tab.active { background: var(--crayola); color: #FFF; box-shadow: 0 4px 10px rgba(55, 114, 255, 0.3); }
+
+        /* UNREAD BERICHTEN BOLLETJE */
+        .unread-badge { position: absolute; top: 6px; right: 10px; width: 10px; height: 10px; background-color: var(--wk-red); border-radius: 50%; box-shadow: 0 0 8px var(--wk-red); animation: pulse-dot 1.5s infinite; }
+        @keyframes pulse-dot { 
+          0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(227, 0, 47, 0.7); } 
+          70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(227, 0, 47, 0); } 
+          100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(227, 0, 47, 0); } 
+        }
         
         .prijzen-banner { background: linear-gradient(135deg, var(--aqua), var(--crayola)); color: #FFF; padding: 15px; border-radius: 20px; text-align: center; font-weight: 900; margin-bottom: 20px; font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 1.5px; box-shadow: 0 8px 20px rgba(112, 228, 239, 0.4); animation: pulse 2s infinite; border: 3px solid #FFF; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
@@ -318,7 +346,6 @@ export default function Home() {
         .input-field:focus { border-color: var(--magenta); background: #FFF; box-shadow: 0 5px 15px rgba(240, 56, 255, 0.1); transform: translateY(-2px); }
         .input-field:disabled { opacity: 0.6; cursor: not-allowed; background: #E9ECEF; }
         
-        /* CSS VOOR AUTOCOMPLETE DROPDOWN */
         .autocomplete-dropdown { position: absolute; top: calc(100% + 5px); left: 0; right: 0; max-height: 200px; overflow-y: auto; background: #FFF; border: 2px solid var(--crayola); border-radius: 15px; z-index: 100; list-style: none; padding: 0; margin: 0; box-shadow: 0 10px 25px rgba(55, 114, 255, 0.2); }
         .autocomplete-item { padding: 12px 18px; border-bottom: 1px solid #F1F3F5; cursor: pointer; color: var(--text-dark); font-size: 0.95rem; font-weight: 800; transition: 0.2s; }
         .autocomplete-item:hover { background: #F8FBFF; color: var(--crayola); }
@@ -373,6 +400,9 @@ export default function Home() {
         </div>
       )}
 
+      <datalist id="top-spelers">{TOP_SPELERS.map(s => <option key={s} value={s} />)}</datalist>
+      <datalist id="top-keepers">{TOP_KEEPERS.map(k => <option key={k} value={k} />)}</datalist>
+
       <div className="glass-card">
         <h1 className="title">WK 2026</h1>
         <p className="subtitle">Pronostiek • Road to America</p>
@@ -380,11 +410,14 @@ export default function Home() {
         {actieveSpeler ? (
           <div>
             <div className="tab-container">
-              <div className={`tab ${actieveTab === 'matchen' ? 'active' : ''}`} onClick={() => setActieveTab('matchen')}>MATCHEN</div>
-              <div className={`tab ${actieveTab === 'toernooi' ? 'active' : ''}`} onClick={() => setActieveTab('toernooi')}>TOERNOOI</div>
-              <div className={`tab ${actieveTab === 'antwoorden' ? 'active' : ''}`} onClick={() => setActieveTab('antwoorden')}>ANTWOORDEN</div>
-              <div className={`tab ${actieveTab === 'ranking' ? 'active' : ''}`} onClick={() => setActieveTab('ranking')}>RANKING</div>
-              <div className={`tab ${actieveTab === 'kleedkamer' ? 'active' : ''}`} onClick={() => setActieveTab('kleedkamer')}>CHAT 💬</div>
+              <div className={`tab ${actieveTab === 'matchen' ? 'active' : ''}`} onClick={() => veranderTab('matchen')}>MATCHEN</div>
+              <div className={`tab ${actieveTab === 'toernooi' ? 'active' : ''}`} onClick={() => veranderTab('toernooi')}>BONUSVRAGEN</div>
+              <div className={`tab ${actieveTab === 'antwoorden' ? 'active' : ''}`} onClick={() => veranderTab('antwoorden')}>ANTWOORDEN</div>
+              <div className={`tab ${actieveTab === 'ranking' ? 'active' : ''}`} onClick={() => veranderTab('ranking')}>RANKING</div>
+              <div className={`tab ${actieveTab === 'kleedkamer' ? 'active' : ''}`} onClick={() => veranderTab('kleedkamer')}>
+                CHAT 💬
+                {ongelezenBerichten && <span className="unread-badge"></span>}
+              </div>
             </div>
 
             {actieveTab === 'ranking' && (
@@ -435,7 +468,6 @@ export default function Home() {
                 
                 <div className="input-group"><label className="label">Eindwinnaar WK</label><select className="input-field" value={winnaar} onChange={e=>setWinnaar(e.target.value)} required disabled={isGesloten}><option value="" disabled>Kies je kampioen...</option>{WK_LANDEN.map(l=><option key={l} value={l}>{l}</option>)}</select></div>
                 
-                {/* AANGEPAST NAAR HET NIEUWE AUTOCOMPLETE MENU */}
                 <div className="input-group">
                   <label className="label">Topschutter</label>
                   <Autocomplete options={TOP_SPELERS} value={topschutter} onChange={setTopschutter} placeholder="Wie schiet ze erin?" disabled={isGesloten} />
@@ -503,6 +535,14 @@ export default function Home() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+            
+            {actieveTab === 'matchen' && (
+              <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.7 }}>
+                <div style={{fontSize: '3rem', marginBottom: '10px'}}>🏟️</div>
+                <h3 style={{color: 'var(--crayola)', margin: 0}}>De grasmat wordt gekeurd...</h3>
+                <p style={{ fontSize: '0.85rem' }}>De kalender en de wedstrijden worden binnenkort vrijgegeven!</p>
               </div>
             )}
             
