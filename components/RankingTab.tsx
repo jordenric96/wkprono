@@ -1,5 +1,7 @@
 // src/components/RankingTab.tsx
-export default function RankingTab({ klassement }: any) {
+export default function RankingTab({ klassement, actieveSpeler, toggleBetaald }: any) {
+  const isAdmin = actieveSpeler?.naam?.toLowerCase() === 'jorden ricour'.toLowerCase();
+
   return (
     <div>
       {klassement.map((s: any, i: number) => {
@@ -12,6 +14,23 @@ export default function RankingTab({ klassement }: any) {
               <div className="ranking-stats">
                 ✅ {s.exact} exact • 🏆 {s.winnaarCorrect} win • ❌ {s.fout} fout
               </div>
+              
+              {/* BETALINGSSTATUS */}
+              <div style={{ marginTop: '8px' }}>
+                {isAdmin ? (
+                  <button 
+                    onClick={() => toggleBetaald(s.id, s.betaald)} 
+                    className={`betaal-btn ${s.betaald ? 'is-betaald' : 'niet-betaald'}`}
+                  >
+                    {s.betaald ? '✅ Betaald' : '❌ Niet betaald (Klik om aan te vinken)'}
+                  </button>
+                ) : (
+                  <span className={`betaal-badge ${s.betaald ? 'is-betaald' : 'niet-betaald'}`}>
+                    {s.betaald ? '💰 Inleggeld Betaald' : '⏳ Wacht op betaling'}
+                  </span>
+                )}
+              </div>
+              
             </div>
             <span className="ranking-score">{s.totaal_score}</span>
           </div>

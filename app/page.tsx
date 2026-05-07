@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { WK_LANDEN } from '../lib/data';
 
-// Importeer jouw nieuwe, schone componenten!
 import { CountdownTimer } from '../components/Shared';
 import MatchenTab from '../components/MatchenTab';
 import BonusTab from '../components/BonusTab';
@@ -26,6 +25,9 @@ export default function Home() {
   const [filterRonde, setFilterRonde] = useState('Alle');
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
   const actieveTabRef = useRef(actieveTab);
+
+  // INFO BANNER STATE
+  const [infoOpen, setInfoOpen] = useState(false);
 
   // DATA STATES
   const [matchen, setMatchen] = useState<any[]>([]);
@@ -272,6 +274,17 @@ export default function Home() {
     }
   };
 
+  // Functie exclusief voor Jorden Ricour
+  const toggleBetaald = async (spelerId: number, huidigeStatus: boolean) => {
+    if (actieveSpeler?.naam?.toLowerCase() !== 'jorden ricour'.toLowerCase()) return;
+    
+    // Update Supabase
+    await supabase.from('spelers').update({ betaald: !huidigeStatus }).eq('id', spelerId);
+    
+    // Herlaad klassement direct zodat je de verandering ziet
+    haalKlassementOp();
+  };
+
   const ontgrendel = async (e: React.FormEvent) => {
     e.preventDefault();
     const { data: speler } = await supabase.from('spelers').select('*').ilike('naam', ontgrendelNaam.trim()).single();
@@ -319,7 +332,7 @@ export default function Home() {
 
   return (
     <main className="main-container">
-      {/* DE GLOBALE STYLING BLIJFT HIER, ZODAT ALLE COMPONENTEN DEZE KUNNEN GEBRUIKEN */}
+      {/* CSS STYLING */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@600;800;900&display=swap');
 
@@ -344,6 +357,12 @@ export default function Home() {
 
         .title { font-family: 'Bebas Neue', sans-serif; font-size: 4.5rem; text-align: center; color: #FFF; line-height: 1; text-shadow: 3px 3px 0px var(--magenta); margin: 0; animation: title-glow 3s linear infinite; }
         
+        /* INFO BANNER */
+        .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+        .info-toggle-btn:hover { background: var(--crayola); color: white; }
+        .info-content { background: rgba(255,255,255,0.9); padding: 15px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; margin-bottom: 20px; border-left: 4px solid var(--magenta); line-height: 1.5; }
+        .info-content h4 { color: var(--magenta); margin-top: 0; font-size: 1rem; margin-bottom: 8px; text-transform: uppercase; font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; }
+
         .timer { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
         .timer-box { background: var(--magenta); color: #FFF; padding: 8px 12px; border-radius: 12px; text-align: center; font-weight: 900; line-height: 1.1; box-shadow: 0 4px 10px rgba(240, 56, 255, 0.3); }
         .timer-value { font-size: 1.5rem; }
@@ -405,6 +424,13 @@ export default function Home() {
         .ranking-stats { font-size: 0.75rem; color: #6C757D; font-weight: 800; margin-top: 4px; }
         .ranking-score { font-family: 'Bebas Neue'; font-size: 2.5rem; color: var(--magenta); }
 
+        /* BETALEN BADGES & BUTTONS */
+        .betaal-badge { display: inline-block; font-size: 0.65rem; padding: 4px 8px; border-radius: 8px; font-weight: 800; }
+        .betaal-btn { font-size: 0.65rem; padding: 4px 8px; border-radius: 8px; font-weight: 900; border: none; cursor: pointer; transition: 0.2s; }
+        .betaal-btn:active { transform: scale(0.95); }
+        .is-betaald { background: #d3f9d8; color: #2b8a3e; border: 1px solid #b2f2bb; }
+        .niet-betaald { background: #ffe3e3; color: #e03131; border: 1px solid #ffc9c9; }
+
         .teller-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
         .teller-card { background: var(--crayola); color: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         .teller-val { font-family: 'Bebas Neue'; font-size: 3rem; line-height: 1; }
@@ -424,9 +450,6 @@ export default function Home() {
         .chat-container { height: 350px; overflow-y: auto; padding-right: 5px; margin-bottom: 15px; }
         .chat-bericht { background: rgba(248, 249, 250, 0.9); padding: 12px; border-radius: 16px; border-bottom-left-radius: 4px; margin-bottom: 10px; font-size: 0.9rem; font-weight: 700; border: 1px solid #E9ECEF; }
         .chat-eigen { background: var(--aqua); border-color: #61cbd6; border-bottom-left-radius: 16px; border-bottom-right-radius: 4px; }
-        
-        .autocomplete-dropdown { position: absolute; z-index: 100; background: #FFF; width: 100%; border: 2px solid #E9ECEF; border-radius: 12px; max-height: 200px; overflow-y: auto; padding: 0; list-style: none; margin-top: 5px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
-        .autocomplete-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #F8F9FA; font-weight: 800; font-size: 0.9rem; }
 
         .main-container { padding: 25px 15px 80px 15px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
 
@@ -445,6 +468,29 @@ export default function Home() {
 
       <div className="glass-card">
         <h1 className="title">WK 2026</h1>
+
+        {/* UITKLAPBARE INFO BANNER */}
+        <button className="info-toggle-btn" onClick={() => setInfoOpen(!infoOpen)}>
+          <span>ℹ️ Praktische Info & Betalen</span>
+          <span>{infoOpen ? '▲' : '▼'}</span>
+        </button>
+
+        {infoOpen && (
+          <div className="info-content">
+            <h4>📲 App Installeren op je GSM</h4>
+            <p style={{marginBottom:15}}>
+              <strong>iPhone (Safari):</strong> Klik onderaan op het 'Deel'-icoontje (vierkant met pijltje omhoog) en kies <em>'Zet op beginscherm'</em>.<br/>
+              <strong>Android (Chrome):</strong> Klik rechtsboven op de drie puntjes en kies <em>'Toevoegen aan startscherm'</em>.
+            </p>
+            <h4>💰 Inleggeld Betalen</h4>
+            <p>
+              Deelname kost <strong>€ [BEDRAG]</strong>. Stuur dit via Payconiq of schrijf over naar:<br/>
+              <strong>IBAN:</strong> [JOUW REKENINGNUMMER HIER]<br/>
+              <strong>Naam:</strong> Jorden Ricour<br/>
+              <em>Vermeld je spelersnaam in de mededeling!</em>
+            </p>
+          </div>
+        )}
 
         {!isGesloten && actieveSpeler && <CountdownTimer tijdOver={tijdOver} />}
 
@@ -493,7 +539,13 @@ export default function Home() {
 
             {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} />}
 
-            {actieveTab === 'ranking' && <RankingTab klassement={klassement} />}
+            {actieveTab === 'ranking' && (
+              <RankingTab 
+                klassement={klassement} 
+                actieveSpeler={actieveSpeler} 
+                toggleBetaald={toggleBetaald} 
+              />
+            )}
 
             {actieveTab === 'tellers' && <TellersTab tellersData={tellersData} />}
 
