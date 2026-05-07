@@ -119,13 +119,6 @@ export default function Home() {
     if (!error) setNieuwBericht('');
   };
 
-  const stuurPlaag = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    const plaagBerichten = ["Kobe, hoezo dacht je dat Canada ging winnen? 🤔", "Iedereen is stil... bang voor Lars? 😉", "Wat een trage slakken hier 🐌", "Mijn pronostiek is goud waard 🏆", "Koekoek! 👀 🤡"];
-    const willekeurig = plaagBerichten[Math.floor(Math.random() * plaagBerichten.length)];
-    await supabase.from('kleedkamer').insert([{ speler_id: actieveSpeler.id, bericht: willekeurig }]);
-  };
-
   const haalAlleVoorspellingenOp = async () => {
     const { data, error } = await supabase.from('toernooi_voorspellingen').select('*');
     if (!error && data) setAlleVoorspellingen(data);
@@ -176,7 +169,7 @@ export default function Home() {
     setStatus('Even geduld... ⚽');
     const { error } = await supabase.from('spelers').insert([{ naam: inschrijfNaam.trim(), totaal_score: 0 }]);
     if (error) setStatus('Oeps! 🚩 Naam bestaat al.');
-    else { setStatus('Gelukt! 🌟 Vraag de code aan Jorden.'); setInschrijfNaam(''); haalSpelersOp(); }
+    else { setStatus('Gelukt! 🌟 Vraag de code aan de beheerder.'); setInschrijfNaam(''); haalSpelersOp(); }
   };
 
   const ontgrendel = async (e: React.FormEvent) => {
@@ -271,8 +264,6 @@ export default function Home() {
         .chat-input:focus { border-color: var(--crayola); box-shadow: 0 0 0 4px rgba(55, 114, 255, 0.1); }
         .chat-send { background: var(--crayola); color: white; border: none; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; font-size: 1.3rem; box-shadow: 0 5px 15px rgba(55, 114, 255, 0.3); transition: transform 0.2s; display: flex; justify-content: center; align-items: center; }
         .chat-send:active { transform: scale(0.9); }
-        .chat-plaag { background: var(--aqua); color: var(--off-blue); border: none; width: 48px; height: 48px; border-radius: 50%; cursor: pointer; font-size: 1.4rem; box-shadow: 0 5px 15px rgba(112, 228, 239, 0.4); transition: transform 0.2s; display: flex; justify-content: center; align-items: center; }
-        .chat-plaag:active { transform: scale(0.9) rotate(10deg); }
         
         /* FORMS */
         .input-group { text-align: left; margin-bottom: 18px; }
@@ -291,12 +282,13 @@ export default function Home() {
         /* COUNTDOWN */
         .countdown-banner { background: #FFF; border-radius: 25px; padding: 20px; margin-bottom: 25px; border: 3px solid var(--rose); text-align: center; box-shadow: 0 10px 30px rgba(239, 112, 157, 0.15); }
         .countdown-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; color: var(--rose); margin-bottom: 15px; font-weight: 900; }
-        .tijd-grid { display: flex; justify-content: center; gap: 10px; }
-        .tijd-box { flex: 1; max-width: 80px; background: #F8F9FA; border: 2px solid #E9ECEF; padding: 10px 5px; border-radius: 15px; animation: floatBox 4s ease-in-out infinite; }
+        .tijd-grid { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        .tijd-box { flex: 1; min-width: 60px; max-width: 80px; background: #F8F9FA; border: 2px solid #E9ECEF; padding: 10px 5px; border-radius: 15px; animation: floatBox 4s ease-in-out infinite; }
         .tijd-box:nth-child(2) { animation-delay: 0.5s; }
         .tijd-box:nth-child(3) { animation-delay: 1s; }
+        .tijd-box:nth-child(4) { animation-delay: 1.5s; }
         @keyframes floatBox { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-        .tijd-cijfer { font-family: 'Bebas Neue', sans-serif; font-size: 2.8rem; line-height: 1; color: var(--crayola); animation: bouncenum 2s infinite; }
+        .tijd-cijfer { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; line-height: 1; color: var(--crayola); animation: bouncenum 2s infinite; }
         @keyframes bouncenum { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
         .tijd-label { font-size: 0.55rem; text-transform: uppercase; color: #ADB5BD; font-weight: 900; letter-spacing: 1px; }
         
@@ -379,6 +371,7 @@ export default function Home() {
                       <div className="tijd-box"><div className="tijd-cijfer">{tijdOver.dagen}</div><div className="tijd-label">Dagen</div></div>
                       <div className="tijd-box"><div className="tijd-cijfer">{tijdOver.uren}</div><div className="tijd-label">Uren</div></div>
                       <div className="tijd-box"><div className="tijd-cijfer">{tijdOver.minuten}</div><div className="tijd-label">Minuten</div></div>
+                      <div className="tijd-box"><div className="tijd-cijfer">{tijdOver.seconden}</div><div className="tijd-label">Sec</div></div>
                     </div>
                   </div>
                 )}
@@ -410,15 +403,14 @@ export default function Home() {
                 <div className="chat-berichten">
                   {chatBerichten.length === 0 ? <div className="bouncing-ball-loader">⚽</div> : chatBerichten.map((c, idx) => (
                     <div key={idx} className={`chat-bericht ${c.speler_id === actieveSpeler.id ? 'is-mij' : ''}`}>
-                      {c.speler_id !== actieveSpeler.id && <div className="chat-naam">{c.spelers?.naam}</div>}
+                      <div className="chat-naam">{c.spelers?.naam}</div>
                       <div className="chat-bubbel">{c.bericht}</div>
                     </div>
                   ))}
                   <div ref={chatEindeRef} />
                 </div>
                 <form onSubmit={verstuurChat} className="chat-invoer">
-                  <input className="chat-input" placeholder="Typ je banter..." value={nieuwBericht} onChange={e=>setNieuwBericht(e.target.value)} />
-                  <button type="button" onClick={stuurPlaag} className="chat-plaag" title="Stuur een plaagstoot!">🤡</button>
+                  <input className="chat-input" placeholder="Typ je bericht..." value={nieuwBericht} onChange={e=>setNieuwBericht(e.target.value)} />
                   <button type="submit" className="chat-send">▶</button>
                 </form>
               </div>
