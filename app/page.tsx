@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-// Importeer de lijsten uit ons nieuwe bestand!
 import { WK_LANDEN, TOP_SPELERS, TOP_KEEPERS } from '../lib/data';
 
 // DEADLINE: 11 Juni 2026 om 21:00
@@ -24,6 +23,10 @@ export default function Home() {
   const [besteKeeper, setBesteKeeper] = useState('');
   const [eindstation, setEindstation] = useState('');
   const [totaalGoals, setTotaalGoals] = useState('');
+  // NIEUW: Gele en Rode kaarten
+  const [totaalGeel, setTotaalGeel] = useState('');
+  const [totaalRood, setTotaalRood] = useState('');
+  
   const [lv1, setLv1] = useState('');
   const [lv2, setLv2] = useState('');
   const [lv3, setLv3] = useState('');
@@ -90,6 +93,10 @@ export default function Home() {
       setWinnaar(data.winnaar || ''); setTopschutter(data.topschutter || '');
       setBesteKeeper(data.beste_keeper || ''); setEindstation(data.eindstation_belgie || '');
       setTotaalGoals(data.totaal_goals_tornooi?.toString() || '');
+      // Vang de nieuwe data op
+      setTotaalGeel(data.totaal_gele_kaarten?.toString() || '');
+      setTotaalRood(data.totaal_rode_kaarten?.toString() || '');
+
       if (data.laatste_vier && data.laatste_vier.length === 4) {
         setLv1(data.laatste_vier[0]); setLv2(data.laatste_vier[1]);
         setLv3(data.laatste_vier[2]); setLv4(data.laatste_vier[3]);
@@ -106,7 +113,10 @@ export default function Home() {
     const voorspellingData = {
       speler_id: actieveSpeler.id, winnaar: winnaar.trim(), topschutter: topschutter.trim(),
       beste_keeper: besteKeeper.trim(), eindstation_belgie: eindstation.trim(),
-      totaal_goals_tornooi: parseInt(totaalGoals) || 0, laatste_vier: laatsteVierArray
+      totaal_goals_tornooi: parseInt(totaalGoals) || 0, 
+      totaal_gele_kaarten: parseInt(totaalGeel) || 0, 
+      totaal_rode_kaarten: parseInt(totaalRood) || 0,
+      laatste_vier: laatsteVierArray
     };
 
     const { data: bestaand } = await supabase.from('toernooi_voorspellingen').select('id').eq('speler_id', actieveSpeler.id).single();
@@ -155,7 +165,6 @@ export default function Home() {
         .title { font-size: 2.8rem; font-weight: 900; margin: 0; letter-spacing: -1.5px; text-align: center; }
         .subtitle { font-size: 0.75rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 20px; color: rgba(255,255,255,0.6); text-align: center; }
         
-        /* AANGEPAST: COUNTDOWN CSS MOBIELVRIENDELIJK */
         .countdown-banner { background: rgba(0,0,0,0.25); border-radius: 16px; padding: 15px 10px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(156, 246, 246, 0.2); }
         .countdown-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: #9CF6F6; margin-bottom: 10px; font-weight: 800; }
         .tijd-grid { display: flex; justify-content: center; gap: 6px; width: 100%; }
@@ -174,9 +183,11 @@ export default function Home() {
         .input-field:focus { border-color: #9CF6F6; background: rgba(255,255,255,0.1); }
         .input-field:disabled { opacity: 0.5; cursor: not-allowed; }
         .input-field option { background: #C46D5E; color: white; }
+        
         .btn-primary { width: 100%; padding: 18px; border-radius: 18px; border: none; background: #9CF6F6; color: #1A3C40; font-weight: 800; cursor: pointer; font-size: 0.95rem; box-shadow: 0 10px 20px -5px rgba(156, 246, 246, 0.35); }
         .btn-primary:disabled { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); box-shadow: none; cursor: not-allowed; }
         .btn-secondary { width: 100%; padding: 14px; margin-top: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.25); background: transparent; color: white; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+        
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
         .ranking-item { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 15px; margin-bottom: 12px; display: flex; align-items: center; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; }
@@ -192,7 +203,6 @@ export default function Home() {
         .ranking-totaal { font-size: 1.6rem; font-weight: 900; color: #9CF6F6; text-align: right; min-width: 50px; }
       `}</style>
 
-      {/* GEGEVENS UIT DATA.TS */}
       <datalist id="top-spelers">{TOP_SPELERS.map(speler => <option key={speler} value={speler} />)}</datalist>
       <datalist id="top-keepers">{TOP_KEEPERS.map(keeper => <option key={keeper} value={keeper} />)}</datalist>
 
@@ -278,9 +288,21 @@ export default function Home() {
                   </div>
                 </div>
 
+                {/* NIEUWE BONUSVRAGEN */}
                 <div className="input-group">
-                  <label className="label">Tie-breaker: Totaal goals WK</label>
+                  <label className="label">Totaal Aantal Goals WK</label>
                   <input className="input-field" type="number" placeholder="Bv. 172" value={totaalGoals} onChange={e => setTotaalGoals(e.target.value)} required disabled={isGesloten} />
+                </div>
+                
+                <div className="grid-2">
+                  <div className="input-group">
+                    <label className="label">Gele Kaarten WK</label>
+                    <input className="input-field" type="number" placeholder="Bv. 220" value={totaalGeel} onChange={e => setTotaalGeel(e.target.value)} required disabled={isGesloten} />
+                  </div>
+                  <div className="input-group">
+                    <label className="label">Rode Kaarten WK</label>
+                    <input className="input-field" type="number" placeholder="Bv. 15" value={totaalRood} onChange={e => setTotaalRood(e.target.value)} required disabled={isGesloten} />
+                  </div>
                 </div>
 
                 {voorspellingStatus && <div style={{ textAlign: 'center', margin: '15px 0', fontSize: '0.9rem', fontWeight: 'bold' }}>{voorspellingStatus}</div>}
