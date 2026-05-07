@@ -2,47 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-
-// --- VASTE LIJSTEN OM FOUTEN TE VOORKOMEN ---
-const WK_LANDEN = [
-  'Argentinië', 'Australië', 'België', 'Brazilië', 'Canada', 'Chili', 'Colombia', 
-  'Costa Rica', 'Denemarken', 'Duitsland', 'Ecuador', 'Engeland', 'Frankrijk', 
-  'Ghana', 'Italië', 'Ivoorkust', 'Japan', 'Kameroen', 'Kroatië', 'Marokko', 
-  'Mexico', 'Nederland', 'Nigeria', 'Oekraïne', 'Oostenrijk', 'Peru', 'Polen', 
-  'Portugal', 'Qatar', 'Saudi-Arabië', 'Senegal', 'Servië', 'Spanje', 'Turkije', 
-  'Uruguay', 'Verenigde Staten', 'Wales', 'Zuid-Korea', 'Zweden', 'Zwitserland'
-].sort();
-
-const TOP_SPELERS = [
-  'Virgil van Dijk', 'Matthijs de Ligt', 'Nathan Aké', 'Denzel Dumfries', 'Jeremie Frimpong', 
-  'Ian Maatsen', 'Stefan de Vrij', 'Micky van de Ven', 'Lutsharel Geertruida', 'Daley Blind',
-  'Frenkie de Jong', 'Teun Koopmeiners', 'Tijjani Reijnders', 'Jerdy Schouten', 'Xavi Simons', 
-  'Joey Veerman', 'Ryan Gravenberch', 'Georginio Wijnaldum', 'Marten de Roon',
-  'Cody Gakpo', 'Memphis Depay', 'Donyell Malen', 'Wout Weghorst', 'Brian Brobbey', 
-  'Joshua Zirkzee', 'Steven Bergwijn', 'Noa Lang',
-  'Kevin De Bruyne', 'Romelu Lukaku', 'Lois Openda', 'Jeremy Doku', 'Leandro Trossard', 
-  'Charles De Ketelaere', 'Johan Bakayoko', 'Amadou Onana', 'Youri Tielemans', 'Orel Mangala', 
-  'Arthur Vermeeren', 'Aster Vranckx', 'Dodi Lukebakio', 'Timothy Castagne', 'Wout Faes', 
-  'Zeno Debast', 'Arthur Theate', 'Maxim De Cuyper', 'Thomas Meunier',
-  'Kylian Mbappé', 'Erling Haaland', 'Harry Kane', 'Vinícius Júnior', 'Jude Bellingham', 
-  'Lionel Messi', 'Cristiano Ronaldo', 'Antoine Griezmann', 'Bukayo Saka', 'Phil Foden', 
-  'Jamal Musiala', 'Florian Wirtz', 'Rodrygo', 'Raphinha', 'Lautaro Martínez', 'Julián Álvarez', 
-  'Victor Osimhen', 'Rafael Leão', 'Bernardo Silva', 'Bruno Fernandes', 'Leroy Sané', 
-  'Kai Havertz', 'Alvaro Morata', 'Lamine Yamal', 'Pedri', 'Gavi', 'Robert Lewandowski', 
-  'Dusan Vlahovic', 'Heung-min Son', 'Mohamed Salah', 'Luis Díaz', 'Darwin Núñez', 
-  'Federico Valverde', 'Ollie Watkins', 'Cole Palmer', 'Marcus Rashford', 'Jack Grealish',
-  'Declan Rice', 'Rodri', 'Aurelien Tchouameni', 'Eduardo Camavinga', 'Ousmane Dembélé',
-  'Olivier Giroud', 'Marcus Thuram', 'Randal Kolo Muani', 'Neymar', 'Endrick', 'Lucas Paquetá'
-].sort();
-
-const TOP_KEEPERS = [
-  'Thibaut Courtois', 'Koen Casteels', 'Matz Sels', 'Thomas Kaminski',
-  'Bart Verbruggen', 'Justin Bijlow', 'Mark Flekken', 'Nick Olij',
-  'Alisson Becker', 'Ederson', 'Mike Maignan', 'Emiliano Martínez', 
-  'Gianluigi Donnarumma', 'Jordan Pickford', 'Manuel Neuer', 'Marc-André ter Stegen', 
-  'Jan Oblak', 'Diogo Costa', 'Unai Simón', 'Yann Sommer', 'Wojciech Szczęsny', 
-  'Dominik Livaković', 'Yassine Bounou', 'Guglielmo Vicario', 'David Raya', 'Aaron Ramsdale'
-].sort();
+// Importeer de lijsten uit ons nieuwe bestand!
+import { WK_LANDEN, TOP_SPELERS, TOP_KEEPERS } from '../lib/data';
 
 // DEADLINE: 11 Juni 2026 om 21:00
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
@@ -118,15 +79,8 @@ export default function Home() {
   };
 
   const haalKlassementOp = async () => {
-    // Haal alle spelers op en sorteer op totaal_score, van hoog naar laag
-    const { data, error } = await supabase
-      .from('spelers')
-      .select('id, naam, totaal_score')
-      .order('totaal_score', { ascending: false });
-    
-    if (!error && data) {
-      setKlassement(data);
-    }
+    const { data, error } = await supabase.from('spelers').select('id, naam, totaal_score').order('totaal_score', { ascending: false });
+    if (!error && data) setKlassement(data);
   };
 
   const haalToernooiVoorspellingOp = async () => {
@@ -201,21 +155,19 @@ export default function Home() {
         .title { font-size: 2.8rem; font-weight: 900; margin: 0; letter-spacing: -1.5px; text-align: center; }
         .subtitle { font-size: 0.75rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 20px; color: rgba(255,255,255,0.6); text-align: center; }
         
-        /* COUNTDOWN CSS */
-        .countdown-banner { background: rgba(0,0,0,0.25); border-radius: 16px; padding: 15px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(156, 246, 246, 0.2); }
+        /* AANGEPAST: COUNTDOWN CSS MOBIELVRIENDELIJK */
+        .countdown-banner { background: rgba(0,0,0,0.25); border-radius: 16px; padding: 15px 10px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(156, 246, 246, 0.2); }
         .countdown-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: #9CF6F6; margin-bottom: 10px; font-weight: 800; }
-        .tijd-grid { display: flex; justify-content: center; gap: 8px; }
-        .tijd-box { background: rgba(255,255,255,0.1); padding: 10px; border-radius: 12px; min-width: 55px; text-align: center; }
-        .tijd-cijfer { font-size: 1.4rem; font-weight: 900; line-height: 1; margin-bottom: 3px; font-variant-numeric: tabular-nums; }
-        .tijd-label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; }
+        .tijd-grid { display: flex; justify-content: center; gap: 6px; width: 100%; }
+        .tijd-box { background: rgba(255,255,255,0.1); padding: 8px 4px; border-radius: 12px; text-align: center; flex: 1; max-width: 70px; }
+        .tijd-cijfer { font-size: 1.2rem; font-weight: 900; line-height: 1; margin-bottom: 3px; font-variant-numeric: tabular-nums; }
+        .tijd-label { font-size: 0.5rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; }
         .gesloten-banner { background: rgba(245, 105, 96, 0.3); border: 1px solid #F56960; color: white; padding: 15px; border-radius: 16px; text-align: center; font-weight: 800; margin-bottom: 25px; letter-spacing: 1px; text-transform: uppercase; }
 
-        /* TABS CSS */
         .tab-container { display: flex; background: rgba(0,0,0,0.2); border-radius: 16px; padding: 5px; margin-bottom: 25px; }
         .tab { flex: 1; text-align: center; padding: 12px 5px; font-size: 0.8rem; font-weight: 700; border-radius: 12px; cursor: pointer; transition: all 0.3s; opacity: 0.6; }
         .tab.active { background: #9CF6F6; color: #1A3C40; opacity: 1; }
         
-        /* FORM CSS */
         .input-group { text-align: left; margin-bottom: 15px; }
         .label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; margin-left: 12px; margin-bottom: 6px; display: block; opacity: 0.8; color: #9CF6F6; }
         .input-field { width: 100%; padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); color: white; font-size: 1rem; outline: none; box-sizing: border-box; -webkit-appearance: none; }
@@ -227,7 +179,6 @@ export default function Home() {
         .btn-secondary { width: 100%; padding: 14px; margin-top: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.25); background: transparent; color: white; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-        /* RANKING CSS */
         .ranking-item { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 15px; margin-bottom: 12px; display: flex; align-items: center; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; }
         .ranking-item.is-me { border-color: #9CF6F6; background: rgba(156, 246, 246, 0.1); }
         .ranking-pos { width: 35px; font-size: 1.2rem; font-weight: 900; opacity: 0.8; text-align: left; }
@@ -241,6 +192,7 @@ export default function Home() {
         .ranking-totaal { font-size: 1.6rem; font-weight: 900; color: #9CF6F6; text-align: right; min-width: 50px; }
       `}</style>
 
+      {/* GEGEVENS UIT DATA.TS */}
       <datalist id="top-spelers">{TOP_SPELERS.map(speler => <option key={speler} value={speler} />)}</datalist>
       <datalist id="top-keepers">{TOP_KEEPERS.map(keeper => <option key={keeper} value={keeper} />)}</datalist>
 
@@ -256,7 +208,6 @@ export default function Home() {
               <div className={`tab ${actieveTab === 'ranking' ? 'active' : ''}`} onClick={() => setActieveTab('ranking')}>RANKING</div>
             </div>
 
-            {/* TAB: TOERNOOI */}
             {actieveTab === 'toernooi' && (
               <form onSubmit={slaToernooiVoorspellingOp} style={{ animation: 'fadeIn 0.4s' }}>
                 {isGesloten ? (
@@ -339,13 +290,9 @@ export default function Home() {
               </form>
             )}
 
-            {/* TAB: RANKING */}
             {actieveTab === 'ranking' && (
               <div style={{ animation: 'fadeIn 0.4s' }}>
-                <p style={{ textAlign: 'center', fontSize: '0.8rem', opacity: 0.8, marginBottom: '20px' }}>
-                  Inclusief live punten voor toernooivragen (topschutter, etc.)
-                </p>
-
+                <p style={{ textAlign: 'center', fontSize: '0.8rem', opacity: 0.8, marginBottom: '20px' }}>Inclusief live punten voor toernooivragen</p>
                 {klassement.length === 0 ? (
                   <p style={{ textAlign: 'center', opacity: 0.5 }}>Laden...</p>
                 ) : (
@@ -360,7 +307,7 @@ export default function Home() {
                           <p className="ranking-naam">{speler.naam} {isMijzelf && '(Jij)'}</p>
                           <div className="ranking-breakdown">
                             <div className="breakdown-item">Matchen: <span>0</span></div>
-                            <div className="breakdown-item">Toernooi (Live): <span>0</span></div>
+                            <div className="breakdown-item">Toernooi: <span>0</span></div>
                             <div className="breakdown-item">Bonus: <span>0</span></div>
                           </div>
                         </div>
@@ -369,12 +316,10 @@ export default function Home() {
                     );
                   })
                 )}
-                
                 <button className="btn-secondary" style={{ marginTop: '30px' }} onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>Uitloggen</button>
               </div>
             )}
 
-            {/* TAB: MATCHEN (Nog in opbouw) */}
             {actieveTab === 'matchen' && (
               <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.7 }}>
                 <h3>Komt Binnenkort</h3>
