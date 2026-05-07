@@ -4,34 +4,16 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { WK_LANDEN } from '../lib/data';
 
+// Importeer jouw nieuwe, schone componenten!
+import { CountdownTimer } from '../components/Shared';
+import MatchenTab from '../components/MatchenTab';
+import BonusTab from '../components/BonusTab';
+import AntwoordenTab from '../components/AntwoordenTab';
+import RankingTab from '../components/RankingTab';
+import TellersTab from '../components/TellersTab';
+import ChatTab from '../components/ChatTab';
+
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
-
-const Autocomplete = ({ options, value, onChange, placeholder, disabled }: { options: string[], value: string, onChange: (val: string) => void, placeholder: string, disabled: boolean }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const filtered = options.filter(o => o.toLowerCase().includes(value.toLowerCase()));
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setIsOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  return (
-    <div ref={wrapperRef} style={{ position: 'relative' }}>
-      <input className="full-input" value={value} onChange={(e) => { onChange(e.target.value); setIsOpen(true); }} onFocus={() => setIsOpen(true)} disabled={disabled} placeholder={placeholder} />
-      {isOpen && !disabled && (
-        <ul className="autocomplete-dropdown">
-          {filtered.length > 0 ? filtered.map(opt => (
-            <li key={opt} className="autocomplete-item" onClick={() => { onChange(opt); setIsOpen(false); }}>{opt}</li>
-          )) : <li className="autocomplete-item" style={{ color: '#F038FF' }}>Onbekend land...</li>}
-        </ul>
-      )}
-    </div>
-  );
-};
 
 export default function Home() {
   const [ontgrendelNaam, setOntgrendelNaam] = useState('');
@@ -39,7 +21,7 @@ export default function Home() {
   const [status, setStatus] = useState('');
   
   const [actieveSpeler, setActieveSpeler] = useState<any>(null);
-  const [alleSpelers, setAlleSpelers] = useState<any[]>([]); // Nodig voor de ratio "3/5 ingevuld"
+  const [alleSpelers, setAlleSpelers] = useState<any[]>([]); 
   const [actieveTab, setActieveTab] = useState('matchen');
   const [filterRonde, setFilterRonde] = useState('Alle');
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
@@ -55,8 +37,7 @@ export default function Home() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null);
   
-  // Auto-save timer reference
-  const saveTimeoutRef = useRef<Record<number, NodeJS.Timeout>>({});
+  const saveTimeoutRef = useRef<Record<number, any>>({});
 
   // BONUSVRAGEN STATES
   const [winnaar, setWinnaar] = useState('');
@@ -171,7 +152,6 @@ export default function Home() {
     }
   };
 
-  // AUTO-SAVE LOGICA
   const triggerAutoSave = (mId: number, data: { thuis: string, uit: string, joker: boolean }) => {
     if (data.thuis === '' || data.uit === '') return;
     
@@ -185,7 +165,6 @@ export default function Home() {
       
       setMatchSaveStatus(prev => ({ ...prev, [mId]: error ? 'idle' : 'saved' }));
       
-      // Update lokaal zodat je bolletje er direct bij komt te staan!
       if (!error) {
         setAlleMatchVoorspellingen(prev => {
           const bestaand = prev.filter(p => !(p.match_id === mId && p.speler_id === actieveSpeler.id));
@@ -194,7 +173,7 @@ export default function Home() {
           }];
         });
       }
-    }, 800); // 0.8s wachten na de laatste toetsaanslag
+    }, 800); 
   };
 
   const handleScore = (mId: number, veld: 'thuis'|'uit', waarde: string) => {
@@ -218,17 +197,23 @@ export default function Home() {
     });
   };
 
+  const slaMatchOp = async (mId: number) => {
+    const v = matchVoorspellingen[mId];
+    if (!v || v.thuis === '' || v.uit === '') return;
+    setMatchSaveStatus(prev => ({...prev, [mId]: 'saving'}));
+    const { error } = await supabase.from('match_voorspellingen').upsert({
+      speler_id: actieveSpeler.id, match_id: mId, thuis_score: parseInt(v.thuis), uit_score: parseInt(v.uit), gouden_bal: v.joker
+    }, { onConflict: 'speler_id, match_id' });
+    if (!error) setMatchSaveStatus(prev => ({...prev, [mId]: 'saved'}));
+    else setMatchSaveStatus(prev => ({...prev, [mId]: 'idle'}));
+  };
+
   const slaBonusOp = async () => {
     setOpslaanStatus('Bezig... ⚽');
     await supabase.from('toernooi_voorspellingen').upsert({
-      speler_id: actieveSpeler.id, 
-      winnaar, 
-      halve_finalist_1: hf[0], halve_finalist_2: hf[1], halve_finalist_3: hf[2], halve_finalist_4: hf[3],
-      topschutter: meesteGoalsLand, 
-      beste_keeper: besteVerdedigingLand, 
-      eindstation_belgie: eindstation,
-      totaal_gele_kaarten: parseInt(totaalGeel) || 0,
-      totaal_rode_kaarten: parseInt(totaalRood) || 0
+      speler_id: actieveSpeler.id, winnaar, halve_finalist_1: hf[0], halve_finalist_2: hf[1], halve_finalist_3: hf[2], halve_finalist_4: hf[3],
+      topschutter: meesteGoalsLand, beste_keeper: besteVerdedigingLand, eindstation_belgie: eindstation,
+      totaal_gele_kaarten: parseInt(totaalGeel) || 0, totaal_rode_kaarten: parseInt(totaalRood) || 0
     }, { onConflict: 'speler_id' });
 
     setOpslaanStatus('Bonusvragen Opgeslagen! 🌟');
@@ -296,7 +281,6 @@ export default function Home() {
     } else setStatus('Naam of code fout! 🚩');
   };
 
-  // TELLERS BEREKENING
   const tellersData = useMemo(() => {
     let totaleGoals = 0; let totaleGeleKaarten = 0; let totaleRodeKaarten = 0;
     const teamGoalsVoor: Record<string, number> = {};
@@ -335,6 +319,7 @@ export default function Home() {
 
   return (
     <main className="main-container">
+      {/* DE GLOBALE STYLING BLIJFT HIER, ZODAT ALLE COMPONENTEN DEZE KUNNEN GEBRUIKEN */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@600;800;900&display=swap');
 
@@ -348,9 +333,7 @@ export default function Home() {
           background-size: 200% 200%; animation: background-fade 10s ease-in-out infinite; overflow-x: hidden;
         }
 
-        body::before, body::after {
-          content: ''; position: fixed; border-radius: 50%; filter: blur(50px); opacity: 0.5; z-index: -1; pointer-events: none;
-        }
+        body::before, body::after { content: ''; position: fixed; border-radius: 50%; filter: blur(50px); opacity: 0.5; z-index: -1; pointer-events: none; }
         body::before { width: 400px; height: 400px; top: -100px; left: -100px; background: var(--magenta); animation: blob-movement-a 12s linear infinite; }
         body::after { width: 350px; height: 350px; bottom: -80px; right: -80px; background: var(--aqua); animation: blob-movement-b 15s linear infinite; }
 
@@ -377,10 +360,7 @@ export default function Home() {
         .filter-chip.urgent { background: #ffe3e3; color: #e03131; border-color: #ffa8a8; }
         .filter-chip.urgent.active { background: #e03131; color: #fff; border-color: #c92a2a; }
 
-        /* MATCH CARD STYLING & AUTO SAVE */
-        .match-card {
-          background: rgba(255, 255, 255, 0.95); border-radius: 16px; margin-bottom: 12px; border: 3px solid #E9ECEF; overflow: hidden; transition: 0.3s; position: relative;
-        }
+        .match-card { background: rgba(255, 255, 255, 0.95); border-radius: 16px; margin-bottom: 12px; border: 3px solid #E9ECEF; overflow: hidden; transition: 0.3s; position: relative; }
         .match-card.locked { border-color: var(--rose); cursor: pointer; } 
         .match-header { background: var(--lime); padding: 10px 15px; font-size: 0.7rem; font-weight: 900; color: #111827; display: flex; justify-content: space-between; align-items: center; position: relative; }
         .match-body { display: flex; align-items: center; padding: 15px; }
@@ -396,14 +376,12 @@ export default function Home() {
         .save-indicator.saving { background: rgba(240, 56, 255, 0.2); color: var(--magenta); opacity: 1; }
         .save-indicator.saved { background: rgba(46, 204, 64, 0.2); color: #2ECC40; opacity: 1; }
 
-        /* WIE HEEFT INGEVULD BOLLETJES */
         .filled-container { display: flex; align-items: center; gap: 8px; padding: 10px 15px; border-top: 1px dashed #DEE2E6; justify-content: center; background: #F8F9FA; }
         .filled-avatars { display: flex; }
         .filled-avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--crayola); color: white; font-size: 0.55rem; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 2px solid white; margin-left: -8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .filled-avatar:first-child { margin-left: 0; }
         .filled-text { font-size: 0.65rem; font-weight: 800; color: #ADB5BD; }
 
-        /* PREDICTIONS DROPDOWN (GESTARRT) */
         .click-to-expand { text-align: center; font-size: 0.7rem; font-weight: 900; color: var(--rose); padding-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
         .predictions-dropdown { background: rgba(240, 244, 248, 0.9); padding: 15px; border-top: 2px solid #E9ECEF; }
         .pred-title { font-weight: 900; color: var(--crayola); font-size: 0.75rem; margin-bottom: 10px; border-bottom: 2px solid #DEE2E6; padding-bottom: 5px; }
@@ -411,7 +389,6 @@ export default function Home() {
         .pred-row:last-child { border-bottom: none; }
         .pred-score { color: var(--magenta); font-family: 'Bebas Neue'; font-size: 1.2rem; }
 
-        /* VERNIEUWD KLASSEMENT (PODIUM) */
         .ranking-item { position: relative; overflow: hidden; background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 15px; margin-bottom: 12px; border: 2px solid #E9ECEF; display: flex; align-items: center; gap: 15px; transition: 0.2s; }
         .ranking-item:hover { transform: translateY(-3px); }
         .ranking-item.rank-1 { border-color: #FFD700; background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 255, 255, 0.9)); box-shadow: 0 10px 20px rgba(255,215,0,0.2); }
@@ -428,17 +405,14 @@ export default function Home() {
         .ranking-stats { font-size: 0.75rem; color: #6C757D; font-weight: 800; margin-top: 4px; }
         .ranking-score { font-family: 'Bebas Neue'; font-size: 2.5rem; color: var(--magenta); }
 
-        /* VERNIEUWDE TELLERS */
         .teller-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
         .teller-card { background: var(--crayola); color: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         .teller-val { font-family: 'Bebas Neue'; font-size: 3rem; line-height: 1; }
         .teller-label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin-top: 5px; opacity: 0.9; }
 
-        /* ANTWOORDEN */
         .antwoord-sectie { background: rgba(255, 255, 255, 0.8); border-radius: 16px; padding: 15px; margin-bottom: 15px; border: 2px solid #E9ECEF; }
         .antwoord-header { font-weight: 900; color: var(--crayola); margin-bottom: 10px; font-size: 1rem; text-transform: uppercase; border-bottom: 2px solid #E9ECEF; padding-bottom: 5px; }
 
-        /* INPUTS & BUTTONS */
         .input-group { margin-bottom: 15px; text-align: left; }
         .input-label { display: block; font-size: 0.75rem; font-weight: 900; margin-bottom: 5px; color: #495057; text-transform: uppercase; }
         .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; outline: none; box-sizing: border-box; font-weight: 800; font-size: 1rem; transition: 0.2s; }
@@ -447,7 +421,6 @@ export default function Home() {
         .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); transition: 0.2s; }
         .btn-primary:active { transform: translateY(2px); box-shadow: 0 2px 8px rgba(240, 56, 255, 0.3); }
 
-        /* CHAT & AUTOCOMPLETE */
         .chat-container { height: 350px; overflow-y: auto; padding-right: 5px; margin-bottom: 15px; }
         .chat-bericht { background: rgba(248, 249, 250, 0.9); padding: 12px; border-radius: 16px; border-bottom-left-radius: 4px; margin-bottom: 10px; font-size: 0.9rem; font-weight: 700; border: 1px solid #E9ECEF; }
         .chat-eigen { background: var(--aqua); border-color: #61cbd6; border-bottom-left-radius: 16px; border-bottom-right-radius: 4px; }
@@ -473,14 +446,7 @@ export default function Home() {
       <div className="glass-card">
         <h1 className="title">WK 2026</h1>
 
-        {!isGesloten && actieveSpeler && (
-          <div className="timer">
-            <div className="timer-box"><div className="timer-value">{tijdOver.dagen}</div><div className="timer-label">Dagen</div></div>
-            <div className="timer-box"><div className="timer-value">{tijdOver.uren}</div><div className="timer-label">Uren</div></div>
-            <div className="timer-box"><div className="timer-value">{tijdOver.minuten}</div><div className="timer-label">Min</div></div>
-            <div className="timer-box"><div className="timer-value">{tijdOver.seconden}</div><div className="timer-label">Sec</div></div>
-          </div>
-        )}
+        {!isGesloten && actieveSpeler && <CountdownTimer tijdOver={tijdOver} />}
 
         {actieveSpeler ? (
           <div>
@@ -494,262 +460,48 @@ export default function Home() {
             </div>
 
             {actieveTab === 'matchen' && (
-              <div>
-                <div className="filter-scroll">
-                  <span className={`filter-chip urgent ${filterRonde === 'Nog in te vullen' ? 'active' : ''}`} onClick={() => setFilterRonde('Nog in te vullen')}>Nog in te vullen ✍️</span>
-                  {['Alle', 'Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale'].map(r => (
-                    <span key={r} className={`filter-chip ${filterRonde === r ? 'active' : ''}`} onClick={() => setFilterRonde(r)}>{r}</span>
-                  ))}
-                </div>
-
-                {gefilterdeMatchen.length === 0 ? (
-                  <p style={{textAlign:'center', fontWeight:800, color:'#6C757D', margin:'40px 0'}}>Alle wedstrijden in deze selectie zijn ingevuld!</p>
-                ) : (
-                  gefilterdeMatchen.map(m => {
-                    const gestart = nu > new Date(m.datum).getTime();
-                    const v = matchVoorspellingen[m.id] || { thuis: '', uit: '', joker: false };
-                    const saveStatus = matchSaveStatus[m.id] || 'idle';
-                    
-                    // Bereken wie deze match al heeft ingevuld
-                    const voorspellingenVoorMatch = alleMatchVoorspellingen.filter(av => av.match_id === m.id);
-
-                    return (
-                      <div key={m.id} 
-                        className={`match-card ${gestart ? 'locked' : ''}`}
-                        onClick={() => gestart && setExpandedMatchId(expandedMatchId === m.id ? null : m.id)}
-                      >
-                        <div className="match-header">
-                          <span>{m.ronde} • {new Date(m.datum).toLocaleDateString('nl-BE', {day:'2-digit', month:'short'})} {new Date(m.datum).toLocaleTimeString('nl-BE', {hour:'2-digit', minute:'2-digit'})}</span>
-                          
-                          {/* AUTO SAVE INDICATOR */}
-                          {!gestart && (
-                            <span className={`save-indicator ${saveStatus}`}>
-                              {saveStatus === 'saving' ? '⏳ Opslaan...' : saveStatus === 'saved' ? '✅ Opgeslagen' : ''}
-                            </span>
-                          )}
-
-                          <button className={`joker-btn ${v.joker ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); if(!gestart) toggleJoker(m.id); }}>🌟</button>
-                        </div>
-                        <div className="match-body" style={{paddingBottom: (gestart && expandedMatchId !== m.id) ? '10px' : '15px'}}>
-                          <span className="team-naam">{m.thuisploeg}</span>
-                          <input className="score-invoer" type="tel" value={v.thuis} disabled={gestart} onClick={e => e.stopPropagation()} onChange={e => handleScore(m.id, 'thuis', e.target.value)} />
-                          <span style={{margin:'0 10px', fontWeight:900, color:'#ADB5BD'}}>-</span>
-                          <input className="score-invoer" type="tel" value={v.uit} disabled={gestart} onClick={e => e.stopPropagation()} onChange={e => handleScore(m.id, 'uit', e.target.value)} />
-                          <span className="team-naam">{m.uitploeg}</span>
-                        </div>
-                        
-                        {/* WIE HEEFT INGEVULD (Voor de start) */}
-                        {!gestart && (
-                          <div className="filled-container">
-                            <div className="filled-avatars">
-                              {voorspellingenVoorMatch.map(av => (
-                                <div key={av.speler_id} className="filled-avatar" title={av.spelers?.naam}>{av.spelers?.naam?.charAt(0).toUpperCase()}</div>
-                              ))}
-                            </div>
-                            <span className="filled-text">{voorspellingenVoorMatch.length} / {alleSpelers.length} ingevuld</span>
-                          </div>
-                        )}
-
-                        {/* KLIK OM TE ZIEN (Gestart, ingeklapt) */}
-                        {gestart && expandedMatchId !== m.id && (
-                          <div className="click-to-expand">Klik om voorspellingen te zien 👁️</div>
-                        )}
-
-                        {/* DROPDOWN MET ALLE VOORSPELLINGEN (Gestart, uitgeklapt) */}
-                        {gestart && expandedMatchId === m.id && (
-                          <div className="predictions-dropdown">
-                            <div className="pred-title">IEDEREENS VOORSPELLING</div>
-                            {voorspellingenVoorMatch.map(av => (
-                              <div key={av.id} className="pred-row">
-                                <span>{av.spelers?.naam} {av.gouden_bal ? '🌟' : ''}</span>
-                                <span className="pred-score">{av.thuis_score} - {av.uit_score}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
+              <MatchenTab 
+                gefilterdeMatchen={gefilterdeMatchen} 
+                nu={nu} 
+                matchVoorspellingen={matchVoorspellingen} 
+                matchSaveStatus={matchSaveStatus} 
+                alleMatchVoorspellingen={alleMatchVoorspellingen} 
+                actieveSpeler={actieveSpeler} 
+                alleSpelers={alleSpelers} 
+                handleScore={handleScore} 
+                toggleJoker={toggleJoker} 
+                slaMatchOp={slaMatchOp} 
+                filterRonde={filterRonde} 
+                setFilterRonde={setFilterRonde} 
+                expandedMatchId={expandedMatchId} 
+                setExpandedMatchId={setExpandedMatchId} 
+              />
             )}
 
             {actieveTab === 'bonus' && (
-              <div>
-                <div className="input-group">
-                  <label className="input-label">Wereldkampioen?</label>
-                  <Autocomplete options={WK_LANDEN} value={winnaar} onChange={setWinnaar} placeholder="Typ een land..." disabled={isGesloten} />
-                </div>
-
-                <div className="input-group">
-                  <label className="input-label" style={{color:'var(--magenta)'}}>De 4 Halve Finalisten?</label>
-                  <div style={{display:'flex', flexDirection:'column', gap:8}}>
-                    <Autocomplete options={WK_LANDEN} value={hf[0]} onChange={(v) => { const n = [...hf]; n[0] = v; setHf(n); }} placeholder="Halve finalist 1..." disabled={isGesloten} />
-                    <Autocomplete options={WK_LANDEN} value={hf[1]} onChange={(v) => { const n = [...hf]; n[1] = v; setHf(n); }} placeholder="Halve finalist 2..." disabled={isGesloten} />
-                    <Autocomplete options={WK_LANDEN} value={hf[2]} onChange={(v) => { const n = [...hf]; n[2] = v; setHf(n); }} placeholder="Halve finalist 3..." disabled={isGesloten} />
-                    <Autocomplete options={WK_LANDEN} value={hf[3]} onChange={(v) => { const n = [...hf]; n[3] = v; setHf(n); }} placeholder="Halve finalist 4..." disabled={isGesloten} />
-                  </div>
-                </div>
-
-                <div className="input-group">
-                  <label className="input-label">Land met meeste goals (totaal)?</label>
-                  <Autocomplete options={WK_LANDEN} value={meesteGoalsLand} onChange={setMeesteGoalsLand} placeholder="Typ een land..." disabled={isGesloten} />
-                </div>
-                <div className="input-group">
-                  <label className="input-label">Beste verdediging (minste tegengoals)?</label>
-                  <Autocomplete options={WK_LANDEN} value={besteVerdedigingLand} onChange={setBesteVerdedigingLand} placeholder="Typ een land..." disabled={isGesloten} />
-                </div>
-                <div className="input-group">
-                  <label className="input-label">Eindstation België?</label>
-                  <select className="full-input" value={eindstation} onChange={e => setEindstation(e.target.value)} disabled={isGesloten}>
-                    <option value="">Kies een ronde...</option>
-                    {['Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale', 'Wereldkampioen'].map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </div>
-                
-                <div style={{display:'flex', gap:10}}>
-                  <div className="input-group" style={{flex:1}}>
-                    <label className="input-label">Totaal Geel?</label>
-                    <input className="full-input" type="number" value={totaalGeel} onChange={e => setTotaalGeel(e.target.value)} disabled={isGesloten} />
-                  </div>
-                  <div className="input-group" style={{flex:1}}>
-                    <label className="input-label">Totaal Rood?</label>
-                    <input className="full-input" type="number" value={totaalRood} onChange={e => setTotaalRood(e.target.value)} disabled={isGesloten} />
-                  </div>
-                </div>
-
-                {!isGesloten && <button className="btn-primary" onClick={slaBonusOp}>BONUS OPSLAAN</button>}
-                <p style={{textAlign:'center', fontWeight:900, color:'var(--crayola)', marginTop: 10}}>{opslaanStatus}</p>
-              </div>
+              <BonusTab 
+                winnaar={winnaar} setWinnaar={setWinnaar} 
+                hf={hf} setHf={setHf} 
+                meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} 
+                besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} 
+                eindstation={eindstation} setEindstation={setEindstation} 
+                totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} 
+                totaalRood={totaalRood} setTotaalRood={setTotaalRood} 
+                isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} 
+              />
             )}
 
-            {actieveTab === 'antwoorden' && (
-              <div>
-                {nu < DEADLINE_DATE ? (
-                  <div style={{textAlign:'center', padding:'40px 20px', background:'rgba(255,255,255,0.8)', borderRadius:16, border:'2px dashed #ADB5BD'}}>
-                    <div style={{fontSize:'3.5rem', marginBottom:15}}>🔒</div>
-                    <h3 style={{color:'#111827', margin:0, fontFamily:'Bebas Neue', fontSize:'2.5rem'}}>TOP SECRET</h3>
-                    <p style={{color:'#6C757D', fontSize:'0.85rem', fontWeight:800, marginTop:10}}>
-                      Om afkijken te voorkomen, blijven de antwoorden van je vrienden verborgen tot de allereerste WK-match is afgetrapt (11 Juni 2026).
-                    </p>
-                  </div>
-                ) : (
-                  <div>
-                    <div className="antwoord-sectie">
-                      <div className="antwoord-header">🏆 Wereldkampioen</div>
-                      {alleToernooiV.map(v => <div key={v.id} className="pred-row"><span>{v.spelers?.naam}</span> <span style={{color:'var(--magenta)'}}>{v.winnaar || '-'}</span></div>)}
-                    </div>
+            {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} />}
 
-                    <div className="antwoord-sectie">
-                      <div className="antwoord-header">⚔️ De 4 Halve Finalisten</div>
-                      {alleToernooiV.map(v => (
-                        <div key={v.id} className="pred-row" style={{flexDirection:'column'}}>
-                          <span style={{color:'var(--crayola)', marginBottom:4}}>{v.spelers?.naam}</span> 
-                          <span style={{fontSize:'0.8rem', color:'var(--magenta)'}}>{[v.halve_finalist_1, v.halve_finalist_2, v.halve_finalist_3, v.halve_finalist_4].filter(Boolean).join(' • ') || '-'}</span>
-                        </div>
-                      ))}
-                    </div>
+            {actieveTab === 'ranking' && <RankingTab klassement={klassement} />}
 
-                    <div className="antwoord-sectie">
-                      <div className="antwoord-header">⚽ Meeste Goals Voor</div>
-                      {alleToernooiV.map(v => <div key={v.id} className="pred-row"><span>{v.spelers?.naam}</span> <span style={{color:'var(--magenta)'}}>{v.topschutter || '-'}</span></div>)}
-                    </div>
-
-                    <div className="antwoord-sectie">
-                      <div className="antwoord-header">🛡️ Beste Verdediging</div>
-                      {alleToernooiV.map(v => <div key={v.id} className="pred-row"><span>{v.spelers?.naam}</span> <span style={{color:'var(--magenta)'}}>{v.beste_keeper || '-'}</span></div>)}
-                    </div>
-
-                    <div className="antwoord-sectie">
-                      <div className="antwoord-header">🍟 Eindstation België</div>
-                      {alleToernooiV.map(v => <div key={v.id} className="pred-row"><span>{v.spelers?.naam}</span> <span style={{color:'var(--magenta)'}}>{v.eindstation_belgie || '-'}</span></div>)}
-                    </div>
-
-                    <div style={{display:'flex', gap:10}}>
-                      <div className="antwoord-sectie" style={{flex:1}}>
-                        <div className="antwoord-header" style={{color:'#EAB308'}}>🟨 Geel</div>
-                        {alleToernooiV.map(v => <div key={v.id} className="pred-row"><span>{v.spelers?.naam}</span> <span style={{color:'var(--magenta)'}}>{v.totaal_gele_kaarten || '-'}</span></div>)}
-                      </div>
-                      <div className="antwoord-sectie" style={{flex:1}}>
-                        <div className="antwoord-header" style={{color:'#EF4444'}}>🟥 Rood</div>
-                        {alleToernooiV.map(v => <div key={v.id} className="pred-row"><span>{v.spelers?.naam}</span> <span style={{color:'var(--magenta)'}}>{v.totaal_rode_kaarten || '-'}</span></div>)}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {actieveTab === 'ranking' && (
-              <div>
-                {klassement.map((s, i) => {
-                  const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-other';
-                  return (
-                    <div key={s.id} className={`ranking-item ${rankClass}`}>
-                      <div className="rank-badge">{i+1}</div>
-                      <div className="ranking-main">
-                        <span className="ranking-naam">{s.naam} {s.jokerIngezet ? <span style={{fontSize:'1rem'}}>🌑</span> : <span style={{fontSize:'1rem'}}>🌟</span>}</span>
-                        <div className="ranking-stats">
-                          ✅ {s.exact} exact • 🏆 {s.winnaarCorrect} win • ❌ {s.fout} fout
-                        </div>
-                      </div>
-                      <span className="ranking-score">{s.totaal_score}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {actieveTab === 'tellers' && (
-              <div>
-                <div className="teller-grid">
-                  <div className="teller-card" style={{gridColumn: 'span 2'}}>
-                    <div className="teller-val">{tellersData.totaleGoals}</div>
-                    <div className="teller-label">Totaal Aantal Doelpunten</div>
-                  </div>
-                  
-                  <div className="teller-card" style={{background: '#FFD43B', color: '#111827'}}>
-                    <div className="teller-val">{tellersData.totaleGeleKaarten}</div>
-                    <div className="teller-label">Gele Kaarten</div>
-                  </div>
-                  
-                  <div className="teller-card" style={{background: '#FA5252'}}>
-                    <div className="teller-val">{tellersData.totaleRodeKaarten}</div>
-                    <div className="teller-label">Rode Kaarten</div>
-                  </div>
-
-                  {/* VERNIEUWDE OPMAAK MEESTE/MINSTE GOALS */}
-                  <div className="teller-card" style={{background: '#40C057', gridColumn: 'span 2'}}>
-                    <div className="teller-label">MEEST SCOREND TEAM</div>
-                    <div className="teller-val" style={{fontSize: '2.5rem', margin: '5px 0'}}>{tellersData.meestScorendTeam[0]}</div>
-                    <div style={{fontWeight: 900}}>{tellersData.meestScorendTeam[1]} Doelpunten</div>
-                  </div>
-
-                  <div className="teller-card" style={{background: '#228BE6', gridColumn: 'span 2'}}>
-                    <div className="teller-label">BESTE VERDEDIGING (MINSTE TEGEN)</div>
-                    <div className="teller-val" style={{fontSize: '2.5rem', margin: '5px 0'}}>{tellersData.minstTegenTeam[0]}</div>
-                    <div style={{fontWeight: 900}}>{tellersData.minstTegenTeam[1]} Tegendoelpunten</div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {actieveTab === 'tellers' && <TellersTab tellersData={tellersData} />}
 
             {actieveTab === 'kleedkamer' && (
-              <div>
-                <div className="chat-container">
-                  {chatBerichten.map(b => (
-                    <div key={b.id} className={`chat-bericht ${b.speler_id === actieveSpeler.id ? 'chat-eigen' : ''}`}>
-                      <div style={{fontSize: '0.65rem', color: b.speler_id === actieveSpeler.id ? '#111827' : '#ADB5BD', marginBottom: 2}}>{b.spelers?.naam}</div>
-                      <div>{b.bericht}</div>
-                    </div>
-                  ))}
-                  <div ref={chatEindeRef} />
-                </div>
-                <form onSubmit={verstuurChat} style={{display:'flex', gap:10}}>
-                  <input className="full-input" style={{padding:'12px', marginBottom:0}} value={nieuwBericht} onChange={e => setNieuwBericht(e.target.value)} placeholder="Zeg iets..." />
-                  <button className="btn-primary" style={{width:'80px', padding:'12px'}} type="submit">➤</button>
-                </form>
-              </div>
+              <ChatTab 
+                chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} chatEindeRef={chatEindeRef} 
+                nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} 
+              />
             )}
             
             <div style={{textAlign:'center', marginTop:20}}>
