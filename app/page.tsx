@@ -23,8 +23,8 @@ export default function Home() {
   const [besteKeeper, setBesteKeeper] = useState('');
   const [eindstation, setEindstation] = useState('');
   const [totaalGoals, setTotaalGoals] = useState('');
-  const [geelKaarten, setGeelKaarten] = useState(''); // NIEUW
-  const [roodKaarten, setRoodKaarten] = useState(''); // NIEUW
+  const [geelKaarten, setGeelKaarten] = useState('');
+  const [roodKaarten, setRoodKaarten] = useState('');
   const [lv1, setLv1] = useState('');
   const [lv2, setLv2] = useState('');
   const [lv3, setLv3] = useState('');
@@ -167,7 +167,6 @@ export default function Home() {
     return <span className="antw-text blurred-waarde">█████████</span>;
   };
 
-  // Categorieën opzet voor het "Antwoorden" tabblad
   const CATEGORIEEN = [
     { key: 'winnaar', label: 'Eindwinnaar WK', stand: 'Nog niet bekend' },
     { key: 'topschutter', label: 'Topschutter', stand: 'Momenteel: 0 goals' },
@@ -189,7 +188,6 @@ export default function Home() {
         .title { font-size: 2.8rem; font-weight: 900; margin: 0; letter-spacing: -1.5px; text-align: center; }
         .subtitle { font-size: 0.75rem; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 20px; color: rgba(255,255,255,0.6); text-align: center; }
         
-        /* COUNTDOWN CSS */
         .countdown-banner { background: rgba(0,0,0,0.25); border-radius: 16px; padding: 15px 10px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(156, 246, 246, 0.2); }
         .countdown-title { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: #9CF6F6; margin-bottom: 10px; font-weight: 800; }
         .tijd-grid { display: flex; justify-content: center; gap: 6px; width: 100%; }
@@ -198,12 +196,10 @@ export default function Home() {
         .tijd-label { font-size: 0.5rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.8; }
         .gesloten-banner { background: rgba(245, 105, 96, 0.3); border: 1px solid #F56960; color: white; padding: 15px; border-radius: 16px; text-align: center; font-weight: 800; margin-bottom: 25px; letter-spacing: 1px; text-transform: uppercase; }
 
-        /* TABS CSS */
         .tab-container { display: flex; background: rgba(0,0,0,0.2); border-radius: 16px; padding: 5px; margin-bottom: 25px; }
         .tab { flex: 1; text-align: center; padding: 12px 2px; font-size: 0.65rem; font-weight: 800; border-radius: 12px; cursor: pointer; transition: all 0.3s; opacity: 0.6; white-space: nowrap; letter-spacing: 0.5px; }
         .tab.active { background: #9CF6F6; color: #1A3C40; opacity: 1; }
         
-        /* FORM CSS */
         .input-group { text-align: left; margin-bottom: 15px; }
         .label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; margin-left: 12px; margin-bottom: 6px; display: block; opacity: 0.8; color: #9CF6F6; }
         .input-field { width: 100%; padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); color: white; font-size: 1rem; outline: none; box-sizing: border-box; -webkit-appearance: none; }
@@ -215,7 +211,7 @@ export default function Home() {
         .btn-secondary { width: 100%; padding: 14px; margin-top: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.25); background: transparent; color: white; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-        /* RANKING CSS */
+        /* RANKING CSS & STATS DASHBOARD */
         .ranking-item { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 15px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; }
         .ranking-item.is-me { border-color: #9CF6F6; background: rgba(156, 246, 246, 0.1); }
         .ranking-hoofd { display: flex; align-items: center; margin-bottom: 10px; }
@@ -225,12 +221,18 @@ export default function Home() {
         .pos-3 { color: #CD7F32; opacity: 1; }
         .ranking-naam { flex: 1; font-size: 1.1rem; font-weight: 800; margin: 0; text-align: left; }
         .ranking-totaal { font-size: 1.6rem; font-weight: 900; color: #9CF6F6; text-align: right; min-width: 50px; }
-        .ranking-details { background: rgba(0,0,0,0.15); padding: 10px; border-radius: 12px; }
+        
+        .ranking-details { background: rgba(0,0,0,0.15); padding: 10px; border-radius: 12px; margin-bottom: 8px; }
         .detail-rij { display: flex; justify-content: space-between; font-size: 0.75rem; color: rgba(255,255,255,0.85); margin-bottom: 6px; }
         .detail-rij:last-child { margin-bottom: 0; }
         .detail-rij span:last-child { font-weight: 900; color: #9CF6F6; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+        .stat-box { background: rgba(0,0,0,0.2); border-radius: 8px; padding: 8px 4px; text-align: center; }
+        .stat-icoon { font-size: 1.2rem; margin-bottom: 2px; }
+        .stat-waarde { font-size: 1rem; font-weight: 900; color: white; line-height: 1.1; }
+        .stat-label { font-size: 0.55rem; text-transform: uppercase; color: rgba(255,255,255,0.6); letter-spacing: 0.5px; }
 
-        /* NIEUWE ANTWOORDEN (PER CATEGORIE) CSS */
         .cat-card { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 0; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; }
         .cat-header { background: rgba(0,0,0,0.2); padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
         .cat-titel { font-size: 1rem; font-weight: 800; color: #9CF6F6; margin: 0 0 4px 0; text-transform: uppercase; letter-spacing: 1px; }
@@ -254,7 +256,6 @@ export default function Home() {
 
         {actieveSpeler ? (
           <div>
-            {/* 4 TABS MENU */}
             <div className="tab-container">
               <div className={`tab ${actieveTab === 'matchen' ? 'active' : ''}`} onClick={() => setActieveTab('matchen')}>MATCHEN</div>
               <div className={`tab ${actieveTab === 'toernooi' ? 'active' : ''}`} onClick={() => setActieveTab('toernooi')}>TOERNOOI</div>
@@ -262,7 +263,6 @@ export default function Home() {
               <div className={`tab ${actieveTab === 'ranking' ? 'active' : ''}`} onClick={() => setActieveTab('ranking')}>RANKING</div>
             </div>
 
-            {/* TAB: TOERNOOI INVOEREN */}
             {actieveTab === 'toernooi' && (
               <form onSubmit={slaToernooiVoorspellingOp} style={{ animation: 'fadeIn 0.4s' }}>
                 {isGesloten ? (
@@ -282,7 +282,6 @@ export default function Home() {
                 <div className="input-group"><label className="label">Eindwinnaar WK</label><select className="input-field" value={winnaar} onChange={e => setWinnaar(e.target.value)} required disabled={isGesloten}><option value="" disabled>Kies een land...</option>{WK_LANDEN.map(land => <option key={land} value={land}>{land}</option>)}</select></div>
                 <div className="input-group"><label className="label">Topschutter</label><input className="input-field" list="top-spelers" placeholder="Begin te typen..." value={topschutter} onChange={e => setTopschutter(e.target.value)} required disabled={isGesloten} /></div>
                 <div className="input-group"><label className="label">Beste Keeper</label><input className="input-field" list="top-keepers" placeholder="Begin te typen..." value={besteKeeper} onChange={e => setBesteKeeper(e.target.value)} required disabled={isGesloten} /></div>
-                
                 <div className="input-group">
                   <label className="label">Eindstation Rode Duivels</label>
                   <select className="input-field" value={eindstation} onChange={e => setEindstation(e.target.value)} required disabled={isGesloten}>
@@ -296,7 +295,6 @@ export default function Home() {
                     <option value="Wereldkampioen">Wereldkampioen</option>
                   </select>
                 </div>
-
                 <div className="input-group">
                   <label className="label">De Laatste Vier</label>
                   <div className="grid-2">
@@ -306,21 +304,10 @@ export default function Home() {
                     <select className="input-field" value={lv4} onChange={e => setLv4(e.target.value)} required disabled={isGesloten}><option value="" disabled>Land 4</option>{WK_LANDEN.map(land => <option key={land} value={land}>{land}</option>)}</select>
                   </div>
                 </div>
-
-                <div className="input-group">
-                  <label className="label">Tie-breaker: Totaal goals WK</label>
-                  <input className="input-field" type="number" placeholder="Bv. 172" value={totaalGoals} onChange={e => setTotaalGoals(e.target.value)} required disabled={isGesloten} />
-                </div>
-
+                <div className="input-group"><label className="label">Tie-breaker: Totaal goals WK</label><input className="input-field" type="number" placeholder="Bv. 172" value={totaalGoals} onChange={e => setTotaalGoals(e.target.value)} required disabled={isGesloten} /></div>
                 <div className="grid-2">
-                  <div className="input-group">
-                    <label className="label">Gele Kaarten (Totaal)</label>
-                    <input className="input-field" type="number" placeholder="Bv. 220" value={geelKaarten} onChange={e => setGeelKaarten(e.target.value)} required disabled={isGesloten} />
-                  </div>
-                  <div className="input-group">
-                    <label className="label">Rode Kaarten (Totaal)</label>
-                    <input className="input-field" type="number" placeholder="Bv. 12" value={roodKaarten} onChange={e => setRoodKaarten(e.target.value)} required disabled={isGesloten} />
-                  </div>
+                  <div className="input-group"><label className="label">Gele Kaarten</label><input className="input-field" type="number" placeholder="Bv. 220" value={geelKaarten} onChange={e => setGeelKaarten(e.target.value)} required disabled={isGesloten} /></div>
+                  <div className="input-group"><label className="label">Rode Kaarten</label><input className="input-field" type="number" placeholder="Bv. 12" value={roodKaarten} onChange={e => setRoodKaarten(e.target.value)} required disabled={isGesloten} /></div>
                 </div>
 
                 {voorspellingStatus && <div style={{ textAlign: 'center', margin: '15px 0', fontSize: '0.9rem', fontWeight: 'bold' }}>{voorspellingStatus}</div>}
@@ -329,14 +316,9 @@ export default function Home() {
               </form>
             )}
 
-            {/* VERNIEUWDE TAB: ANTWOORDEN (PER CATEGORIE) */}
             {actieveTab === 'antwoorden' && (
               <div style={{ animation: 'fadeIn 0.4s' }}>
-                <p style={{ textAlign: 'center', fontSize: '0.8rem', opacity: 0.8, marginBottom: '20px', lineHeight: '1.4' }}>
-                  Bekijk hier per vraag wat iedereen gegokt heeft.<br/>
-                  <strong style={{color: '#9CF6F6'}}>Anderen zijn geblurred tot de start!</strong>
-                </p>
-
+                <p style={{ textAlign: 'center', fontSize: '0.8rem', opacity: 0.8, marginBottom: '20px', lineHeight: '1.4' }}>Bekijk hier per vraag wat iedereen gegokt heeft.<br/><strong style={{color: '#9CF6F6'}}>Anderen zijn geblurred tot de start!</strong></p>
                 {CATEGORIEEN.map((cat, idx) => (
                   <div key={idx} className="cat-card">
                     <div className="cat-header">
@@ -348,21 +330,15 @@ export default function Home() {
                         const v = alleVoorspellingen.find(x => x.speler_id === speler.id);
                         const isMijzelf = speler.id === actieveSpeler.id;
                         const toonData = isGesloten || isMijzelf;
-
                         let getoondeWaarde = "Nog niets ingevuld...";
                         if (v) {
                           if (cat.key === 'laatste_vier') getoondeWaarde = v[cat.key]?.join(', ') || '-';
                           else getoondeWaarde = v[cat.key] || '-';
                         }
-
                         return (
                           <div key={speler.id} className={`cat-speler-rij ${isMijzelf ? 'eigen-antw' : ''}`}>
                             <span className="antw-naam">{speler.naam}</span>
-                            {v ? (
-                              <VeiligAntwoord toon={toonData} waarde={getoondeWaarde.toString()} />
-                            ) : (
-                              <span style={{ fontSize: '0.75rem', fontStyle: 'italic', opacity: 0.4 }}>Wachtend...</span>
-                            )}
+                            {v ? <VeiligAntwoord toon={toonData} waarde={getoondeWaarde.toString()} /> : <span style={{ fontSize: '0.75rem', fontStyle: 'italic', opacity: 0.4 }}>Wachtend...</span>}
                           </div>
                         );
                       })}
@@ -372,7 +348,6 @@ export default function Home() {
               </div>
             )}
 
-            {/* TAB: RANKING */}
             {actieveTab === 'ranking' && (
               <div style={{ animation: 'fadeIn 0.4s' }}>
                 <p style={{ textAlign: 'center', fontSize: '0.8rem', opacity: 0.8, marginBottom: '20px' }}>Inclusief live updates voor je bonusvragen!</p>
@@ -392,15 +367,29 @@ export default function Home() {
                         </div>
                         
                         <div className="ranking-details">
-                          <div className="detail-rij">
-                            <span>⚽ Punten uit wedstrijden:</span>
-                            <span>0 pt</span>
+                          <div className="detail-rij"><span>⚽ Punten uit wedstrijden:</span><span>0 pt</span></div>
+                          <div className="detail-rij"><span title="Bijv. Topschutter of Eindwinnaar">🏆 Live Toernooivragen:</span><span>0 pt</span></div>
+                        </div>
+
+                        {/* NIEUW: HET PRECISIE-DASHBOARD (Aantal exact/juist/fout) */}
+                        <div className="stats-grid">
+                          <div className="stat-box">
+                            <div className="stat-icoon">🎯</div>
+                            <div className="stat-waarde">0</div>
+                            <div className="stat-label">Exact</div>
                           </div>
-                          <div className="detail-rij">
-                            <span title="Bijv. Topschutter of Eindwinnaar">🏆 Live Toernooivragen:</span>
-                            <span>0 pt</span>
+                          <div className="stat-box">
+                            <div className="stat-icoon">✅</div>
+                            <div className="stat-waarde">0</div>
+                            <div className="stat-label">Juiste Ploeg</div>
+                          </div>
+                          <div className="stat-box">
+                            <div className="stat-icoon">❌</div>
+                            <div className="stat-waarde">0</div>
+                            <div className="stat-label">Fout</div>
                           </div>
                         </div>
+
                       </div>
                     );
                   })
