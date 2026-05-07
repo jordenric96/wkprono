@@ -566,7 +566,7 @@ export default function Home() {
                   </div>
                   <div className="input-group" style={{flex:1}}>
                     <label className="input-label">Totaal Rood?</label>
-                    <input className="full-input" type="number" value={totaalRood} onChange={e => setRoodV(e.target.value)} disabled={isGesloten} />
+                    <input className="full-input" type="number" value={totaalRood} onChange={e => setTotaalRood(e.target.value)} disabled={isGesloten} />
                   </div>
                 </div>
 
