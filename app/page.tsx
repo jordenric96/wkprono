@@ -295,18 +295,28 @@ export default function Home() {
   };
 
   const tellersData = useMemo(() => {
-    let g = 0; let y = 0; let r = 0;
-    const v: any = {}; const t: any = {};
+    let totaleGoals = 0; let totaleGeleKaarten = 0; let totaleRodeKaarten = 0;
+    const teamGoalsVoor: Record<string, number> = {};
+    const teamGoalsTegen: Record<string, number> = {};
+
     matchen.forEach(m => {
-      if (m.thuis_score !== null) {
-        g += (m.thuis_score + m.uit_score); y += (m.gele_kaarten || 0); r += (m.rode_kaarten || 0);
-        v[m.thuisploeg] = (v[m.thuisploeg] || 0) + m.thuis_score; v[m.uitploeg] = (v[m.uitploeg] || 0) + m.uit_score;
-        t[m.thuisploeg] = (t[m.thuisploeg] || 0) + m.uit_score; t[m.uitploeg] = (t[m.uitploeg] || 0) + m.thuis_score;
+      if (m.thuis_score !== null && m.uit_score !== null) {
+        totaleGoals += (m.thuis_score + m.uit_score);
+        totaleGeleKaarten += (m.gele_kaarten || 0);
+        totaleRodeKaarten += (m.rode_kaarten || 0);
+        
+        teamGoalsVoor[m.thuisploeg] = (teamGoalsVoor[m.thuisploeg] || 0) + m.thuis_score;
+        teamGoalsVoor[m.uitploeg] = (teamGoalsVoor[m.uitploeg] || 0) + m.uit_score;
+        
+        teamGoalsTegen[m.thuisploeg] = (teamGoalsTegen[m.thuisploeg] || 0) + m.uit_score;
+        teamGoalsTegen[m.uitploeg] = (teamGoalsTegen[m.uitploeg] || 0) + m.thuis_score;
       }
     });
-    const mS = Object.entries(v).sort((a:any, b:any) => b[1] - a[1])[0] || ['-', 0];
-    const mT = Object.entries(t).sort((a:any, b:any) => a[1] - b[1])[0] || ['-', 0];
-    return { g, y, r, mS, mT };
+
+    const meestScorendTeam = Object.entries(teamGoalsVoor).sort((a, b) => b[1] - a[1])[0] || ['Nog geen data', 0];
+    const minstTegenTeam = Object.entries(teamGoalsTegen).sort((a, b) => a[1] - b[1])[0] || ['Nog geen data', 0];
+
+    return { totaleGoals, totaleGeleKaarten, totaleRodeKaarten, meestScorendTeam, minstTegenTeam };
   }, [matchen]);
 
   const gefilterdeMatchen = useMemo(() => {
