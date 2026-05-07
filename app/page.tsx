@@ -26,7 +26,7 @@ const Autocomplete = ({ options, value, onChange, placeholder, disabled }: { opt
         <ul className="autocomplete-dropdown">
           {filtered.length > 0 ? filtered.map(opt => (
             <li key={opt} className="autocomplete-item" onClick={() => { onChange(opt); setIsOpen(false); }}>{opt}</li>
-          )) : <li className="autocomplete-item" style={{ color: '#F038FF' }}>Ongekend land...</li>}
+          )) : <li className="autocomplete-item" style={{ color: '#F038FF' }}>Onbekend land...</li>}
         </ul>
       )}
     </div>
@@ -44,20 +44,25 @@ export default function Home() {
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
   const actieveTabRef = useRef(actieveTab);
 
-  // MATCHEN & VOORSPELLINGEN
+  // DATA STATES
   const [matchen, setMatchen] = useState<any[]>([]);
   const [matchVoorspellingen, setMatchVoorspellingen] = useState<Record<number, {thuis: string, uit: string, joker: boolean}>>({});
+  const [matchSaveStatus, setMatchSaveStatus] = useState<Record<number, 'idle' | 'saving' | 'saved'>>({});
+  const [alleAntwoorden, setAlleAntwoorden] = useState<any[]>([]);
   const [opslaanStatus, setOpslaanStatus] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
 
-  // BONUSVRAGEN
+  // BONUSVRAGEN STATES
   const [winnaar, setWinnaar] = useState('');
+  const [hf1, setHf1] = useState('');
+  const [hf2, setHf2] = useState('');
+  const [hf3, setHf3] = useState('');
+  const [hf4, setHf4] = useState('');
   const [meesteGoalsLand, setMeesteGoalsLand] = useState('');
   const [besteVerdedigingLand, setBesteVerdedigingLand] = useState('');
   const [eindstation, setEindstation] = useState('');
   const [totaalGeel, setTotaalGeel] = useState('');
   const [totaalRood, setTotaalRood] = useState('');
-  const [alleAntwoorden, setAlleAntwoorden] = useState<any[]>([]);
 
   // KLASSEMENT & CHAT
   const [klassement, setKlassement] = useState<any[]>([]);
@@ -155,6 +160,7 @@ export default function Home() {
   };
 
   const handleScore = (mId: number, veld: 'thuis'|'uit', waarde: string) => {
+    setMatchSaveStatus(prev => ({...prev, [mId]: 'idle'}));
     setMatchVoorspellingen(prev => ({
       ...prev,
       [mId]: { ...prev[mId], [veld]: waarde, joker: prev[mId]?.joker || false }
@@ -171,28 +177,40 @@ export default function Home() {
       nieuwStaat[mId] = { ...prev[mId], joker: !isNuJoker, thuis: prev[mId]?.thuis || '', uit: prev[mId]?.uit || '' };
       return nieuwStaat;
     });
+    setMatchSaveStatus(prev => ({...prev, [mId]: 'idle'}));
   };
 
-  const slaAllesOp = async () => {
-    setOpslaanStatus('Bezig... ⚽');
-    
-    // Matchen opslaan
-    const inserts: any[] = [];
-    Object.keys(matchVoorspellingen).forEach(mId => {
-      const v = matchVoorspellingen[Number(mId)];
-      if (v.thuis !== '' && v.uit !== '') {
-        inserts.push({ speler_id: actieveSpeler.id, match_id: Number(mId), thuis_score: parseInt(v.thuis), uit_score: parseInt(v.uit), gouden_bal: v.joker });
-      }
-    });
+  // NIEUW: Bewaar per match met visuele indicatie
+  const slaMatchOp = async (mId: number) => {
+    const v = matchVoorspellingen[mId];
+    if (!v || v.thuis === '' || v.uit === '') return;
 
-    if (inserts.length > 0) {
-      await supabase.from('match_voorspellingen').upsert(inserts, { onConflict: 'speler_id, match_id' });
+    setMatchSaveStatus(prev => ({...prev, [mId]: 'saving'}));
+
+    const { error } = await supabase.from('match_voorspellingen').upsert({
+      speler_id: actieveSpeler.id, 
+      match_id: mId, 
+      thuis_score: parseInt(v.thuis), 
+      uit_score: parseInt(v.uit), 
+      gouden_bal: v.joker
+    }, { onConflict: 'speler_id, match_id' });
+
+    if (!error) {
+      setMatchSaveStatus(prev => ({...prev, [mId]: 'saved'}));
+    } else {
+      setMatchSaveStatus(prev => ({...prev, [mId]: 'idle'}));
     }
+  };
 
-    // Bonus opslaan (we hergebruiken tijdelijk kolommen of voegen toe als ze in supabase staan)
+  const slaBonusOp = async () => {
+    setOpslaanStatus('Bezig... ⚽');
     await supabase.from('toernooi_voorspellingen').upsert({
       speler_id: actieveSpeler.id, 
       winnaar, 
+      halve_finalist_1: hf1,
+      halve_finalist_2: hf2,
+      halve_finalist_3: hf3,
+      halve_finalist_4: hf4,
       topschutter: meesteGoalsLand, 
       beste_keeper: besteVerdedigingLand, 
       eindstation_belgie: eindstation,
@@ -200,7 +218,7 @@ export default function Home() {
       totaal_rode_kaarten: parseInt(totaalRood) || 0
     }, { onConflict: 'speler_id' });
 
-    setOpslaanStatus('Alles opgeslagen! 🌟');
+    setOpslaanStatus('Bonusvragen Opgeslagen! 🌟');
     setShowConfetti(true);
     setTimeout(() => { setShowConfetti(false); setOpslaanStatus(''); }, 3000);
   };
@@ -209,6 +227,10 @@ export default function Home() {
     const { data } = await supabase.from('toernooi_voorspellingen').select('*').eq('speler_id', actieveSpeler.id).single();
     if (data) {
       setWinnaar(data.winnaar || ''); 
+      setHf1(data.halve_finalist_1 || '');
+      setHf2(data.halve_finalist_2 || '');
+      setHf3(data.halve_finalist_3 || '');
+      setHf4(data.halve_finalist_4 || '');
       setMeesteGoalsLand(data.topschutter || '');
       setBesteVerdedigingLand(data.beste_keeper || ''); 
       setEindstation(data.eindstation_belgie || '');
@@ -266,9 +288,7 @@ export default function Home() {
 
   // TELLERS BEREKENING
   const tellersData = useMemo(() => {
-    let totaleGoals = 0;
-    let totaleGeleKaarten = 0;
-    let totaleRodeKaarten = 0;
+    let totaleGoals = 0; let totaleGeleKaarten = 0; let totaleRodeKaarten = 0;
     const teamGoalsVoor: Record<string, number> = {};
     const teamGoalsTegen: Record<string, number> = {};
 
@@ -277,10 +297,8 @@ export default function Home() {
         totaleGoals += (m.thuis_score + m.uit_score);
         totaleGeleKaarten += (m.gele_kaarten || 0);
         totaleRodeKaarten += (m.rode_kaarten || 0);
-        
         teamGoalsVoor[m.thuisploeg] = (teamGoalsVoor[m.thuisploeg] || 0) + m.thuis_score;
         teamGoalsVoor[m.uitploeg] = (teamGoalsVoor[m.uitploeg] || 0) + m.uit_score;
-        
         teamGoalsTegen[m.thuisploeg] = (teamGoalsTegen[m.thuisploeg] || 0) + m.uit_score;
         teamGoalsTegen[m.uitploeg] = (teamGoalsTegen[m.uitploeg] || 0) + m.thuis_score;
       }
@@ -329,7 +347,8 @@ export default function Home() {
         .filter-chip.urgent { background: #ffe3e3; color: #e03131; border-color: #ffa8a8; }
         .filter-chip.urgent.active { background: #e03131; color: #fff; border-color: #c92a2a; }
 
-        .match-card { background: #FFF; border-radius: 16px; margin-bottom: 12px; border: 2px solid #E9ECEF; overflow: hidden; }
+        .match-card { background: #FFF; border-radius: 16px; margin-bottom: 12px; border: 2px solid #E9ECEF; overflow: hidden; transition: 0.3s border-color, 0.3s box-shadow; position: relative; }
+        .match-card.is-saved { border-color: #2ECC40; box-shadow: 0 0 15px rgba(46, 204, 64, 0.3); }
         .match-header { background: #F8F9FA; padding: 10px 15px; font-size: 0.7rem; font-weight: 800; color: #ADB5BD; display: flex; justify-content: space-between; align-items: center; }
         .match-body { display: flex; align-items: center; padding: 15px; }
         .team-naam { font-weight: 900; flex: 1; text-align: center; font-size: 0.95rem; }
@@ -338,6 +357,9 @@ export default function Home() {
         .joker-btn { width: 38px; height: 38px; border-radius: 50%; border: 2px solid #DEE2E6; background: #FFF; font-size: 1.2rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; filter: grayscale(1); opacity: 0.5; }
         .joker-btn.active { background: #FFD700; border-color: #FFA500; filter: grayscale(0); opacity: 1; transform: scale(1.15); box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); }
 
+        .save-match-btn { position: absolute; right: 15px; bottom: 15px; background: var(--crayola); color: white; border: none; border-radius: 10px; width: 40px; height: 40px; font-size: 1rem; cursor: pointer; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+        .save-match-btn.saved { background: #2ECC40; }
+
         .ranking-item { background: #FFF; border-radius: 16px; padding: 15px; margin-bottom: 12px; border: 2px solid #E9ECEF; display: flex; align-items: center; gap: 15px; }
         .ranking-pos { font-family: 'Bebas Neue'; font-size: 1.8rem; color: var(--crayola); width: 30px; text-align: center; }
         .ranking-main { flex: 1; }
@@ -345,7 +367,6 @@ export default function Home() {
         .ranking-stats { font-size: 0.75rem; color: #6C757D; font-weight: 800; margin-top: 4px; }
         .ranking-score { font-family: 'Bebas Neue'; font-size: 2.5rem; color: var(--magenta); }
 
-        /* TELLER STYLES */
         .teller-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
         .teller-card { background: var(--crayola); color: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         .teller-val { font-family: 'Bebas Neue'; font-size: 3rem; line-height: 1; }
@@ -365,9 +386,11 @@ export default function Home() {
         .autocomplete-item { padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #F8F9FA; font-weight: 800; font-size: 0.9rem; }
         .autocomplete-item:hover { background: #F8F9FA; color: var(--crayola); }
 
-        .antwoorden-tabel { width: 100%; border-collapse: collapse; font-size: 0.75rem; font-weight: 700; }
-        .antwoorden-tabel th, .antwoorden-tabel td { padding: 10px; border-bottom: 1px solid #E9ECEF; text-align: left; }
-        .antwoorden-tabel th { background: #F8F9FA; color: #ADB5BD; font-weight: 900; text-transform: uppercase; font-size: 0.65rem; }
+        .antwoord-sectie { background: #F8F9FA; border-radius: 16px; padding: 15px; margin-bottom: 15px; border: 1px solid #E9ECEF; }
+        .antwoord-header { font-weight: 900; color: var(--crayola); margin-bottom: 10px; font-size: 1.1rem; text-transform: uppercase; border-bottom: 2px solid #E9ECEF; padding-bottom: 5px; }
+        .antwoord-rij { display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 800; padding: 6px 0; border-bottom: 1px solid #eee; }
+        .antwoord-rij:last-child { border-bottom: none; }
+        .antwoord-waarde { color: var(--magenta); }
       `}</style>
 
       {showConfetti && (
@@ -409,29 +432,38 @@ export default function Home() {
                 </div>
 
                 {gefilterdeMatchen.length === 0 ? (
-                  <p style={{textAlign:'center', fontWeight:800, color:'#ADB5BD', margin:'40px 0'}}>Geen matchen gevonden in deze categorie.</p>
+                  <p style={{textAlign:'center', fontWeight:800, color:'#ADB5BD', margin:'40px 0'}}>Alle wedstrijden in deze ronde zijn ingevuld!</p>
                 ) : (
                   gefilterdeMatchen.map(m => {
                     const v = matchVoorspellingen[m.id] || { thuis: '', uit: '', joker: false };
+                    const saveStatus = matchSaveStatus[m.id] || 'idle';
+                    
                     return (
-                      <div key={m.id} className="match-card">
+                      <div key={m.id} className={`match-card ${saveStatus === 'saved' ? 'is-saved' : ''}`}>
                         <div className="match-header">
                           <span>{m.ronde} • {new Date(m.datum).toLocaleDateString('nl-BE', {day:'2-digit', month:'short'})}</span>
                           <button className={`joker-btn ${v.joker ? 'active' : ''}`} onClick={() => toggleJoker(m.id)}>🌟</button>
                         </div>
-                        <div className="match-body">
+                        <div className="match-body" style={{paddingBottom: (v.thuis !== '' && v.uit !== '') ? '40px' : '15px'}}>
                           <span className="team-naam">{m.thuisploeg}</span>
-                          <input className="score-invoer" type="tel" value={v.thuis} onChange={e => handleScore(m.id, 'thuis', e.target.value)} />
+                          <input className="score-invoer" type="tel" value={v.thuis} onChange={e => handleScore(m.id, 'thuis', e.target.value)} disabled={isGesloten} />
                           <span style={{margin:'0 10px', fontWeight:900, color:'#ADB5BD'}}>-</span>
-                          <input className="score-invoer" type="tel" value={v.uit} onChange={e => handleScore(m.id, 'uit', e.target.value)} />
+                          <input className="score-invoer" type="tel" value={v.uit} onChange={e => handleScore(m.id, 'uit', e.target.value)} disabled={isGesloten} />
                           <span className="team-naam">{m.uitploeg}</span>
                         </div>
+                        
+                        {!isGesloten && v.thuis !== '' && v.uit !== '' && (
+                          <button 
+                            className={`save-match-btn ${saveStatus === 'saved' ? 'saved' : ''}`} 
+                            onClick={() => slaMatchOp(m.id)}
+                          >
+                            {saveStatus === 'saving' ? '⏳' : saveStatus === 'saved' ? '✅' : '💾'}
+                          </button>
+                        )}
                       </div>
                     );
                   })
                 )}
-                <button className="btn-primary" onClick={slaAllesOp}>OPSLAAN</button>
-                <p style={{textAlign:'center', fontWeight:900, color:'var(--crayola)'}}>{opslaanStatus}</p>
               </div>
             )}
 
@@ -441,6 +473,17 @@ export default function Home() {
                   <label className="input-label">Wereldkampioen?</label>
                   <Autocomplete options={WK_LANDEN} value={winnaar} onChange={setWinnaar} placeholder="Typ een land..." disabled={isGesloten} />
                 </div>
+
+                <div className="input-group">
+                  <label className="input-label" style={{color:'var(--magenta)'}}>Welke 4 landen bereiken de Halve Finale?</label>
+                  <div style={{display:'flex', flexDirection:'column', gap:8}}>
+                    <Autocomplete options={WK_LANDEN} value={hf1} onChange={setHf1} placeholder="Halve finalist 1..." disabled={isGesloten} />
+                    <Autocomplete options={WK_LANDEN} value={hf2} onChange={setHf2} placeholder="Halve finalist 2..." disabled={isGesloten} />
+                    <Autocomplete options={WK_LANDEN} value={hf3} onChange={setHf3} placeholder="Halve finalist 3..." disabled={isGesloten} />
+                    <Autocomplete options={WK_LANDEN} value={hf4} onChange={setHf4} placeholder="Halve finalist 4..." disabled={isGesloten} />
+                  </div>
+                </div>
+
                 <div className="input-group">
                   <label className="input-label">Land met meeste goals (totaal)?</label>
                   <Autocomplete options={WK_LANDEN} value={meesteGoalsLand} onChange={setMeesteGoalsLand} placeholder="Typ een land..." disabled={isGesloten} />
@@ -464,38 +507,69 @@ export default function Home() {
                   <label className="input-label">Totaal aantal rode kaarten?</label>
                   <input className="full-input" type="number" value={totaalRood} onChange={e => setTotaalRood(e.target.value)} disabled={isGesloten} />
                 </div>
-                <button className="btn-primary" onClick={slaAllesOp} disabled={isGesloten}>BONUS OPSLAAN</button>
+                {!isGesloten && (
+                  <>
+                    <button className="btn-primary" onClick={slaBonusOp}>BONUS OPSLAAN</button>
+                    <p style={{textAlign:'center', fontWeight:900, color:'var(--crayola)'}}>{opslaanStatus}</p>
+                  </>
+                )}
               </div>
             )}
 
             {actieveTab === 'antwoorden' && (
-              <div style={{overflowX: 'auto'}}>
-                <table className="antwoorden-tabel">
-                  <thead>
-                    <tr>
-                      <th>Naam</th>
-                      <th>Kampioen</th>
-                      <th>Meest Goals</th>
-                      <th>Beste Def</th>
-                      <th>België</th>
-                      <th>Geel</th>
-                      <th>Rood</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {alleAntwoorden.map(v => (
-                      <tr key={v.id}>
-                        <td style={{fontWeight:900}}>{v.spelers?.naam}</td>
-                        <td>{v.winnaar || '-'}</td>
-                        <td>{v.topschutter || '-'}</td>
-                        <td>{v.beste_keeper || '-'}</td>
-                        <td>{v.eindstation_belgie || '-'}</td>
-                        <td>{v.totaal_gele_kaarten || '-'}</td>
-                        <td>{v.totaal_rode_kaarten || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div>
+                {!isGesloten ? (
+                  <div style={{textAlign:'center', padding:'40px 20px', background:'#F8F9FA', borderRadius:16, border:'2px dashed #ADB5BD'}}>
+                    <div style={{fontSize:'3.5rem', marginBottom:15}}>🔒</div>
+                    <h3 style={{color:'#111827', margin:0, fontFamily:'Bebas Neue', fontSize:'2rem'}}>Top Secret</h3>
+                    <p style={{color:'#6C757D', fontSize:'0.85rem', fontWeight:800, marginTop:10}}>
+                      Om afkijken te voorkomen, blijven de antwoorden van je vrienden verborgen tot de allereerste WK-match is afgetrapt (11 Juni 2026).
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="antwoord-sectie">
+                      <div className="antwoord-header">🏆 Wereldkampioen</div>
+                      {alleAntwoorden.map(v => <div key={v.id} className="antwoord-rij"><span>{v.spelers?.naam}</span> <span className="antwoord-waarde">{v.winnaar || '-'}</span></div>)}
+                    </div>
+
+                    <div className="antwoord-sectie">
+                      <div className="antwoord-header">⚔️ De 4 Halve Finalisten</div>
+                      {alleAntwoorden.map(v => (
+                        <div key={v.id} className="antwoord-rij" style={{flexDirection:'column'}}>
+                          <span style={{color:'var(--crayola)', marginBottom:4}}>{v.spelers?.naam}</span> 
+                          <span className="antwoord-waarde" style={{fontSize:'0.8rem'}}>{[v.halve_finalist_1, v.halve_finalist_2, v.halve_finalist_3, v.halve_finalist_4].filter(Boolean).join(' • ') || '-'}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="antwoord-sectie">
+                      <div className="antwoord-header">⚽ Meeste Goals Voor</div>
+                      {alleAntwoorden.map(v => <div key={v.id} className="antwoord-rij"><span>{v.spelers?.naam}</span> <span className="antwoord-waarde">{v.topschutter || '-'}</span></div>)}
+                    </div>
+
+                    <div className="antwoord-sectie">
+                      <div className="antwoord-header">🛡️ Beste Verdediging (Minst Tegen)</div>
+                      {alleAntwoorden.map(v => <div key={v.id} className="antwoord-rij"><span>{v.spelers?.naam}</span> <span className="antwoord-waarde">{v.beste_keeper || '-'}</span></div>)}
+                    </div>
+
+                    <div className="antwoord-sectie">
+                      <div className="antwoord-header">🍟 Eindstation België</div>
+                      {alleAntwoorden.map(v => <div key={v.id} className="antwoord-rij"><span>{v.spelers?.naam}</span> <span className="antwoord-waarde">{v.eindstation_belgie || '-'}</span></div>)}
+                    </div>
+
+                    <div className="antwoord-sectie" style={{display:'flex', gap:10, padding:0, background:'transparent', border:'none'}}>
+                      <div style={{flex:1, background:'#F8F9FA', borderRadius:16, padding:15, border:'1px solid #E9ECEF'}}>
+                        <div className="antwoord-header" style={{color:'#EAB308'}}>🟨 Geel</div>
+                        {alleAntwoorden.map(v => <div key={v.id} className="antwoord-rij"><span>{v.spelers?.naam}</span> <span>{v.totaal_gele_kaarten || '-'}</span></div>)}
+                      </div>
+                      <div style={{flex:1, background:'#F8F9FA', borderRadius:16, padding:15, border:'1px solid #E9ECEF'}}>
+                        <div className="antwoord-header" style={{color:'#EF4444'}}>🟥 Rood</div>
+                        {alleAntwoorden.map(v => <div key={v.id} className="antwoord-rij"><span>{v.spelers?.naam}</span> <span>{v.totaal_rode_kaarten || '-'}</span></div>)}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
