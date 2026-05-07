@@ -194,13 +194,13 @@ export default function Home() {
   ];
 
   const prijzenPot = spelers.length * 10;
+  const loadingIndicator = <div className="bouncing-ball-loader">⚽</div>;
 
   return (
     <main className="main-container">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@600;800;900&display=swap');
         
-        /* OFFICIËLE WK KLEUREN & SPEELSE PALET */
         :root {
           --crayola: #3772FF;
           --magenta: #F038FF;
@@ -226,11 +226,9 @@ export default function Home() {
         .tab { flex: 1; min-width: 80px; text-align: center; padding: 12px 5px; font-size: 0.65rem; font-weight: 800; border-radius: 12px; cursor: pointer; color: #6C757D; white-space: nowrap; transition: 0.2s; }
         .tab.active { background: var(--crayola); color: #FFF; box-shadow: 0 4px 10px rgba(55, 114, 255, 0.3); }
         
-        /* PRIJZENPOT CLOUD */
         .prijzen-banner { background: linear-gradient(135deg, var(--aqua), var(--crayola)); color: #FFF; padding: 15px; border-radius: 20px; text-align: center; font-weight: 900; margin-bottom: 20px; font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 1.5px; box-shadow: 0 8px 20px rgba(112, 228, 239, 0.4); animation: pulse 2s infinite; border: 3px solid #FFF; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
         
-        /* HELDERE SCOREKAARTEN (RANKING) */
         .ranking-item { background: #FFFFFF; border-radius: 20px; padding: 16px 20px; margin-bottom: 16px; border: 2px solid #E9ECEF; display: flex; flex-direction: column; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: transform 0.2s; }
         .ranking-item:hover { transform: translateY(-2px); border-color: var(--aqua); }
         .ranking-item.is-me { border-color: var(--crayola); border-width: 2px; background: #F8FBFF; box-shadow: 0 4px 15px rgba(55, 114, 255, 0.15); }
@@ -251,7 +249,6 @@ export default function Home() {
         .ranking-stats { display: flex; justify-content: space-between; width: 100%; font-size: 0.7rem; font-weight: 800; color: #6C757D; border-top: 2px dashed #E9ECEF; padding-top: 10px; }
         .ranking-stats span { display: flex; align-items: center; gap: 4px; }
         
-        /* CHAT LAYS */
         .chat-container { display: flex; flex-direction: column; height: 450px; background: #F8F9FA; border-radius: 20px; border: 2px solid #E9ECEF; overflow: hidden; }
         .chat-berichten { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
         .chat-bubbel { background: #FFFFFF; padding: 12px 16px; border-radius: 18px; border-top-left-radius: 4px; max-width: 80%; font-size: 0.9rem; font-weight: 700; position: relative; text-align: left; box-shadow: 0 2px 8px rgba(0,0,0,0.05); color: var(--text-dark); border: 1px solid #E9ECEF; }
@@ -264,7 +261,6 @@ export default function Home() {
         .chat-send { background: var(--magenta); color: white; border: none; width: 48px; height: 48px; border-radius: 50%; margin-left: 8px; cursor: pointer; font-size: 1.2rem; box-shadow: 0 4px 10px rgba(240, 56, 255, 0.3); transition: 0.2s; }
         .chat-send:active { transform: scale(0.9); }
         
-        /* FORMS */
         .input-group { text-align: left; margin-bottom: 18px; }
         .label { font-size: 0.7rem; font-weight: 900; text-transform: uppercase; color: var(--crayola); margin-bottom: 8px; display: block; margin-left: 15px; letter-spacing: 1px; }
         .input-field { width: 100%; padding: 16px 20px; border-radius: 20px; border: 2px solid #E9ECEF; background: #F8F9FA; color: var(--text-dark); font-size: 1rem; font-family: 'Nunito', sans-serif; font-weight: 800; box-sizing: border-box; transition: all 0.3s; outline: none; }
@@ -276,25 +272,24 @@ export default function Home() {
         .btn-secondary { width: 100%; padding: 15px; margin-top: 15px; border-radius: 20px; border: 3px solid var(--crayola); background: transparent; color: var(--crayola); font-weight: 900; font-size: 1rem; cursor: pointer; transition: all 0.2s; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         
-        /* COUNTDOWN */
+        /* AANGEPAST: COUNTDOWN (NU ALLES NAAST ELKAAR) */
         .countdown-banner { background: #FFF; border-radius: 25px; padding: 20px; margin-bottom: 25px; border: 3px solid var(--rose); text-align: center; box-shadow: 0 10px 30px rgba(239, 112, 157, 0.15); }
         .countdown-title { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; color: var(--rose); margin-bottom: 15px; font-weight: 900; }
-        .tijd-grid { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
-        .tijd-box { flex: 1; min-width: 60px; max-width: 80px; background: #F8F9FA; border: 2px solid #E9ECEF; padding: 10px 5px; border-radius: 15px; animation: floatBox 4s ease-in-out infinite; }
+        .tijd-grid { display: flex; justify-content: center; gap: 6px; flex-wrap: nowrap; width: 100%; }
+        .tijd-box { flex: 1; background: #F8F9FA; border: 2px solid #E9ECEF; padding: 10px 2px; border-radius: 12px; animation: floatBox 4s ease-in-out infinite; min-width: 0; text-align: center; }
         .tijd-box:nth-child(2) { animation-delay: 0.5s; }
         .tijd-box:nth-child(3) { animation-delay: 1s; }
         .tijd-box:nth-child(4) { animation-delay: 1.5s; }
         @keyframes floatBox { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-        .tijd-cijfer { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; line-height: 1; color: var(--crayola); animation: bouncenum 2s infinite; }
+        .tijd-cijfer { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; line-height: 1; color: var(--crayola); animation: bouncenum 2s infinite; margin-bottom: 2px; }
         @keyframes bouncenum { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
-        .tijd-label { font-size: 0.55rem; text-transform: uppercase; color: #ADB5BD; font-weight: 900; letter-spacing: 1px; }
+        .tijd-label { font-size: 0.5rem; text-transform: uppercase; color: #ADB5BD; font-weight: 900; letter-spacing: 0.5px; }
         
-        /* ANTWOORDEN */
         .cat-card { background: #FFF; border-radius: 20px; margin-bottom: 18px; border: 2px solid #E9ECEF; overflow: hidden; text-align: left; transition: 0.2s; }
         .cat-card:hover { border-color: var(--aqua); box-shadow: 0 5px 20px rgba(112, 228, 239, 0.2); }
         .cat-header { background: #F8F9FA; padding: 15px 20px; border-bottom: 2px solid #E9ECEF; display: flex; justify-content: space-between; align-items: center; }
         .cat-titel { font-size: 0.85rem; font-weight: 900; color: var(--crayola); text-transform: uppercase; margin: 0; }
-        .cat-stand { font-size: 0.65rem; font-weight: 900; background: var(--wk-green); color: white; padding: 5px 10px; border-radius: 10px; }
+        .cat-stand { font-size: 0.65rem; font-weight: 900; background: var(--off-green); color: white; padding: 5px 10px; border-radius: 10px; }
         .cat-lijst { padding: 5px 20px; }
         .cat-speler-rij { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #F1F3F5; font-size: 0.9rem; }
         .antw-naam { font-weight: 800; color: #ADB5BD; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px;}
@@ -410,7 +405,7 @@ export default function Home() {
             {actieveTab === 'kleedkamer' && (
               <div className="chat-container">
                 <div className="chat-berichten">
-                  {chatBerichten.length === 0 ? <div className="bouncing-ball-loader">⚽</div> : chatBerichten.map((c, idx) => (
+                  {chatBerichten.length === 0 ? <p style={{textAlign:'center', marginTop:'20px', color:'#ADB5BD', fontSize:'0.8rem'}}>Het is hier stil... Deel de eerste plaagstoot!</p> : chatBerichten.map((c, idx) => (
                     <div key={idx} className={`chat-bericht ${c.speler_id === actieveSpeler.id ? 'is-mij' : ''}`}>
                       {c.speler_id !== actieveSpeler.id && <div className="chat-naam">{c.spelers?.naam}</div>}
                       <div className="chat-bubbel">{c.bericht}</div>
