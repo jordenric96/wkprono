@@ -39,6 +39,7 @@ export default function Home() {
   const [status, setStatus] = useState('');
   
   const [actieveSpeler, setActieveSpeler] = useState<any>(null);
+  const [alleSpelers, setAlleSpelers] = useState<any[]>([]); // Nodig voor de ratio "3/5 ingevuld"
   const [actieveTab, setActieveTab] = useState('matchen');
   const [filterRonde, setFilterRonde] = useState('Alle');
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
@@ -47,16 +48,19 @@ export default function Home() {
   // DATA STATES
   const [matchen, setMatchen] = useState<any[]>([]);
   const [matchVoorspellingen, setMatchVoorspellingen] = useState<Record<number, {thuis: string, uit: string, joker: boolean}>>({});
-  const [alleMatchVoorspellingen, setAlleMatchVoorspellingen] = useState<any[]>([]); // Nodig voor de openklap-functie!
+  const [alleMatchVoorspellingen, setAlleMatchVoorspellingen] = useState<any[]>([]); 
   const [matchSaveStatus, setMatchSaveStatus] = useState<Record<number, 'idle' | 'saving' | 'saved'>>({});
   const [alleToernooiV, setAlleToernooiV] = useState<any[]>([]);
   const [opslaanStatus, setOpslaanStatus] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
   const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null);
+  
+  // Auto-save timer reference
+  const saveTimeoutRef = useRef<Record<number, NodeJS.Timeout>>({});
 
   // BONUSVRAGEN STATES
   const [winnaar, setWinnaar] = useState('');
-  const [hf, setHf] = useState(['', '', '', '']); // Array voor de 4 halve finalisten
+  const [hf, setHf] = useState(['', '', '', '']);
   const [meesteGoalsLand, setMeesteGoalsLand] = useState('');
   const [besteVerdedigingLand, setBesteVerdedigingLand] = useState('');
   const [eindstation, setEindstation] = useState('');
@@ -72,7 +76,7 @@ export default function Home() {
   // TIMER
   const [nu, setNu] = useState(new Date().getTime());
   const [tijdOver, setTijdOver] = useState({ dagen: 0, uren: 0, minuten: 0, seconden: 0 });
-  const [isGesloten, setIsGesloten] = useState(false); // Blokkeert bonusvragen na start toernooi
+  const [isGesloten, setIsGesloten] = useState(false); 
 
   useEffect(() => {
     actieveTabRef.current = actieveTab;
@@ -86,7 +90,7 @@ export default function Home() {
     
     const klokInterval = setInterval(() => {
       const nuTijd = new Date().getTime();
-      setNu(nuTijd); // Update de live tijd (belangrijk voor het blokkeren van individuele matchen)
+      setNu(nuTijd); 
       
       const verschil = DEADLINE_DATE - nuTijd;
       if (verschil <= 0) { setIsGesloten(true); } 
@@ -126,9 +130,12 @@ export default function Home() {
 
   const haalSpelersOp = async (checkId?: string | null) => {
     const { data } = await supabase.from('spelers').select('*').order('created_at', { ascending: true });
-    if (data && checkId) {
-      const gevonden = data.find(s => s.id.toString() === checkId);
-      if (gevonden) setActieveSpeler(gevonden);
+    if (data) {
+      setAlleSpelers(data);
+      if (checkId) {
+        const gevonden = data.find(s => s.id.toString() === checkId);
+        if (gevonden) setActieveSpeler(gevonden);
+      }
     }
   };
 
@@ -153,9 +160,8 @@ export default function Home() {
 
     const { data: voorspellingenData } = await supabase.from('match_voorspellingen').select('*, spelers(naam)');
     if (voorspellingenData) {
-      setAlleMatchVoorspellingen(voorspellingenData); // Sla alles op voor de openklap-functie
+      setAlleMatchVoorspellingen(voorspellingenData); 
 
-      // Filter enkel jouw eigen voorspellingen om de input-velden te vullen
       const mijnVoorspellingen = voorspellingenData.filter(v => v.speler_id === actieveSpeler.id);
       const stateObj: any = {};
       mijnVoorspellingen.forEach(v => {
@@ -165,12 +171,37 @@ export default function Home() {
     }
   };
 
+  // AUTO-SAVE LOGICA
+  const triggerAutoSave = (mId: number, data: { thuis: string, uit: string, joker: boolean }) => {
+    if (data.thuis === '' || data.uit === '') return;
+    
+    if (saveTimeoutRef.current[mId]) clearTimeout(saveTimeoutRef.current[mId]);
+    setMatchSaveStatus(prev => ({ ...prev, [mId]: 'saving' }));
+    
+    saveTimeoutRef.current[mId] = setTimeout(async () => {
+      const { error } = await supabase.from('match_voorspellingen').upsert({
+        speler_id: actieveSpeler.id, match_id: mId, thuis_score: parseInt(data.thuis), uit_score: parseInt(data.uit), gouden_bal: data.joker
+      }, { onConflict: 'speler_id, match_id' });
+      
+      setMatchSaveStatus(prev => ({ ...prev, [mId]: error ? 'idle' : 'saved' }));
+      
+      // Update lokaal zodat je bolletje er direct bij komt te staan!
+      if (!error) {
+        setAlleMatchVoorspellingen(prev => {
+          const bestaand = prev.filter(p => !(p.match_id === mId && p.speler_id === actieveSpeler.id));
+          return [...bestaand, { 
+            match_id: mId, speler_id: actieveSpeler.id, thuis_score: parseInt(data.thuis), uit_score: parseInt(data.uit), gouden_bal: data.joker, spelers: { naam: actieveSpeler.naam } 
+          }];
+        });
+      }
+    }, 800); // 0.8s wachten na de laatste toetsaanslag
+  };
+
   const handleScore = (mId: number, veld: 'thuis'|'uit', waarde: string) => {
-    setMatchSaveStatus(prev => ({...prev, [mId]: 'idle'}));
-    setMatchVoorspellingen(prev => ({
-      ...prev,
-      [mId]: { ...prev[mId], [veld]: waarde, joker: prev[mId]?.joker || false }
-    }));
+    const v = matchVoorspellingen[mId] || { thuis: '', uit: '', joker: false };
+    const newData = { ...v, [veld]: waarde };
+    setMatchVoorspellingen(prev => ({ ...prev, [mId]: newData }));
+    triggerAutoSave(mId, newData);
   };
 
   const toggleJoker = (mId: number) => {
@@ -180,31 +211,11 @@ export default function Home() {
       Object.keys(nieuwStaat).forEach(key => {
         if (nieuwStaat[Number(key)]) nieuwStaat[Number(key)].joker = false;
       });
-      nieuwStaat[mId] = { ...prev[mId], joker: !isNuJoker, thuis: prev[mId]?.thuis || '', uit: prev[mId]?.uit || '' };
+      const newData = { ...prev[mId], joker: !isNuJoker, thuis: prev[mId]?.thuis || '', uit: prev[mId]?.uit || '' };
+      nieuwStaat[mId] = newData;
+      triggerAutoSave(mId, newData);
       return nieuwStaat;
     });
-    setMatchSaveStatus(prev => ({...prev, [mId]: 'idle'}));
-  };
-
-  const slaMatchOp = async (mId: number) => {
-    const v = matchVoorspellingen[mId];
-    if (!v || v.thuis === '' || v.uit === '') return;
-    
-    setMatchSaveStatus(prev => ({...prev, [mId]: 'saving'}));
-
-    const { error } = await supabase.from('match_voorspellingen').upsert({
-      speler_id: actieveSpeler.id, 
-      match_id: mId, 
-      thuis_score: parseInt(v.thuis), 
-      uit_score: parseInt(v.uit), 
-      gouden_bal: v.joker
-    }, { onConflict: 'speler_id, match_id' });
-
-    if (!error) {
-      setMatchSaveStatus(prev => ({...prev, [mId]: 'saved'}));
-    } else {
-      setMatchSaveStatus(prev => ({...prev, [mId]: 'idle'}));
-    }
   };
 
   const slaBonusOp = async () => {
@@ -244,24 +255,24 @@ export default function Home() {
   };
 
   const haalKlassementOp = async () => {
-    const { data: alleSpelers } = await supabase.from('spelers').select('*');
-    const { data: alleMatchen } = await supabase.from('matchen').select('*');
-    const { data: alleVoorspellingen } = await supabase.from('match_voorspellingen').select('*');
+    const { data: s } = await supabase.from('spelers').select('*');
+    const { data: m } = await supabase.from('matchen').select('*');
+    const { data: v } = await supabase.from('match_voorspellingen').select('*');
 
-    if (alleSpelers && alleMatchen && alleVoorspellingen) {
-      const stats = alleSpelers.map(s => {
+    if (s && m && v) {
+      const stats = s.map(sp => {
         let punten = 0; let exact = 0; let winnaarCorrect = 0; let fout = 0; let jokerIngezet = false;
 
-        const spelerV = alleVoorspellingen.filter(v => v.speler_id === s.id);
-        spelerV.forEach(v => {
-          if (v.gouden_bal) jokerIngezet = true;
-          const m = alleMatchen.find(m => m.id === v.match_id);
-          if (m && m.thuis_score !== null && m.uit_score !== null) {
-            const factor = v.gouden_bal ? 2 : 1;
-            const echtResultaat = m.thuis_score > m.uit_score ? 1 : m.thuis_score < m.uit_score ? 2 : 0;
-            const voorspeldResultaat = v.thuis_score > v.uit_score ? 1 : v.thuis_score < v.uit_score ? 2 : 0;
+        const spelerV = v.filter(vo => vo.speler_id === sp.id);
+        spelerV.forEach(vo => {
+          if (vo.gouden_bal) jokerIngezet = true;
+          const match = m.find(ma => ma.id === vo.match_id);
+          if (match && match.thuis_score !== null && match.uit_score !== null) {
+            const factor = vo.gouden_bal ? 2 : 1;
+            const echtResultaat = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
+            const voorspeldResultaat = vo.thuis_score > vo.uit_score ? 1 : vo.thuis_score < vo.uit_score ? 2 : 0;
 
-            if (v.thuis_score === m.thuis_score && v.uit_score === m.uit_score) {
+            if (vo.thuis_score === match.thuis_score && vo.uit_score === match.uit_score) {
               punten += (5 * factor); exact++;
             } else if (echtResultaat === voorspeldResultaat) {
               punten += (3 * factor); winnaarCorrect++;
@@ -270,7 +281,7 @@ export default function Home() {
             }
           }
         });
-        return { ...s, totaal_score: punten, exact, winnaarCorrect, fout, jokerIngezet };
+        return { ...sp, totaal_score: punten, exact, winnaarCorrect, fout, jokerIngezet };
       });
       setKlassement(stats.sort((a, b) => b.totaal_score - a.totaal_score));
     }
@@ -344,7 +355,7 @@ export default function Home() {
         body::after { width: 350px; height: 350px; bottom: -80px; right: -80px; background: var(--aqua); animation: blob-movement-b 15s linear infinite; }
 
         .glass-card {
-          background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(12px); padding: 25px 20px; border-radius: 24px;
+          background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(15px); padding: 25px 20px; border-radius: 24px;
           width: 100%; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 3px solid rgba(255, 255, 255, 0.4); margin-bottom: 20px;
         }
 
@@ -366,13 +377,12 @@ export default function Home() {
         .filter-chip.urgent { background: #ffe3e3; color: #e03131; border-color: #ffa8a8; }
         .filter-chip.urgent.active { background: #e03131; color: #fff; border-color: #c92a2a; }
 
-        /* MATCH CARD STYLING */
+        /* MATCH CARD STYLING & AUTO SAVE */
         .match-card {
-          background: rgba(255, 255, 255, 0.9); border-radius: 16px; margin-bottom: 12px; border: 3px solid #E9ECEF; overflow: hidden; transition: 0.3s border-color, 0.3s box-shadow; position: relative;
+          background: rgba(255, 255, 255, 0.95); border-radius: 16px; margin-bottom: 12px; border: 3px solid #E9ECEF; overflow: hidden; transition: 0.3s; position: relative;
         }
-        .match-card.is-saved { border-color: #2ECC40; box-shadow: 0 0 15px rgba(46, 204, 64, 0.3); }
-        .match-card.locked { border-color: var(--rose); cursor: pointer; } /* Rood randje & klikbaar als match gestart is */
-        .match-header { background: var(--lime); padding: 10px 15px; font-size: 0.7rem; font-weight: 900; color: #111827; display: flex; justify-content: space-between; align-items: center; }
+        .match-card.locked { border-color: var(--rose); cursor: pointer; } 
+        .match-header { background: var(--lime); padding: 10px 15px; font-size: 0.7rem; font-weight: 900; color: #111827; display: flex; justify-content: space-between; align-items: center; position: relative; }
         .match-body { display: flex; align-items: center; padding: 15px; }
         .team-naam { font-weight: 900; flex: 1; text-align: center; font-size: 0.95rem; }
         .score-invoer { width: 45px; height: 50px; text-align: center; font-size: 1.5rem; font-family: 'Bebas Neue', sans-serif; border-radius: 12px; border: 2px solid #DEE2E6; outline: none; transition: 0.2s; }
@@ -382,10 +392,18 @@ export default function Home() {
         .joker-btn { width: 38px; height: 38px; border-radius: 50%; border: 2px solid #DEE2E6; background: #FFF; font-size: 1.2rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; filter: grayscale(1); opacity: 0.5; }
         .joker-btn.active { background: #FFD700; border-color: #FFA500; filter: grayscale(0); opacity: 1; transform: scale(1.15); box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); }
 
-        .save-match-btn { position: absolute; right: 15px; bottom: 15px; background: var(--crayola); color: white; border: none; border-radius: 10px; width: 45px; height: 45px; font-size: 1.2rem; cursor: pointer; font-weight: 900; display: flex; align-items: center; justify-content: center; transition: 0.2s; box-shadow: 0 4px 10px rgba(55, 114, 255, 0.3); }
-        .save-match-btn.saved { background: #2ECC40; box-shadow: 0 4px 10px rgba(46, 204, 64, 0.3); }
+        .save-indicator { position: absolute; right: 50px; top: 10px; font-size: 0.65rem; font-weight: 900; padding: 4px 8px; border-radius: 10px; transition: 0.3s; opacity: 0; }
+        .save-indicator.saving { background: rgba(240, 56, 255, 0.2); color: var(--magenta); opacity: 1; }
+        .save-indicator.saved { background: rgba(46, 204, 64, 0.2); color: #2ECC40; opacity: 1; }
 
-        /* PREDICTIONS DROPDOWN (NIEUW) */
+        /* WIE HEEFT INGEVULD BOLLETJES */
+        .filled-container { display: flex; align-items: center; gap: 8px; padding: 10px 15px; border-top: 1px dashed #DEE2E6; justify-content: center; background: #F8F9FA; }
+        .filled-avatars { display: flex; }
+        .filled-avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--crayola); color: white; font-size: 0.55rem; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 2px solid white; margin-left: -8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .filled-avatar:first-child { margin-left: 0; }
+        .filled-text { font-size: 0.65rem; font-weight: 800; color: #ADB5BD; }
+
+        /* PREDICTIONS DROPDOWN (GESTARRT) */
         .click-to-expand { text-align: center; font-size: 0.7rem; font-weight: 900; color: var(--rose); padding-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
         .predictions-dropdown { background: rgba(240, 244, 248, 0.9); padding: 15px; border-top: 2px solid #E9ECEF; }
         .pred-title { font-weight: 900; color: var(--crayola); font-size: 0.75rem; margin-bottom: 10px; border-bottom: 2px solid #DEE2E6; padding-bottom: 5px; }
@@ -393,19 +411,30 @@ export default function Home() {
         .pred-row:last-child { border-bottom: none; }
         .pred-score { color: var(--magenta); font-family: 'Bebas Neue'; font-size: 1.2rem; }
 
-        /* RANKING, TELLERS & ANTWOORDEN */
-        .ranking-item { background: rgba(255, 255, 255, 0.8); border-radius: 16px; padding: 15px; margin-bottom: 12px; border: 2px solid #E9ECEF; display: flex; align-items: center; gap: 15px; transition: 0.2s; }
+        /* VERNIEUWD KLASSEMENT (PODIUM) */
+        .ranking-item { position: relative; overflow: hidden; background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 15px; margin-bottom: 12px; border: 2px solid #E9ECEF; display: flex; align-items: center; gap: 15px; transition: 0.2s; }
         .ranking-item:hover { transform: translateY(-3px); }
-        .ranking-pos { font-family: 'Bebas Neue'; font-size: 1.8rem; color: var(--crayola); width: 30px; text-align: center; }
+        .ranking-item.rank-1 { border-color: #FFD700; background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 255, 255, 0.9)); box-shadow: 0 10px 20px rgba(255,215,0,0.2); }
+        .ranking-item.rank-2 { border-color: #C0C0C0; background: linear-gradient(135deg, rgba(192, 192, 192, 0.15), rgba(255, 255, 255, 0.9)); }
+        .ranking-item.rank-3 { border-color: #CD7F32; background: linear-gradient(135deg, rgba(205, 127, 50, 0.15), rgba(255, 255, 255, 0.9)); }
+        
+        .rank-badge { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue'; font-size: 1.8rem; color: white; background: var(--crayola); }
+        .rank-1 .rank-badge { background: #FFD700; box-shadow: 0 0 15px rgba(255,215,0,0.6); color: #111827; }
+        .rank-2 .rank-badge { background: #C0C0C0; color: #111827; }
+        .rank-3 .rank-badge { background: #CD7F32; color: #111827; }
+
         .ranking-main { flex: 1; }
         .ranking-naam { font-weight: 900; text-transform: uppercase; display: flex; align-items: center; gap: 6px; font-size: 1.1rem; }
+        .ranking-stats { font-size: 0.75rem; color: #6C757D; font-weight: 800; margin-top: 4px; }
         .ranking-score { font-family: 'Bebas Neue'; font-size: 2.5rem; color: var(--magenta); }
 
+        /* VERNIEUWDE TELLERS */
         .teller-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px; }
         .teller-card { background: var(--crayola); color: white; padding: 20px; border-radius: 16px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         .teller-val { font-family: 'Bebas Neue'; font-size: 3rem; line-height: 1; }
-        .teller-label { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; margin-top: 5px; opacity: 0.9; }
+        .teller-label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; margin-top: 5px; opacity: 0.9; }
 
+        /* ANTWOORDEN */
         .antwoord-sectie { background: rgba(255, 255, 255, 0.8); border-radius: 16px; padding: 15px; margin-bottom: 15px; border: 2px solid #E9ECEF; }
         .antwoord-header { font-weight: 900; color: var(--crayola); margin-bottom: 10px; font-size: 1rem; text-transform: uppercase; border-bottom: 2px solid #E9ECEF; padding-bottom: 5px; }
 
@@ -481,16 +510,27 @@ export default function Home() {
                     const v = matchVoorspellingen[m.id] || { thuis: '', uit: '', joker: false };
                     const saveStatus = matchSaveStatus[m.id] || 'idle';
                     
+                    // Bereken wie deze match al heeft ingevuld
+                    const voorspellingenVoorMatch = alleMatchVoorspellingen.filter(av => av.match_id === m.id);
+
                     return (
                       <div key={m.id} 
-                        className={`match-card ${saveStatus === 'saved' ? 'is-saved' : ''} ${gestart ? 'locked' : ''}`}
+                        className={`match-card ${gestart ? 'locked' : ''}`}
                         onClick={() => gestart && setExpandedMatchId(expandedMatchId === m.id ? null : m.id)}
                       >
                         <div className="match-header">
                           <span>{m.ronde} • {new Date(m.datum).toLocaleDateString('nl-BE', {day:'2-digit', month:'short'})} {new Date(m.datum).toLocaleTimeString('nl-BE', {hour:'2-digit', minute:'2-digit'})}</span>
+                          
+                          {/* AUTO SAVE INDICATOR */}
+                          {!gestart && (
+                            <span className={`save-indicator ${saveStatus}`}>
+                              {saveStatus === 'saving' ? '⏳ Opslaan...' : saveStatus === 'saved' ? '✅ Opgeslagen' : ''}
+                            </span>
+                          )}
+
                           <button className={`joker-btn ${v.joker ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); if(!gestart) toggleJoker(m.id); }}>🌟</button>
                         </div>
-                        <div className="match-body" style={{paddingBottom: (!gestart && v.thuis !== '' && v.uit !== '') ? '50px' : '15px'}}>
+                        <div className="match-body" style={{paddingBottom: (gestart && expandedMatchId !== m.id) ? '10px' : '15px'}}>
                           <span className="team-naam">{m.thuisploeg}</span>
                           <input className="score-invoer" type="tel" value={v.thuis} disabled={gestart} onClick={e => e.stopPropagation()} onChange={e => handleScore(m.id, 'thuis', e.target.value)} />
                           <span style={{margin:'0 10px', fontWeight:900, color:'#ADB5BD'}}>-</span>
@@ -498,20 +538,28 @@ export default function Home() {
                           <span className="team-naam">{m.uitploeg}</span>
                         </div>
                         
-                        {!gestart && v.thuis !== '' && v.uit !== '' && (
-                          <button className={`save-match-btn ${saveStatus === 'saved' ? 'saved' : ''}`} onClick={(e) => { e.stopPropagation(); slaMatchOp(m.id); }}>
-                            {saveStatus === 'saving' ? '⏳' : saveStatus === 'saved' ? '✅' : '💾'}
-                          </button>
+                        {/* WIE HEEFT INGEVULD (Voor de start) */}
+                        {!gestart && (
+                          <div className="filled-container">
+                            <div className="filled-avatars">
+                              {voorspellingenVoorMatch.map(av => (
+                                <div key={av.speler_id} className="filled-avatar" title={av.spelers?.naam}>{av.spelers?.naam?.charAt(0).toUpperCase()}</div>
+                              ))}
+                            </div>
+                            <span className="filled-text">{voorspellingenVoorMatch.length} / {alleSpelers.length} ingevuld</span>
+                          </div>
                         )}
 
+                        {/* KLIK OM TE ZIEN (Gestart, ingeklapt) */}
                         {gestart && expandedMatchId !== m.id && (
                           <div className="click-to-expand">Klik om voorspellingen te zien 👁️</div>
                         )}
 
+                        {/* DROPDOWN MET ALLE VOORSPELLINGEN (Gestart, uitgeklapt) */}
                         {gestart && expandedMatchId === m.id && (
                           <div className="predictions-dropdown">
                             <div className="pred-title">IEDEREENS VOORSPELLING</div>
-                            {alleMatchVoorspellingen.filter(av => av.match_id === m.id).map(av => (
+                            {voorspellingenVoorMatch.map(av => (
                               <div key={av.id} className="pred-row">
                                 <span>{av.spelers?.naam} {av.gouden_bal ? '🌟' : ''}</span>
                                 <span className="pred-score">{av.thuis_score} - {av.uit_score}</span>
@@ -565,7 +613,7 @@ export default function Home() {
                     <input className="full-input" type="number" value={totaalGeel} onChange={e => setTotaalGeel(e.target.value)} disabled={isGesloten} />
                   </div>
                   <div className="input-group" style={{flex:1}}>
-                    <label className="input-label">Totaal Rode kaarten?</label>
+                    <label className="input-label">Totaal Rood?</label>
                     <input className="full-input" type="number" value={totaalRood} onChange={e => setTotaalRood(e.target.value)} disabled={isGesloten} />
                   </div>
                 </div>
@@ -634,18 +682,21 @@ export default function Home() {
 
             {actieveTab === 'ranking' && (
               <div>
-                {klassement.map((s, i) => (
-                  <div key={s.id} className="ranking-item">
-                    <span className="ranking-pos">{i+1}</span>
-                    <div className="ranking-main">
-                      <span className="ranking-naam">{s.naam} {s.jokerIngezet ? <span style={{fontSize:'1rem'}}>🌑</span> : <span style={{fontSize:'1rem'}}>🌟</span>}</span>
-                      <div className="ranking-stats">
-                        ✅ {s.exact} exact • 🏆 {s.winnaarCorrect} winnaar • ❌ {s.fout} fout
+                {klassement.map((s, i) => {
+                  const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-other';
+                  return (
+                    <div key={s.id} className={`ranking-item ${rankClass}`}>
+                      <div className="rank-badge">{i+1}</div>
+                      <div className="ranking-main">
+                        <span className="ranking-naam">{s.naam} {s.jokerIngezet ? <span style={{fontSize:'1rem'}}>🌑</span> : <span style={{fontSize:'1rem'}}>🌟</span>}</span>
+                        <div className="ranking-stats">
+                          ✅ {s.exact} exact • 🏆 {s.winnaarCorrect} win • ❌ {s.fout} fout
+                        </div>
                       </div>
+                      <span className="ranking-score">{s.totaal_score}</span>
                     </div>
-                    <span className="ranking-score">{s.totaal_score}</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
@@ -667,14 +718,17 @@ export default function Home() {
                     <div className="teller-label">Rode Kaarten</div>
                   </div>
 
-                  <div className="teller-card" style={{background: '#40C057'}}>
-                    <div className="teller-val" style={{fontSize: '2rem'}}>{tellersData.meestScorendTeam[1]} goals</div>
-                    <div className="teller-label">Meest Scorend ({tellersData.meestScorendTeam[0]})</div>
+                  {/* VERNIEUWDE OPMAAK MEESTE/MINSTE GOALS */}
+                  <div className="teller-card" style={{background: '#40C057', gridColumn: 'span 2'}}>
+                    <div className="teller-label">MEEST SCOREND TEAM</div>
+                    <div className="teller-val" style={{fontSize: '2.5rem', margin: '5px 0'}}>{tellersData.meestScorendTeam[0]}</div>
+                    <div style={{fontWeight: 900}}>{tellersData.meestScorendTeam[1]} Doelpunten</div>
                   </div>
 
-                  <div className="teller-card" style={{background: '#228BE6'}}>
-                    <div className="teller-val" style={{fontSize: '2rem'}}>{tellersData.minstTegenTeam[1]} goals</div>
-                    <div className="teller-label">Minst Tegen ({tellersData.minstTegenTeam[0]})</div>
+                  <div className="teller-card" style={{background: '#228BE6', gridColumn: 'span 2'}}>
+                    <div className="teller-label">BESTE VERDEDIGING (MINSTE TEGEN)</div>
+                    <div className="teller-val" style={{fontSize: '2.5rem', margin: '5px 0'}}>{tellersData.minstTegenTeam[0]}</div>
+                    <div style={{fontWeight: 900}}>{tellersData.minstTegenTeam[1]} Tegendoelpunten</div>
                   </div>
                 </div>
               </div>
@@ -692,7 +746,7 @@ export default function Home() {
                   <div ref={chatEindeRef} />
                 </div>
                 <form onSubmit={verstuurChat} style={{display:'flex', gap:10}}>
-                  <input className="full-input" style={{padding:'12px'}} value={nieuwBericht} onChange={e => setNieuwBericht(e.target.value)} placeholder="Zeg iets..." />
+                  <input className="full-input" style={{padding:'12px', marginBottom:0}} value={nieuwBericht} onChange={e => setNieuwBericht(e.target.value)} placeholder="Zeg iets..." />
                   <button className="btn-primary" style={{width:'80px', padding:'12px'}} type="submit">➤</button>
                 </form>
               </div>
