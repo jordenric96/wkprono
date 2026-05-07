@@ -484,10 +484,10 @@ export default function Home() {
             </p>
             <h4>💰 Inleggeld Betalen</h4>
             <p>
-              Deelname kost <strong>€ [BEDRAG]</strong>. Stuur dit via Payconiq of schrijf over naar:<br/>
-              <strong>IBAN:</strong> [JOUW REKENINGNUMMER HIER]<br/>
+              Deelname kost <strong>€ [10 euro]</strong> <br/>
+              <strong>Rekeningnummer:</strong> [BE85 0018 2075 8506]<br/>
               <strong>Naam:</strong> Jorden Ricour<br/>
-              <em>Vermeld je spelersnaam in de mededeling!</em>
+              <em>Vermeld "WK + naam" in de mededeling!</em>
             </p>
           </div>
         )}
