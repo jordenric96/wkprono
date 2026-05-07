@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
+// --- VASTE LIJSTEN OM FOUTEN TE VOORKOMEN ---
 const WK_LANDEN = [
   'Argentinië', 'Australië', 'België', 'Brazilië', 'Canada', 'Chili', 'Colombia', 
   'Costa Rica', 'Denemarken', 'Duitsland', 'Ecuador', 'Engeland', 'Frankrijk', 
@@ -43,7 +44,7 @@ const TOP_KEEPERS = [
   'Dominik Livaković', 'Yassine Bounou', 'Guglielmo Vicario', 'David Raya', 'Aaron Ramsdale'
 ].sort();
 
-// DEADLINE: 11 Juni 2026 om 21:00 Belgische/Nederlandse tijd
+// DEADLINE: 11 Juni 2026 om 21:00
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
 
 export default function Home() {
@@ -55,6 +56,7 @@ export default function Home() {
   const [actieveSpeler, setActieveSpeler] = useState<any>(null);
   const [actieveTab, setActieveTab] = useState('toernooi');
   
+  // TOERNOOI STATE
   const [voorspellingStatus, setVoorspellingStatus] = useState('');
   const [winnaar, setWinnaar] = useState('');
   const [topschutter, setTopschutter] = useState('');
@@ -66,15 +68,17 @@ export default function Home() {
   const [lv3, setLv3] = useState('');
   const [lv4, setLv4] = useState('');
 
-  // --- COUNTDOWN STATE ---
+  // COUNTDOWN STATE
   const [tijdOver, setTijdOver] = useState({ dagen: 0, uren: 0, minuten: 0, seconden: 0 });
   const [isGesloten, setIsGesloten] = useState(false);
+
+  // RANKING STATE
+  const [klassement, setKlassement] = useState<any[]>([]);
 
   useEffect(() => {
     const opgeslagenId = localStorage.getItem('wk_speler_id');
     haalSpelersOp(opgeslagenId);
 
-    // De klok-logica
     const klokInterval = setInterval(() => {
       const nu = new Date().getTime();
       const verschil = DEADLINE_DATE - nu;
@@ -96,8 +100,11 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (actieveSpeler) haalToernooiVoorspellingOp();
-  }, [actieveSpeler]);
+    if (actieveSpeler) {
+      if (actieveTab === 'toernooi') haalToernooiVoorspellingOp();
+      if (actieveTab === 'ranking') haalKlassementOp();
+    }
+  }, [actieveSpeler, actieveTab]);
 
   const haalSpelersOp = async (checkId?: string | null) => {
     const { data, error } = await supabase.from('spelers').select('id, naam').order('created_at', { ascending: true });
@@ -107,6 +114,18 @@ export default function Home() {
         const gevonden = data.find(s => s.id.toString() === checkId);
         if (gevonden) setActieveSpeler(gevonden);
       }
+    }
+  };
+
+  const haalKlassementOp = async () => {
+    // Haal alle spelers op en sorteer op totaal_score, van hoog naar laag
+    const { data, error } = await supabase
+      .from('spelers')
+      .select('id, naam, totaal_score')
+      .order('totaal_score', { ascending: false });
+    
+    if (!error && data) {
+      setKlassement(data);
     }
   };
 
@@ -126,7 +145,7 @@ export default function Home() {
 
   const slaToernooiVoorspellingOp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isGesloten) return; // Dubbele check voor de zekerheid
+    if (isGesloten) return;
 
     setVoorspellingStatus('Bezig met opslaan...');
     const laatsteVierArray = [lv1, lv2, lv3, lv4].filter(land => land.trim() !== '');
@@ -191,9 +210,12 @@ export default function Home() {
         .tijd-label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.7; }
         .gesloten-banner { background: rgba(245, 105, 96, 0.3); border: 1px solid #F56960; color: white; padding: 15px; border-radius: 16px; text-align: center; font-weight: 800; margin-bottom: 25px; letter-spacing: 1px; text-transform: uppercase; }
 
+        /* TABS CSS */
         .tab-container { display: flex; background: rgba(0,0,0,0.2); border-radius: 16px; padding: 5px; margin-bottom: 25px; }
         .tab { flex: 1; text-align: center; padding: 12px 5px; font-size: 0.8rem; font-weight: 700; border-radius: 12px; cursor: pointer; transition: all 0.3s; opacity: 0.6; }
         .tab.active { background: #9CF6F6; color: #1A3C40; opacity: 1; }
+        
+        /* FORM CSS */
         .input-group { text-align: left; margin-bottom: 15px; }
         .label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; margin-left: 12px; margin-bottom: 6px; display: block; opacity: 0.8; color: #9CF6F6; }
         .input-field { width: 100%; padding: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.06); color: white; font-size: 1rem; outline: none; box-sizing: border-box; -webkit-appearance: none; }
@@ -204,14 +226,23 @@ export default function Home() {
         .btn-primary:disabled { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.3); box-shadow: none; cursor: not-allowed; }
         .btn-secondary { width: 100%; padding: 14px; margin-top: 15px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.25); background: transparent; color: white; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        /* RANKING CSS */
+        .ranking-item { background: rgba(255,255,255,0.08); border-radius: 16px; padding: 15px; margin-bottom: 12px; display: flex; align-items: center; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; }
+        .ranking-item.is-me { border-color: #9CF6F6; background: rgba(156, 246, 246, 0.1); }
+        .ranking-pos { width: 35px; font-size: 1.2rem; font-weight: 900; opacity: 0.8; text-align: left; }
+        .pos-1 { color: #FFD700; opacity: 1; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
+        .pos-2 { color: #C0C0C0; opacity: 1; }
+        .pos-3 { color: #CD7F32; opacity: 1; }
+        .ranking-info { flex: 1; text-align: left; }
+        .ranking-naam { font-size: 1rem; font-weight: 800; margin: 0 0 4px 0; }
+        .ranking-breakdown { font-size: 0.65rem; color: rgba(255,255,255,0.6); display: flex; gap: 12px; }
+        .breakdown-item span { color: #9CF6F6; font-weight: bold; }
+        .ranking-totaal { font-size: 1.6rem; font-weight: 900; color: #9CF6F6; text-align: right; min-width: 50px; }
       `}</style>
 
-      <datalist id="top-spelers">
-        {TOP_SPELERS.map(speler => <option key={speler} value={speler} />)}
-      </datalist>
-      <datalist id="top-keepers">
-        {TOP_KEEPERS.map(keeper => <option key={keeper} value={keeper} />)}
-      </datalist>
+      <datalist id="top-spelers">{TOP_SPELERS.map(speler => <option key={speler} value={speler} />)}</datalist>
+      <datalist id="top-keepers">{TOP_KEEPERS.map(keeper => <option key={keeper} value={keeper} />)}</datalist>
 
       <div className="glass-card">
         <h1 className="title">WK'26</h1>
@@ -225,14 +256,11 @@ export default function Home() {
               <div className={`tab ${actieveTab === 'ranking' ? 'active' : ''}`} onClick={() => setActieveTab('ranking')}>RANKING</div>
             </div>
 
+            {/* TAB: TOERNOOI */}
             {actieveTab === 'toernooi' && (
               <form onSubmit={slaToernooiVoorspellingOp} style={{ animation: 'fadeIn 0.4s' }}>
-                
-                {/* DE AFTELKLOK / DEADLINE BANNER */}
                 {isGesloten ? (
-                  <div className="gesloten-banner">
-                    ⛔ Inzendingen Gesloten
-                  </div>
+                  <div className="gesloten-banner">⛔ Inzendingen Gesloten</div>
                 ) : (
                   <div className="countdown-banner">
                     <div className="countdown-title">Sluiting over:</div>
@@ -304,21 +332,53 @@ export default function Home() {
                   <input className="input-field" type="number" placeholder="Bv. 172" value={totaalGoals} onChange={e => setTotaalGoals(e.target.value)} required disabled={isGesloten} />
                 </div>
 
-                {voorspellingStatus && (
-                  <div style={{ textAlign: 'center', margin: '15px 0', fontSize: '0.9rem', fontWeight: 'bold' }}>
-                    {voorspellingStatus}
-                  </div>
-                )}
+                {voorspellingStatus && <div style={{ textAlign: 'center', margin: '15px 0', fontSize: '0.9rem', fontWeight: 'bold' }}>{voorspellingStatus}</div>}
 
                 {!isGesloten && <button className="btn-primary" type="submit">OPSLAAN</button>}
                 <button className="btn-secondary" type="button" onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>Uitloggen</button>
               </form>
             )}
 
-            {(actieveTab === 'matchen' || actieveTab === 'ranking') && (
+            {/* TAB: RANKING */}
+            {actieveTab === 'ranking' && (
+              <div style={{ animation: 'fadeIn 0.4s' }}>
+                <p style={{ textAlign: 'center', fontSize: '0.8rem', opacity: 0.8, marginBottom: '20px' }}>
+                  Inclusief live punten voor toernooivragen (topschutter, etc.)
+                </p>
+
+                {klassement.length === 0 ? (
+                  <p style={{ textAlign: 'center', opacity: 0.5 }}>Laden...</p>
+                ) : (
+                  klassement.map((speler, index) => {
+                    const isMijzelf = speler.id === actieveSpeler.id;
+                    const positieKlasse = index === 0 ? 'pos-1' : index === 1 ? 'pos-2' : index === 2 ? 'pos-3' : '';
+                    
+                    return (
+                      <div key={speler.id} className={`ranking-item ${isMijzelf ? 'is-me' : ''}`}>
+                        <div className={`ranking-pos ${positieKlasse}`}>{index + 1}</div>
+                        <div className="ranking-info">
+                          <p className="ranking-naam">{speler.naam} {isMijzelf && '(Jij)'}</p>
+                          <div className="ranking-breakdown">
+                            <div className="breakdown-item">Matchen: <span>0</span></div>
+                            <div className="breakdown-item">Toernooi (Live): <span>0</span></div>
+                            <div className="breakdown-item">Bonus: <span>0</span></div>
+                          </div>
+                        </div>
+                        <div className="ranking-totaal">{speler.totaal_score || 0}</div>
+                      </div>
+                    );
+                  })
+                )}
+                
+                <button className="btn-secondary" style={{ marginTop: '30px' }} onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>Uitloggen</button>
+              </div>
+            )}
+
+            {/* TAB: MATCHEN (Nog in opbouw) */}
+            {actieveTab === 'matchen' && (
               <div style={{ textAlign: 'center', padding: '40px 0', opacity: 0.7 }}>
                 <h3>Komt Binnenkort</h3>
-                <p style={{ fontSize: '0.9rem' }}>De kalender en de ranking worden hier klaargezet.</p>
+                <p style={{ fontSize: '0.9rem' }}>De kalender met wedstrijden wordt hier klaargezet.</p>
                 <button className="btn-secondary" onClick={() => { localStorage.removeItem('wk_speler_id'); setActieveSpeler(null); }}>Uitloggen</button>
               </div>
             )}
