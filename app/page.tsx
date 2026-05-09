@@ -13,34 +13,6 @@ import ChatTab from '../components/ChatTab';
 
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
 
-// --- HULP COMPONENT: AUTOCOMPLETE ---
-const Autocomplete = ({ options, value, onChange, placeholder, disabled }: any) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const filtered = options.filter((o: string) => o.toLowerCase().includes(value.toLowerCase()));
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) setIsOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  return (
-    <div ref={wrapperRef} style={{ position: 'relative', width: '100%' }}>
-      <input className="full-input" value={value} onChange={(e) => { onChange(e.target.value); setIsOpen(true); }} onFocus={() => setIsOpen(true)} disabled={disabled} placeholder={placeholder} />
-      {isOpen && !disabled && (
-        <ul className="autocomplete-dropdown">
-          {filtered.length > 0 ? filtered.map((opt: string) => (
-            <li key={opt} className="autocomplete-item" onClick={() => { onChange(opt); setIsOpen(false); }}>{opt}</li>
-          )) : <li className="autocomplete-item" style={{ color: '#F038FF' }}>Onbekend...</li>}
-        </ul>
-      )}
-    </div>
-  );
-};
-
 export default function Home() {
   const [ontgrendelNaam, setOntgrendelNaam] = useState('');
   const [invoerCode, setInvoerCode] = useState('');
@@ -84,7 +56,6 @@ export default function Home() {
   const [tijdOver, setTijdOver] = useState({ dagen: 0, uren: 0, minuten: 0, seconden: 0 });
   const [isGesloten, setIsGesloten] = useState(false); 
 
-  // --- FUNCTIE: TABWISSEL ---
   const veranderTab = (tab: string) => {
     setActieveTab(tab);
     if (tab === 'kleedkamer') setOngelezenBerichten(false);
@@ -172,10 +143,8 @@ export default function Home() {
   };
 
   const triggerAutoSave = (mId: number, data: { thuis: string, uit: string, joker: boolean }) => {
-    // Blokkeer opslaan als de match gestart is
     const m = matchen.find(x => x.id === mId);
     if (m && nu >= new Date(m.datum).getTime()) return;
-
     if (data.thuis === '' || data.uit === '') return;
     if (saveTimeoutRef.current[mId]) clearTimeout(saveTimeoutRef.current[mId]);
     setMatchSaveStatus(prev => ({ ...prev, [mId]: 'saving' }));
@@ -277,7 +246,6 @@ export default function Home() {
     if (!error) { setNieuwBericht(''); haalChatOp(); }
   };
 
-  // --- HULPFUNCTIES VOOR DESIGN MATCHEN TAB ---
   const getMatchCountdown = (matchTime: string) => {
     const diff = new Date(matchTime).getTime() - nu;
     if (diff <= 0) return "🔒 GESLOTEN";
@@ -292,9 +260,10 @@ export default function Home() {
     );
   };
 
+  // --- MEGA DATABASE MET VLAGGEN EN KLEUREN ---
   const parseTeam = (teamString: string) => {
     if (!teamString || teamString.includes('TBD')) {
-      return { name: teamString || 'TBD', emoji: '❓', gradient: 'linear-gradient(135deg, #e9ecef, #adb5bd)' };
+      return { name: teamString || 'TBD', emoji: '❓', gradient: 'linear-gradient(135deg, #DEE2E6, #ADB5BD)' };
     }
 
     const emojiMatch = teamString.match(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu);
@@ -302,38 +271,96 @@ export default function Home() {
     let name = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
 
     const colors: any = {
+      // Europa
       'België': 'linear-gradient(135deg, #000 33%, #FFD700 33%, #FFD700 66%, #ED2939 66%)',
       'Nederland': 'linear-gradient(135deg, #AE1C28 33%, #FFF 33%, #FFF 66%, #21468B 66%)',
       'Frankrijk': 'linear-gradient(135deg, #002395 33%, #FFF 33%, #FFF 66%, #ED2939 66%)',
       'Duitsland': 'linear-gradient(135deg, #000 33%, #FF0000 33%, #FF0000 66%, #FFCC00 66%)',
       'Spanje': 'linear-gradient(135deg, #AA151B 33%, #F1BF00 33%, #F1BF00 66%, #AA151B 66%)',
-      'Brazilië': 'linear-gradient(135deg, #009c3b 33%, #ffdf00 33%, #ffdf00 66%, #002776 66%)',
-      'Argentinië': 'linear-gradient(135deg, #75AADB 33%, #FFF 33%, #FFF 66%, #75AADB 66%)',
       'Portugal': 'linear-gradient(135deg, #006600 50%, #FF0000 50%)',
       'Engeland': 'linear-gradient(135deg, #FFF 40%, #CE1124 40%, #CE1124 60%, #FFF 60%)',
       'Italië': 'linear-gradient(135deg, #009246 33%, #FFF 33%, #FFF 66%, #CE2B37 66%)',
+      'Kroatië': 'linear-gradient(135deg, #FF0000 33%, #FFF 33%, #FFF 66%, #0000FF 66%)',
+      'Zwitserland': 'linear-gradient(135deg, #FF0000 40%, #FFF 40%, #FFF 60%, #FF0000 60%)',
+      'Oostenrijk': 'linear-gradient(135deg, #ED2939 33%, #FFF 33%, #FFF 66%, #ED2939 66%)',
+      'Tsjechië': 'linear-gradient(135deg, #11457E 33%, #D7141A 33%, #D7141A 66%, #FFF 66%)',
+      'Czechia': 'linear-gradient(135deg, #11457E 33%, #D7141A 33%, #D7141A 66%, #FFF 66%)',
+      'Zweden': 'linear-gradient(135deg, #004B87 40%, #FFCD00 40%, #FFCD00 60%, #004B87 60%)',
+      'Denemarken': 'linear-gradient(135deg, #C60C30 40%, #FFF 40%, #FFF 60%, #C60C30 60%)',
+      'Schotland': 'linear-gradient(135deg, #005EB8 40%, #FFF 40%, #FFF 60%, #005EB8 60%)',
+      'Polen': 'linear-gradient(135deg, #FFF 50%, #DC143C 50%)',
+      'Servië': 'linear-gradient(135deg, #C6363C 33%, #0C4076 33%, #0C4076 66%, #FFF 66%)',
+      'Wales': 'linear-gradient(135deg, #FFF 50%, #00AB39 50%)',
+      'Oekraïne': 'linear-gradient(135deg, #0057B7 50%, #FFD700 50%)',
+      'Roemenië': 'linear-gradient(135deg, #002B7F 33%, #FCD116 33%, #FCD116 66%, #CE1126 66%)',
+      'Hongarije': 'linear-gradient(135deg, #CE2939 33%, #FFF 33%, #FFF 66%, #477050 66%)',
+      'Slowakije': 'linear-gradient(135deg, #FFF 33%, #0B4EA2 33%, #0B4EA2 66%, #EE1C25 66%)',
+      'Turkije': 'linear-gradient(135deg, #E30A17 80%, #FFF 80%)',
+      
+      // Zuid-Amerika
+      'Brazilië': 'linear-gradient(135deg, #009c3b 33%, #ffdf00 33%, #ffdf00 66%, #002776 66%)',
+      'Argentinië': 'linear-gradient(135deg, #75AADB 33%, #FFF 33%, #FFF 66%, #75AADB 66%)',
+      'Chili': 'linear-gradient(135deg, #0039A6 33%, #FFF 33%, #FFF 66%, #D52B1E 66%)',
+      'Colombia': 'linear-gradient(135deg, #FCD116 50%, #003893 50%, #003893 75%, #CE1126 75%)',
+      'Uruguay': 'linear-gradient(135deg, #0038A8 40%, #FFF 40%, #FFF 60%, #0038A8 60%)',
+      'Ecuador': 'linear-gradient(135deg, #FFD100 50%, #003893 50%, #003893 75%, #CE1126 75%)',
+      'Peru': 'linear-gradient(135deg, #D91023 33%, #FFF 33%, #FFF 66%, #D91023 66%)',
+      'Paraguay': 'linear-gradient(135deg, #D52B1E 33%, #FFF 33%, #FFF 66%, #0038A8 66%)',
+      'Venezuela': 'linear-gradient(135deg, #FCE300 50%, #0038A8 50%, #0038A8 75%, #CE1126 75%)',
+      
+      // Noord-Amerika
       'Mexico': 'linear-gradient(135deg, #006847 33%, #FFF 33%, #FFF 66%, #CE1126 66%)',
       'USA': 'linear-gradient(135deg, #B31942 33%, #FFF 33%, #FFF 66%, #0A3161 66%)',
       'Verenigde Staten': 'linear-gradient(135deg, #B31942 33%, #FFF 33%, #FFF 66%, #0A3161 66%)',
       'Canada': 'linear-gradient(135deg, #FF0000 30%, #FFF 30%, #FFF 70%, #FF0000 70%)',
-      'South Korea': 'linear-gradient(135deg, #FFF 40%, #CD2E3A 40%, #CD2E3A 60%, #0047A0 60%)',
-      'Zuid-Korea': 'linear-gradient(135deg, #FFF 40%, #CD2E3A 40%, #CD2E3A 60%, #0047A0 60%)',
+      'Costa Rica': 'linear-gradient(135deg, #002B7F 20%, #FFF 20%, #FFF 40%, #CE1126 40%, #CE1126 60%, #FFF 60%, #FFF 80%, #002B7F 80%)',
+      'Panama': 'linear-gradient(135deg, #FFF 25%, #C2113A 25%, #C2113A 50%, #00225D 50%, #00225D 75%, #FFF 75%)',
+      'Jamaica': 'linear-gradient(135deg, #009B3A 40%, #FED100 40%, #FED100 60%, #000 60%)',
+
+      // Afrika
+      'Marokko': 'linear-gradient(135deg, #c1272d 45%, #006233 45%, #006233 55%, #c1272d 55%)',
+      'Kameroen': 'linear-gradient(135deg, #007A5E 33%, #CE1126 33%, #CE1126 66%, #FCD116 66%)',
+      'Ivoorkust': 'linear-gradient(135deg, #FF8200 33%, #FFF 33%, #FFF 66%, #009A44 66%)',
+      'Senegal': 'linear-gradient(135deg, #00853F 33%, #FDEF42 33%, #FDEF42 66%, #E31B23 66%)',
+      'Ghana': 'linear-gradient(135deg, #CE1126 33%, #FCD116 33%, #FCD116 66%, #006B3F 66%)',
+      'Nigeria': 'linear-gradient(135deg, #008751 33%, #FFF 33%, #FFF 66%, #008751 66%)',
+      'Egypte': 'linear-gradient(135deg, #CE1126 33%, #FFF 33%, #FFF 66%, #000 66%)',
+      'Tunesië': 'linear-gradient(135deg, #E70013 40%, #FFF 40%, #FFF 60%, #E70013 60%)',
       'South Africa': 'linear-gradient(135deg, #007A4D 25%, #FFB612 25%, #FFB612 50%, #000 50%, #000 75%, #DE3831 75%)',
-      'Czechia': 'linear-gradient(135deg, #11457E 33%, #D7141A 33%, #D7141A 66%, #FFF 66%)',
-      'Marokko': 'linear-gradient(135deg, #c1272d 45%, #006233 45%, #006233 55%, #c1272d 55%)'
+      'Zuid-Afrika': 'linear-gradient(135deg, #007A4D 25%, #FFB612 25%, #FFB612 50%, #000 50%, #000 75%, #DE3831 75%)',
+      'Algerije': 'linear-gradient(135deg, #006233 50%, #FFF 50%)',
+      
+      // Azië & Oceanië
+      'Japan': 'linear-gradient(135deg, #FFF 40%, #BC002D 40%, #BC002D 60%, #FFF 60%)',
+      'Zuid-Korea': 'linear-gradient(135deg, #FFF 40%, #CD2E3A 40%, #CD2E3A 60%, #0047A0 60%)',
+      'South Korea': 'linear-gradient(135deg, #FFF 40%, #CD2E3A 40%, #CD2E3A 60%, #0047A0 60%)',
+      'Australië': 'linear-gradient(135deg, #012169 40%, #FFF 40%, #FFF 50%, #E4002B 50%)',
+      'Iran': 'linear-gradient(135deg, #239F40 33%, #FFF 33%, #FFF 66%, #DA0000 66%)',
+      'Saudi-Arabië': 'linear-gradient(135deg, #006C35 80%, #FFF 80%)',
+      'Qatar': 'linear-gradient(135deg, #FFF 30%, #8A1538 30%)',
+      'Nieuw-Zeeland': 'linear-gradient(135deg, #00247D 40%, #FFF 40%, #FFF 50%, #CC142B 50%)'
     };
 
     const defaultEmojis: any = {
       'België': '🇧🇪', 'Nederland': '🇳🇱', 'Frankrijk': '🇫🇷', 'Duitsland': '🇩🇪', 'Spanje': '🇪🇸',
       'Brazilië': '🇧🇷', 'Argentinië': '🇦🇷', 'Portugal': '🇵🇹', 'Italië': '🇮🇹', 'Engeland': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-      'Mexico': '🇲🇽', 'USA': '🇺🇸', 'Verenigde Staten': '🇺🇸', 'Canada': '🇨🇦', 'Marokko': '🇲🇦', 
-      'South Korea': '🇰🇷', 'Zuid-Korea': '🇰🇷', 'South Africa': '🇿🇦', 'Czechia': '🇨🇿'
+      'Mexico': '🇲🇽', 'USA': '🇺🇸', 'Verenigde Staten': '🇺🇸', 'Canada': '🇨🇦', 'Marokko': '🇲🇦',
+      'Chili': '🇨🇱', 'Kameroen': '🇨🇲', 'Colombia': '🇨🇴', 'Costa Rica': '🇨🇷', 'Zwitserland': '🇨🇭',
+      'Ivoorkust': '🇨🇮', 'Oostenrijk': '🇦🇹', 'Australië': '🇦🇺', 'Japan': '🇯🇵', 'Zuid-Korea': '🇰🇷',
+      'South Korea': '🇰🇷', 'Kroatië': '🇭🇷', 'Uruguay': '🇺🇾', 'Senegal': '🇸🇳', 'Ghana': '🇬🇭',
+      'Nigeria': '🇳🇬', 'Ecuador': '🇪🇨', 'Zweden': '🇸🇪', 'Denemarken': '🇩🇰', 'Schotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+      'Polen': '🇵🇱', 'Servië': '🇷🇸', 'Iran': '🇮🇷', 'Saudi-Arabië': '🇸🇦', 'Wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿',
+      'Oekraïne': '🇺🇦', 'Peru': '🇵🇪', 'Panama': '🇵🇦', 'Egypte': '🇪🇬', 'Tunesië': '🇹🇳',
+      'Nieuw-Zeeland': '🇳🇿', 'Qatar': '🇶🇦', 'Ierland': '🇮🇪', 'Turkije': '🇹🇷', 'South Africa': '🇿🇦',
+      'Zuid-Afrika': '🇿🇦', 'Czechia': '🇨🇿', 'Tsjechië': '🇨🇿', 'Roemenië': '🇷🇴', 'Hongarije': '🇭🇺',
+      'Slowakije': '🇸🇰', 'Paraguay': '🇵🇾', 'Venezuela': '🇻🇪', 'Algerije': '🇩🇿', 'Jamaica': '🇯🇲'
     };
 
     if (!emoji && defaultEmojis[name]) emoji = defaultEmojis[name];
     if (!emoji) emoji = '🏳️';
 
-    const gradient = colors[name] || 'linear-gradient(135deg, #3772FF, #70E4EF)';
+    // Geen blauwe fallback meer! Nu zacht grijs voor onbekende landen.
+    const gradient = colors[name] || 'linear-gradient(135deg, #DEE2E6, #ADB5BD)';
     return { name, emoji, gradient };
   };
 
@@ -388,13 +415,12 @@ export default function Home() {
         body::after { width: 350px; height: 350px; bottom: -80px; right: -80px; background: var(--aqua); animation: blob-movement-b 15s linear infinite; }
 
         .glass-card {
-          background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(15px); padding: 20px; border-radius: 24px;
+          background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(15px); padding: 25px 20px; border-radius: 24px;
           width: 100%; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 3px solid rgba(255, 255, 255, 0.4); margin-bottom: 20px;
         }
 
         .title { font-family: 'Bebas Neue', sans-serif; font-size: 4.5rem; text-align: center; color: #FFF; line-height: 1; text-shadow: 3px 3px 0px var(--magenta); margin: 0; animation: title-glow 3s linear infinite; }
         
-        /* HOOFD TIMER STYLING */
         .timer { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
         .timer-box { background: var(--magenta); color: #FFF; padding: 8px 12px; border-radius: 12px; text-align: center; font-weight: 900; box-shadow: 0 4px 10px rgba(240, 56, 255, 0.3); }
         .timer-value { font-size: 1.5rem; line-height: 1.1; }
@@ -421,44 +447,21 @@ export default function Home() {
           border-radius: 50%; box-shadow: 0 0 10px var(--rose); animation: pulse-red 2s infinite;
         }
 
-        .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
         .info-content { background: rgba(255,255,255,0.9); padding: 15px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; margin-bottom: 20px; border-left: 4px solid var(--magenta); line-height: 1.5; }
-        .admin-btn { background: #111827; color: #fff; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 900; cursor: pointer; font-size: 0.8rem; margin: 0 auto 15px; display: block; }
-
-        .match-card { background: rgba(255, 255, 255, 0.95); border-radius: 16px; margin-bottom: 12px; border: 3px solid #E9ECEF; overflow: hidden; position: relative; }
-        .match-header { background: var(--lime); padding: 10px 15px; font-size: 0.7rem; font-weight: 900; color: #111827; display: flex; justify-content: space-between; align-items: center; }
-        .match-body { display: flex; align-items: center; padding: 15px; }
-        .score-invoer { width: 45px; height: 50px; text-align: center; font-size: 1.5rem; font-family: 'Bebas Neue'; border-radius: 12px; border: 2px solid #DEE2E6; outline: none; }
-        .score-invoer:disabled { background: #f1f3f5; color: #adb5bd; cursor: not-allowed; }
-        
-        .save-indicator { position: absolute; right: 50px; top: 10px; font-size: 0.65rem; font-weight: 900; opacity: 0; transition: 0.3s; }
-        .save-indicator.saving { opacity: 1; color: var(--magenta); }
-        .save-indicator.saved { opacity: 1; color: #2ECC40; }
-
-        .ranking-item { background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 15px; margin-bottom: 12px; border: 2px solid #E9ECEF; display: flex; align-items: center; gap: 15px; transition: 0.2s; }
-        .rank-badge { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue'; font-size: 1.8rem; color: white; background: var(--crayola); }
-        .rank-1 { border-color: #FFD700; background: linear-gradient(135deg, rgba(255,215,0,0.1), #fff); }
-        .rank-1 .rank-badge { background: #FFD700; color: #111827; }
-        .betaal-badge { font-size: 0.6rem; padding: 3px 6px; border-radius: 6px; font-weight: 900; margin-top: 5px; display: inline-block; }
-        .is-betaald { background: #d3f9d8; color: #2b8a3e; }
-        .niet-betaald { background: #ffe3e3; color: #e03131; }
+        .admin-btn { background: #111827; color: #fff; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 900; cursor: pointer; font-size: 0.8rem; margin: 0 auto 15px; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
         .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; font-weight: 800; font-size: 1rem; margin-bottom: 10px; }
         .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); }
-
-        .teller-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .teller-card { background: var(--crayola); color: white; padding: 20px; border-radius: 16px; text-align: center; }
-        .teller-val { font-family: 'Bebas Neue'; font-size: 3rem; line-height: 1; }
 
         @keyframes background-fade { 0%, 100% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } }
         @keyframes blob-movement-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(50px, 80px) scale(1.1); } }
         @keyframes blob-movement-b { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-40px, -60px) scale(0.9); } }
         @keyframes title-glow { 0%, 100% { text-shadow: 3px 3px 0px var(--magenta); } 50% { text-shadow: 3px 3px 20px rgba(240, 56, 255, 0.8), 3px 3px 0px var(--magenta); } }
-        @keyframes pulse-red { 0% { transform: scale(0.95); } 70% { transform: scale(1); } 100% { transform: scale(0.95); } }
         .main-container { padding: 25px 15px 80px 15px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
       `}</style>
 
-      {showConfetti && <div style={{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:999,textAlign:'center',fontSize:'5rem'}}>🎉🌟⚽</div>}
+      {showConfetti && <div style={{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:999,textAlign:'center',fontSize:'5rem', pointerEvents:'none'}}>🎉🌟⚽</div>}
 
       <div className="glass-card">
         <h1 className="title">WK 2026</h1>
@@ -467,11 +470,16 @@ export default function Home() {
           <span>ℹ️ Info & Betalen</span>
           <span>{infoOpen ? '▲' : '▼'}</span>
         </button>
+
         {infoOpen && (
           <div className="info-content">
-            <h4>📲 App Installeren</h4>
-            <p><strong>iPhone:</strong> Tik op Deel-icoon &gt; <em>Zet op beginscherm</em>.<br/><strong>Android:</strong> Tik op drie puntjes &gt; <em>Toevoegen aan startscherm</em>.</p>
-            <p>Inleggeld: <strong>€10</strong> t.a.v. Jorden Ricour.</p>
+            <h4>📲 App Installeren op je GSM</h4>
+            <p style={{marginBottom:15}}>
+              <strong>iPhone (Safari):</strong> Klik op 'Deel' en kies <em>'Zet op beginscherm'</em>.<br/>
+              <strong>Android (Chrome):</strong> Klik op drie puntjes en kies <em>'Toevoegen aan startscherm'</em>.
+            </p>
+            <h4>💰 Inleggeld Betalen</h4>
+            <p>Deelname kost <strong>€10</strong>. Betalen via Payconiq of overschrijven naar Jorden Ricour.</p>
           </div>
         )}
 
@@ -516,170 +524,76 @@ export default function Home() {
                       <div 
                         key={m.id} 
                         style={{
-                          background: 'rgba(255, 255, 255, 0.95)', 
-                          borderRadius: '16px', 
-                          marginBottom: '15px', 
-                          border: gestart ? '3px solid #EF709D' : '3px solid #E9ECEF', 
-                          overflow: 'hidden',
-                          boxShadow: '0 10px 20px rgba(0,0,0,0.05)',
-                          cursor: gestart ? 'pointer' : 'default'
+                          background: 'rgba(255, 255, 255, 0.95)', borderRadius: '16px', marginBottom: '15px', 
+                          border: gestart ? '3px solid #EF709D' : '3px solid #E9ECEF', overflow: 'hidden',
+                          boxShadow: '0 10px 20px rgba(0,0,0,0.05)', cursor: gestart ? 'pointer' : 'default'
                         }}
                         onClick={() => gestart && setExpandedMatchId(expandedMatchId === m.id ? null : m.id)}
                       >
-                        
-                        {/* HEADER: TIMER & JOKER KNOP */}
-                        <div style={{ 
-                          background: heeftUitslag ? '#F038FF' : '#E2EF70', 
-                          color: heeftUitslag ? 'white' : '#111827',
-                          padding: '12px 15px', 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
-                          alignItems: 'center' 
-                        }}>
-                          <span style={{ fontSize: '0.8rem' }}>
-                            {heeftUitslag ? '🏆 EINDSTAND' : (gestart ? '🔒 GESLOTEN' : getMatchCountdown(m.datum))}
-                          </span>
-                          
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); if(!gestart) toggleJoker(m.id); }}
-                            disabled={gestart}
+                        <div style={{ background: heeftUitslag ? '#F038FF' : '#E2EF70', color: heeftUitslag ? 'white' : '#111827', padding: '12px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.8rem' }}>{heeftUitslag ? '🏆 EINDSTAND' : (gestart ? '🔒 GESLOTEN' : getMatchCountdown(m.datum))}</span>
+                          <button onClick={(e) => { e.stopPropagation(); if(!gestart) toggleJoker(m.id); }} disabled={gestart}
                             style={{
-                              background: v.joker ? '#FFD700' : '#FFFFFF',
-                              color: v.joker ? '#000' : '#111827',
-                              border: v.joker ? '2px solid #E6C200' : '2px solid #DEE2E6',
-                              borderRadius: '20px',
-                              padding: '6px 12px',
-                              fontSize: '0.7rem',
-                              fontWeight: 900,
-                              cursor: gestart ? 'not-allowed' : 'pointer',
-                              boxShadow: v.joker ? '0 4px 10px rgba(255, 215, 0, 0.4)' : '0 2px 5px rgba(0,0,0,0.05)',
-                              transition: '0.2s',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}
-                          >
+                              background: v.joker ? '#FFD700' : '#FFFFFF', color: v.joker ? '#000' : '#111827', border: v.joker ? '2px solid #E6C200' : '2px solid #DEE2E6',
+                              borderRadius: '20px', padding: '6px 12px', fontSize: '0.7rem', fontWeight: 900, cursor: gestart ? 'not-allowed' : 'pointer',
+                              boxShadow: v.joker ? '0 4px 10px rgba(255, 215, 0, 0.4)' : '0 2px 5px rgba(0,0,0,0.05)', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '4px'
+                            }}>
                             {v.joker ? '🌟 JOKER ACTIEF' : '⭐ GEBRUIK JOKER'}
                           </button>
                         </div>
 
-                        {/* EVENTUELE EINDSTAND BOVENAAN */}
                         {heeftUitslag && (
                           <div style={{ textAlign: 'center', padding: '10px 0', background: 'rgba(240, 56, 255, 0.1)', borderBottom: '1px solid #F038FF' }}>
-                            <span style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: '#F038FF' }}>
-                              {m.thuis_score} - {m.uit_score}
-                            </span>
+                            <span style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: '#F038FF' }}>{m.thuis_score} - {m.uit_score}</span>
                           </div>
                         )}
 
-                        {/* BODY: VLAGGEN EN SCORES */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 10px' }}>
-                          
-                          {/* THUISPLOEG (CIRKEL + NAAM ONDERAAN) */}
                           {(() => {
                             const thuis = parseTeam(m.thuisploeg);
                             return (
                               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                                <div style={{
-                                  width: '60px', height: '60px', borderRadius: '50%',
-                                  background: thuis.gradient,
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
-                                }}>
-                                  <div style={{
-                                    width: '52px', height: '52px', borderRadius: '50%',
-                                    background: '#fff',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: '1.8rem'
-                                  }}>
-                                    {thuis.emoji}
-                                  </div>
+                                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: thuis.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.15)' }}>
+                                  <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem' }}>{thuis.emoji}</div>
                                 </div>
-                                <span style={{ fontSize: '0.75rem', fontWeight: 900, textAlign: 'center', marginTop: '8px', color: '#111827' }}>
-                                  {thuis.name}
-                                </span>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 900, textAlign: 'center', marginTop: '8px', color: '#111827' }}>{thuis.name}</span>
                               </div>
                             );
                           })()}
 
-                          {/* SCORE INVOER */}
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '0 10px' }}>
                             <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ADB5BD', marginBottom: '5px', letterSpacing: '1px' }}>JOUW PRONO</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <input 
-                                type="tel" 
-                                value={v.thuis} 
-                                disabled={gestart} 
-                                onClick={e => e.stopPropagation()} 
-                                onChange={e => handleScore(m.id, 'thuis', e.target.value)} 
-                                style={{ 
-                                  width: '45px', height: '50px', fontSize: '1.5rem', textAlign: 'center', 
-                                  borderRadius: '12px', border: '2px solid #DEE2E6', outline: 'none', 
-                                  fontWeight: 900, fontFamily: 'Bebas Neue', background: gestart ? '#f1f3f5' : '#fff',
-                                  color: gestart ? '#adb5bd' : '#111827'
-                                }} 
-                              />
+                              <input type="tel" value={v.thuis} disabled={gestart} onClick={e => e.stopPropagation()} onChange={e => handleScore(m.id, 'thuis', e.target.value)} 
+                                style={{ width: '45px', height: '50px', fontSize: '1.5rem', textAlign: 'center', borderRadius: '12px', border: '2px solid #DEE2E6', outline: 'none', fontWeight: 900, fontFamily: 'Bebas Neue', background: gestart ? '#f1f3f5' : '#fff', color: gestart ? '#adb5bd' : '#111827' }} />
                               <span style={{ fontWeight: 900, color: '#ADB5BD' }}>-</span>
-                              <input 
-                                type="tel" 
-                                value={v.uit} 
-                                disabled={gestart} 
-                                onClick={e => e.stopPropagation()} 
-                                onChange={e => handleScore(m.id, 'uit', e.target.value)} 
-                                style={{ 
-                                  width: '45px', height: '50px', fontSize: '1.5rem', textAlign: 'center', 
-                                  borderRadius: '12px', border: '2px solid #DEE2E6', outline: 'none', 
-                                  fontWeight: 900, fontFamily: 'Bebas Neue', background: gestart ? '#f1f3f5' : '#fff',
-                                  color: gestart ? '#adb5bd' : '#111827'
-                                }} 
-                              />
+                              <input type="tel" value={v.uit} disabled={gestart} onClick={e => e.stopPropagation()} onChange={e => handleScore(m.id, 'uit', e.target.value)} 
+                                style={{ width: '45px', height: '50px', fontSize: '1.5rem', textAlign: 'center', borderRadius: '12px', border: '2px solid #DEE2E6', outline: 'none', fontWeight: 900, fontFamily: 'Bebas Neue', background: gestart ? '#f1f3f5' : '#fff', color: gestart ? '#adb5bd' : '#111827' }} />
                             </div>
                             {!gestart && save !== 'idle' && (
-                              <span style={{ fontSize: '0.6rem', fontWeight: 900, marginTop: '5px', color: save === 'saving' ? '#F038FF' : '#2ECC40' }}>
-                                {save === 'saving' ? '⏳ Opslaan...' : '✅ Opgeslagen'}
-                              </span>
+                              <span style={{ fontSize: '0.6rem', fontWeight: 900, marginTop: '5px', color: save === 'saving' ? '#F038FF' : '#2ECC40' }}>{save === 'saving' ? '⏳ Opslaan...' : '✅ Opgeslagen'}</span>
                             )}
                           </div>
 
-                          {/* UITPLOEG (CIRKEL + NAAM ONDERAAN) */}
                           {(() => {
                             const uit = parseTeam(m.uitploeg);
                             return (
                               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                                <div style={{
-                                  width: '60px', height: '60px', borderRadius: '50%',
-                                  background: uit.gradient,
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
-                                }}>
-                                  <div style={{
-                                    width: '52px', height: '52px', borderRadius: '50%',
-                                    background: '#fff',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: '1.8rem'
-                                  }}>
-                                    {uit.emoji}
-                                  </div>
+                                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: uit.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.15)' }}>
+                                  <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem' }}>{uit.emoji}</div>
                                 </div>
-                                <span style={{ fontSize: '0.75rem', fontWeight: 900, textAlign: 'center', marginTop: '8px', color: '#111827' }}>
-                                  {uit.name}
-                                </span>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 900, textAlign: 'center', marginTop: '8px', color: '#111827' }}>{uit.name}</span>
                               </div>
                             );
                           })()}
-
                         </div>
 
-                        {/* WIE HEEFT ER AL INGEVULD? */}
                         {!gestart && (
                           <div style={{ background: '#F8F9FA', padding: '10px', borderTop: '1px dashed #DEE2E6', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
                             <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#ADB5BD' }}>{pVoorMatch.length} / {alleSpelers.length} spelers vulden dit al in:</div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', justifyContent: 'center' }}>
                               {pVoorMatch.map((av: any) => (
-                                <span key={av.speler_id} style={{ 
-                                  fontSize: '0.6rem', padding: '3px 8px', background: '#70E4EF', 
-                                  borderRadius: '8px', fontWeight: 900, color: '#3772FF' 
-                                }}>
+                                <span key={av.speler_id} style={{ fontSize: '0.6rem', padding: '3px 8px', background: '#70E4EF', borderRadius: '8px', fontWeight: 900, color: '#3772FF' }}>
                                   {av.spelers?.naam.split(' ')[0]}
                                 </span>
                               ))}
@@ -687,18 +601,13 @@ export default function Home() {
                           </div>
                         )}
 
-                        {/* UITSCHUIFMENU VOOR GESTARTE MATCHEN */}
                         {gestart && expandedMatchId !== m.id && (
-                          <div style={{ textAlign: 'center', fontSize: '0.7rem', fontWeight: 900, color: '#EF709D', paddingBottom: '10px', textTransform: 'uppercase' }}>
-                            Klik om voorspellingen te zien 👁️
-                          </div>
+                          <div style={{ textAlign: 'center', fontSize: '0.7rem', fontWeight: 900, color: '#EF709D', paddingBottom: '10px', textTransform: 'uppercase' }}>Klik om voorspellingen te zien 👁️</div>
                         )}
 
                         {gestart && expandedMatchId === m.id && (
                           <div style={{ background: 'rgba(240, 244, 248, 0.9)', padding: '15px', borderTop: '2px solid #E9ECEF' }}>
-                            <div style={{ fontWeight: 900, color: '#3772FF', fontSize: '0.75rem', marginBottom: '10px', borderBottom: '2px solid #DEE2E6', paddingBottom: '5px' }}>
-                              IEDEREENS VOORSPELLING
-                            </div>
+                            <div style={{ fontWeight: 900, color: '#3772FF', fontSize: '0.75rem', marginBottom: '10px', borderBottom: '2px solid #DEE2E6', paddingBottom: '5px' }}>IEDEREENS VOORSPELLING</div>
                             {pVoorMatch.map((av: any) => (
                               <div key={av.id} style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '0.85rem', padding: '6px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
                                 <span>{av.spelers?.naam} {av.gouden_bal ? '🌟' : ''}</span>
@@ -707,7 +616,6 @@ export default function Home() {
                             ))}
                           </div>
                         )}
-
                       </div>
                     );
                   })
