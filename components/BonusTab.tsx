@@ -1,13 +1,11 @@
 // src/components/BonusTab.tsx
 import { useEffect, useRef } from 'react';
 
-// --- HULPFUNCTIE: VLAGGEN & KLEUREN GENERATOR ---
+// --- HULPFUNCTIE: VLAGGEN & KLEUREN GENERATOR + BLACK FLAG FIX ---
 const parseTeam = (teamString: string) => {
   if (!teamString) return { name: '', emoji: '🏳️', gradient: 'linear-gradient(135deg, #DEE2E6, #ADB5BD)' };
 
-  const emojiMatch = teamString.match(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu);
-  let emoji = emojiMatch ? emojiMatch.join('') : '';
-  let name = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
+  let name = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
 
   const colors: any = {
     'België': 'linear-gradient(135deg, #000 33%, #FFD700 33%, #FFD700 66%, #ED2939 66%)',
@@ -94,11 +92,9 @@ const parseTeam = (teamString: string) => {
     'Venezuela': '🇻🇪', 'Mali': '🇲🇱', 'Algerije': '🇩🇿', 'Zambia': '🇿🇲', 'Honduras': '🇭🇳', 'El Salvador': '🇸🇻'
   };
 
-  if (!emoji && defaultEmojis[name]) emoji = defaultEmojis[name];
-  if (!emoji) emoji = '🏳️';
-
-  // Neutraal lichtgrijs als fallback ipv blauw
+  let emoji = defaultEmojis[name] || '🏳️';
   const gradient = colors[name] || 'linear-gradient(135deg, #DEE2E6, #ADB5BD)';
+  
   return { name, emoji, gradient };
 };
 
@@ -190,7 +186,6 @@ const RoundCarousel = ({ value, onChange, disabled }: any) => {
         {rondes.map(r => {
           const isSelected = value === r.id;
           const noSelection = !value;
-          // De Belgische gradient!
           const belgiumGradient = 'linear-gradient(135deg, #000 33%, #FFD700 33%, #FFD700 66%, #ED2939 66%)';
 
           return (
@@ -279,17 +274,15 @@ export default function BonusTab({
         <CountryCarousel options={WK_LANDEN} value={besteVerdedigingLand} onChange={setBesteVerdedigingLand} disabled={isGesloten} />
       </div>
 
-      {/* EINDSTATION BELGIË (GEÜPDATE NAAR CAROUSEL) */}
+      {/* EINDSTATION BELGIË */}
       <div className="bonus-card">
         <h3 className="bonus-title" style={{color: '#111827'}}>📍 Eindstation België</h3>
         <p style={{fontSize:'0.7rem', color:'#6C757D', margin:'0 0 5px 0', fontWeight:800}}>In welke ronde strandt België?</p>
         <RoundCarousel value={eindstation} onChange={setEindstation} disabled={isGesloten} />
       </div>
       
-      {/* KAARTEN (GEÜPDATE NAAR SCREENSHOT LAYOUT) */}
+      {/* KAARTEN */}
       <div style={{ display: 'flex', gap: '15px' }}>
-        
-        {/* GEEL */}
         <div style={{ flex: 1, background: '#FCD116', borderRadius: '16px', padding: '15px', textAlign: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
           <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.6rem', color: '#111827', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
             <div style={{ width: '16px', height: '22px', background: '#FFD700', borderRadius: '3px', border: '1px solid rgba(0,0,0,0.2)' }} />
@@ -305,7 +298,6 @@ export default function BonusTab({
           />
         </div>
 
-        {/* ROOD */}
         <div style={{ flex: 1, background: '#FA5252', borderRadius: '16px', padding: '15px', textAlign: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
           <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.6rem', color: '#FFF', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
             <div style={{ width: '16px', height: '22px', background: '#C92A2A', borderRadius: '3px', border: '1px solid rgba(0,0,0,0.2)' }} />
@@ -320,7 +312,6 @@ export default function BonusTab({
             }}
           />
         </div>
-
       </div>
 
       {/* OPSLAAN KNOP */}
