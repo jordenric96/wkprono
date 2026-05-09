@@ -44,6 +44,7 @@ export default function Home() {
   const [meesteGoalsLand, setMeesteGoalsLand] = useState('');
   const [besteVerdedigingLand, setBesteVerdedigingLand] = useState('');
   const [eindstation, setEindstation] = useState('');
+  const [totaalGoals, setTotaalGoals] = useState(''); // NIEUW
   const [totaalGeel, setTotaalGeel] = useState('');
   const [totaalRood, setTotaalRood] = useState('');
 
@@ -182,6 +183,7 @@ export default function Home() {
     await supabase.from('toernooi_voorspellingen').upsert({
       speler_id: actieveSpeler.id, winnaar, halve_finalist_1: hf[0], halve_finalist_2: hf[1], halve_finalist_3: hf[2], halve_finalist_4: hf[3],
       topschutter: meesteGoalsLand, beste_keeper: besteVerdedigingLand, eindstation_belgie: eindstation,
+      totaal_goals: parseInt(totaalGoals) || 0, // NIEUW
       totaal_gele_kaarten: parseInt(totaalGeel) || 0, totaal_rode_kaarten: parseInt(totaalRood) || 0
     }, { onConflict: 'speler_id' });
     setOpslaanStatus('Opgeslagen! 🌟');
@@ -197,6 +199,7 @@ export default function Home() {
       setMeesteGoalsLand(data.topschutter || '');
       setBesteVerdedigingLand(data.beste_keeper || ''); 
       setEindstation(data.eindstation_belgie || '');
+      setTotaalGoals(data.totaal_goals?.toString() || ''); // NIEUW
       setTotaalGeel(data.totaal_gele_kaarten?.toString() || '');
       setTotaalRood(data.totaal_rode_kaarten?.toString() || '');
     }
@@ -260,16 +263,13 @@ export default function Home() {
     );
   };
 
-  // --- MEGA DATABASE MET VERTAALMACHINE EN VLAGGEN ---
   const parseTeam = (teamString: string) => {
     if (!teamString || teamString.includes('TBD')) {
       return { name: teamString || 'TBD', emoji: '❓', gradient: 'linear-gradient(135deg, #DEE2E6, #ADB5BD)' };
     }
 
-    // Strip onzichtbare code (de black-flag fix)
     let rawName = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
 
-    // Vertaalmachine: Vertaalt elke Engelse input (ook vreemde spellingen) naar puur Vlaams
     const vertalingen: any = {
       'Brazil': 'Brazilië', 'Morocco': 'Marokko', 'Switzerland': 'Zwitserland', 'Bosnia and Herzegovina': 'Bosnië',
       'Bosnia & Herzegovina': 'Bosnië', 'Bosnia': 'Bosnië', 'South Korea': 'Zuid-Korea', 'South Africa': 'Zuid-Afrika',
@@ -296,7 +296,6 @@ export default function Home() {
 
     let name = vertalingen[rawName] || rawName;
 
-    // Kleuren op basis van de Vlaamse naam
     const colors: any = {
       'België': 'linear-gradient(135deg, #000 33%, #FFD700 33%, #FFD700 66%, #ED2939 66%)',
       'Nederland': 'linear-gradient(135deg, #AE1C28 33%, #FFF 33%, #FFF 66%, #21468B 66%)',
@@ -361,8 +360,6 @@ export default function Home() {
       'Honduras': 'linear-gradient(135deg, #005293 40%, #FFF 40%, #FFF 60%, #D21034 60%)',
       'El Salvador': 'linear-gradient(135deg, #001489 20%, #FFF 20%, #FFF 40%, #CE1126 40%, #CE1126 60%, #FFF 60%, #FFF 80%, #001489 80%)',
       'Bosnië': 'linear-gradient(135deg, #002395 40%, #FECB00 40%, #FECB00 60%, #FFFFFF 60%)',
-      
-      // De nieuwe missende landen:
       'Kaapverdië': 'linear-gradient(135deg, #003893 40%, #FFF 40%, #FFF 45%, #CE1126 45%, #CE1126 55%, #FFF 55%, #FFF 60%, #003893 60%)',
       'Haïti': 'linear-gradient(135deg, #00209F 50%, #D21034 50%)',
       'Curaçao': 'linear-gradient(135deg, #002B7F 65%, #F9E814 65%, #F9E814 80%, #002B7F 80%)',
@@ -385,8 +382,6 @@ export default function Home() {
       'Roemenië': '🇷🇴', 'Hongarije': '🇭🇺', 'Noorwegen': '🇳🇴', 'IJsland': '🇮🇸', 'Slowakije': '🇸🇰', 
       'Irak': '🇮🇶', 'Paraguay': '🇵🇾', 'Venezuela': '🇻🇪', 'Mali': '🇲🇱', 'Algerije': '🇩🇿', 
       'Zambia': '🇿🇲', 'Honduras': '🇭🇳', 'El Salvador': '🇸🇻', 'Bosnië': '🇧🇦',
-      
-      // De nieuwe missende landen:
       'Kaapverdië': '🇨🇻', 'Haïti': '🇭🇹', 'Curaçao': '🇨🇼', 'Jordanië': '🇯🇴', 
       'Congo': '🇨🇩', 'Oezbekistan': '🇺🇿'
     };
@@ -662,6 +657,7 @@ export default function Home() {
                 meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} 
                 besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} 
                 eindstation={eindstation} setEindstation={setEindstation} 
+                totaalGoals={totaalGoals} setTotaalGoals={setTotaalGoals}
                 totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} 
                 isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} 
               />
