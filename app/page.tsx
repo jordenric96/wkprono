@@ -5,7 +5,6 @@ import { supabase } from '../lib/supabase';
 import { WK_LANDEN } from '../lib/data';
 
 import { CountdownTimer } from '../components/Shared';
-import MatchenTab from '../components/MatchenTab';
 import BonusTab from '../components/BonusTab';
 import AntwoordenTab from '../components/AntwoordenTab';
 import RankingTab from '../components/RankingTab';
@@ -173,7 +172,6 @@ export default function Home() {
   };
 
   const triggerAutoSave = (mId: number, data: { thuis: string, uit: string, joker: boolean }) => {
-    // Blokkeer opslaan als de match gestart is
     const m = matchen.find(x => x.id === mId);
     if (m && nu >= new Date(m.datum).getTime()) return;
 
@@ -278,20 +276,65 @@ export default function Home() {
     if (!error) { setNieuwBericht(''); haalChatOp(); }
   };
 
-  // --- HULPFUNCTIE: COUNTDOWN ---
+  // --- HULPFUNCTIES VOOR DESIGN MATCHEN TAB ---
   const getMatchCountdown = (matchTime: string) => {
     const diff = new Date(matchTime).getTime() - nu;
     if (diff <= 0) return "🔒 GESLOTEN";
     const h = Math.floor(diff / (1000 * 60 * 60));
     const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     const s = Math.floor((diff % (1000 * 60)) / 1000);
-    const isUrgent = diff < (1000 * 60 * 60); // Minder dan 1 uur
+    const isUrgent = diff < (1000 * 60 * 60); 
     
     return (
       <span style={{ color: isUrgent ? '#FA5252' : 'inherit', fontWeight: 900 }}>
         ⏱️ {h > 0 ? `${h}u ` : ''}{m}m {h === 0 ? `${s}s` : ''}
       </span>
     );
+  };
+
+  const parseTeam = (teamString: string) => {
+    if (!teamString || teamString.includes('TBD')) {
+      return { name: teamString || 'TBD', emoji: '❓', gradient: 'linear-gradient(135deg, #e9ecef, #adb5bd)' };
+    }
+
+    const emojiMatch = teamString.match(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu);
+    let emoji = emojiMatch ? emojiMatch.join('') : '';
+    let name = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
+
+    const colors: any = {
+      'België': 'linear-gradient(135deg, #000 33%, #FFD700 33%, #FFD700 66%, #ED2939 66%)',
+      'Nederland': 'linear-gradient(135deg, #AE1C28 33%, #FFF 33%, #FFF 66%, #21468B 66%)',
+      'Frankrijk': 'linear-gradient(135deg, #002395 33%, #FFF 33%, #FFF 66%, #ED2939 66%)',
+      'Duitsland': 'linear-gradient(135deg, #000 33%, #FF0000 33%, #FF0000 66%, #FFCC00 66%)',
+      'Spanje': 'linear-gradient(135deg, #AA151B 33%, #F1BF00 33%, #F1BF00 66%, #AA151B 66%)',
+      'Brazilië': 'linear-gradient(135deg, #009c3b 33%, #ffdf00 33%, #ffdf00 66%, #002776 66%)',
+      'Argentinië': 'linear-gradient(135deg, #75AADB 33%, #FFF 33%, #FFF 66%, #75AADB 66%)',
+      'Portugal': 'linear-gradient(135deg, #006600 50%, #FF0000 50%)',
+      'Engeland': 'linear-gradient(135deg, #FFF 40%, #CE1124 40%, #CE1124 60%, #FFF 60%)',
+      'Italië': 'linear-gradient(135deg, #009246 33%, #FFF 33%, #FFF 66%, #CE2B37 66%)',
+      'Mexico': 'linear-gradient(135deg, #006847 33%, #FFF 33%, #FFF 66%, #CE1126 66%)',
+      'USA': 'linear-gradient(135deg, #B31942 33%, #FFF 33%, #FFF 66%, #0A3161 66%)',
+      'Verenigde Staten': 'linear-gradient(135deg, #B31942 33%, #FFF 33%, #FFF 66%, #0A3161 66%)',
+      'Canada': 'linear-gradient(135deg, #FF0000 30%, #FFF 30%, #FFF 70%, #FF0000 70%)',
+      'South Korea': 'linear-gradient(135deg, #FFF 40%, #CD2E3A 40%, #CD2E3A 60%, #0047A0 60%)',
+      'Zuid-Korea': 'linear-gradient(135deg, #FFF 40%, #CD2E3A 40%, #CD2E3A 60%, #0047A0 60%)',
+      'South Africa': 'linear-gradient(135deg, #007A4D 25%, #FFB612 25%, #FFB612 50%, #000 50%, #000 75%, #DE3831 75%)',
+      'Czechia': 'linear-gradient(135deg, #11457E 33%, #D7141A 33%, #D7141A 66%, #FFF 66%)',
+      'Marokko': 'linear-gradient(135deg, #c1272d 45%, #006233 45%, #006233 55%, #c1272d 55%)'
+    };
+
+    const defaultEmojis: any = {
+      'België': '🇧🇪', 'Nederland': '🇳🇱', 'Frankrijk': '🇫🇷', 'Duitsland': '🇩🇪', 'Spanje': '🇪🇸',
+      'Brazilië': '🇧🇷', 'Argentinië': '🇦🇷', 'Portugal': '🇵🇹', 'Italië': '🇮🇹', 'Engeland': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+      'Mexico': '🇲🇽', 'USA': '🇺🇸', 'Verenigde Staten': '🇺🇸', 'Canada': '🇨🇦', 'Marokko': '🇲🇦', 
+      'South Korea': '🇰🇷', 'Zuid-Korea': '🇰🇷', 'South Africa': '🇿🇦', 'Czechia': '🇨🇿'
+    };
+
+    if (!emoji && defaultEmojis[name]) emoji = defaultEmojis[name];
+    if (!emoji) emoji = '🏳️';
+
+    const gradient = colors[name] || 'linear-gradient(135deg, #3772FF, #70E4EF)';
+    return { name, emoji, gradient };
   };
 
   const tellersData = useMemo(() => {
@@ -345,7 +388,7 @@ export default function Home() {
         body::after { width: 350px; height: 350px; bottom: -80px; right: -80px; background: var(--aqua); animation: blob-movement-b 15s linear infinite; }
 
         .glass-card {
-          background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(15px); padding: 20px; border-radius: 24px;
+          background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(15px); padding: 25px 20px; border-radius: 24px;
           width: 100%; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 3px solid rgba(255, 255, 255, 0.4); margin-bottom: 20px;
         }
 
@@ -372,45 +415,22 @@ export default function Home() {
           border-radius: 50%; box-shadow: 0 0 10px var(--rose); animation: pulse-red 2s infinite;
         }
 
-        .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
         .info-content { background: rgba(255,255,255,0.9); padding: 15px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; margin-bottom: 20px; border-left: 4px solid var(--magenta); line-height: 1.5; }
-        .admin-btn { background: #111827; color: #fff; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 900; cursor: pointer; font-size: 0.8rem; margin: 0 auto 15px; display: block; }
-
-        .match-card { background: rgba(255, 255, 255, 0.95); border-radius: 16px; margin-bottom: 12px; border: 3px solid #E9ECEF; overflow: hidden; position: relative; }
-        .match-header { background: var(--lime); padding: 10px 15px; font-size: 0.7rem; font-weight: 900; color: #111827; display: flex; justify-content: space-between; align-items: center; }
-        .match-body { display: flex; align-items: center; padding: 15px; }
-        .score-invoer { width: 45px; height: 50px; text-align: center; font-size: 1.5rem; font-family: 'Bebas Neue'; border-radius: 12px; border: 2px solid #DEE2E6; outline: none; }
-        .score-invoer:disabled { background: #f1f3f5; color: #adb5bd; cursor: not-allowed; }
-        
-        .save-indicator { position: absolute; right: 50px; top: 10px; font-size: 0.65rem; font-weight: 900; opacity: 0; transition: 0.3s; }
-        .save-indicator.saving { opacity: 1; color: var(--magenta); }
-        .save-indicator.saved { opacity: 1; color: #2ECC40; }
-        .joker-btn { width: 38px; height: 38px; border-radius: 50%; border: 2px solid #DEE2E6; background: #FFF; font-size: 1.2rem; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; filter: grayscale(1); opacity: 0.5; }
-        .joker-btn.active { background: #FFD700; border-color: #FFA500; filter: grayscale(0); opacity: 1; transform: scale(1.15); box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); }
-
-        .ranking-item { background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 15px; margin-bottom: 12px; border: 2px solid #E9ECEF; display: flex; align-items: center; gap: 15px; transition: 0.2s; }
-        .rank-badge { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue'; font-size: 1.8rem; color: white; background: var(--crayola); }
-        .rank-1 { border-color: #FFD700; background: linear-gradient(135deg, rgba(255,215,0,0.1), #fff); }
-        .rank-1 .rank-badge { background: #FFD700; color: #111827; }
-        .betaal-badge { font-size: 0.6rem; padding: 3px 6px; border-radius: 6px; font-weight: 900; margin-top: 5px; display: inline-block; }
-        .is-betaald { background: #d3f9d8; color: #2b8a3e; }
-        .niet-betaald { background: #ffe3e3; color: #e03131; }
+        .admin-btn { background: #111827; color: #fff; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 900; cursor: pointer; font-size: 0.8rem; margin: 0 auto 15px; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
         .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; font-weight: 800; font-size: 1rem; margin-bottom: 10px; }
         .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); }
-
-        .teller-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .teller-card { background: var(--crayola); color: white; padding: 20px; border-radius: 16px; text-align: center; }
-        .teller-val { font-family: 'Bebas Neue'; font-size: 3rem; line-height: 1; }
 
         @keyframes background-fade { 0%, 100% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } }
         @keyframes blob-movement-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(50px, 80px) scale(1.1); } }
         @keyframes blob-movement-b { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-40px, -60px) scale(0.9); } }
         @keyframes title-glow { 0%, 100% { text-shadow: 3px 3px 0px var(--magenta); } 50% { text-shadow: 3px 3px 20px rgba(240, 56, 255, 0.8), 3px 3px 0px var(--magenta); } }
+        @keyframes pulse-red { 0% { transform: scale(0.95); } 70% { transform: scale(1); } 100% { transform: scale(0.95); } }
         .main-container { padding: 25px 15px 80px 15px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
       `}</style>
 
-      {showConfetti && <div style={{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:999,textAlign:'center',fontSize:'5rem'}}>🎉🌟⚽</div>}
+      {showConfetti && <div style={{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:999,textAlign:'center',fontSize:'5rem', pointerEvents:'none'}}>🎉🌟⚽</div>}
 
       <div className="glass-card">
         <h1 className="title">WK 2026</h1>
@@ -419,17 +439,24 @@ export default function Home() {
           <span>ℹ️ Info & Betalen</span>
           <span>{infoOpen ? '▲' : '▼'}</span>
         </button>
+
         {infoOpen && (
           <div className="info-content">
-            <h4>📲 App Installeren</h4>
-            <p><strong>iPhone:</strong> Tik op Deel-icoon &gt; <em>Zet op beginscherm</em>.<br/><strong>Android:</strong> Tik op drie puntjes &gt; <em>Toevoegen aan startscherm</em>.</p>
-            <p>Inleggeld: <strong>€10</strong> t.a.v. Jorden Ricour.</p>
+            <h4>📲 App Installeren op je GSM</h4>
+            <p style={{marginBottom:15}}>
+              <strong>iPhone (Safari):</strong> Klik op 'Deel' en kies <em>'Zet op beginscherm'</em>.<br/>
+              <strong>Android (Chrome):</strong> Klik op drie puntjes en kies <em>'Toevoegen aan startscherm'</em>.
+            </p>
+            <h4>💰 Inleggeld Betalen</h4>
+            <p>Deelname kost <strong>€10</strong>. Betalen via Payconiq of overschrijven naar Jorden Ricour.</p>
           </div>
         )}
 
         {isAdmin && (
           <button onClick={syncMetSpreadsheet} className="admin-btn">🔄 {syncStatus || 'SYNC MET GOOGLE SHEETS'}</button>
         )}
+
+        {!isGesloten && actieveSpeler && <CountdownTimer tijdOver={tijdOver} />}
 
         {actieveSpeler ? (
           <div>
@@ -452,61 +479,216 @@ export default function Home() {
 
             {actieveTab === 'matchen' && (
               <div>
-                <div className="filter-scroll">
-                  <span className={`filter-chip ${filterRonde === 'Nog in te vullen' ? 'active' : ''}`} onClick={() => setFilterRonde('Nog in te vullen')}>✍️ INVULLEN</span>
-                  {['Alle', 'Groepsfase', 'Ronde van 32', 'Finale'].map(r => (
-                    <span key={r} className={`filter-chip ${filterRonde === r ? 'active' : ''}`} onClick={() => setFilterRonde(r)}>{r}</span>
-                  ))}
-                </div>
-                {gefilterdeMatchen.map(m => {
-                  const gestart = nu > new Date(m.datum).getTime();
-                  const v = matchVoorspellingen[m.id] || { thuis: '', uit: '', joker: false };
-                  const save = matchSaveStatus[m.id] || 'idle';
-                  const pVoorMatch = alleMatchVoorspellingen.filter(av => av.match_id === m.id);
-                  const heeftUitslag = m.thuis_score !== null;
+                {gefilterdeMatchen.length === 0 ? (
+                  <p style={{textAlign:'center', fontWeight:800, color:'#6C757D', margin:'40px 0'}}>Geen matchen gevonden.</p>
+                ) : (
+                  gefilterdeMatchen.map(m => {
+                    const gestart = nu > new Date(m.datum).getTime();
+                    const v = matchVoorspellingen[m.id] || { thuis: '', uit: '', joker: false };
+                    const save = matchSaveStatus[m.id] || 'idle';
+                    const pVoorMatch = alleMatchVoorspellingen.filter(av => av.match_id === m.id);
+                    const heeftUitslag = m.thuis_score !== null;
 
-                  return (
-                    <div key={m.id} className={`match-card ${gestart ? 'locked' : ''}`} onClick={() => gestart && setExpandedMatchId(expandedMatchId === m.id ? null : m.id)}>
-                      <div className="match-header" style={{background: heeftUitslag ? 'var(--magenta)' : 'var(--lime)', color: heeftUitslag ? '#fff' : '#111827'}}>
-                        <span>{heeftUitslag ? '🏆 EINDSTAND' : getMatchCountdown(m.datum)}</span>
-                        <span className={`save-indicator ${save}`}>{save === 'saving' ? '⏳' : '✅'}</span>
-                        <button className={`joker-btn ${v.joker ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); if(!gestart) toggleJoker(m.id); }}>🌟</button>
-                      </div>
-                      
-                      {heeftUitslag && (
-                        <div style={{textAlign:'center', padding:10, borderBottom:'1px solid #eee', fontWeight:900, fontSize:'2rem'}}>{m.thuis_score} - {m.uit_score}</div>
-                      )}
-
-                      <div className="match-body">
-                        <span className="team-naam">{m.thuisploeg}</span>
-                        <div style={{display:'flex', gap:5, alignItems:'center'}}>
-                          <input className="score-invoer" type="tel" value={v.thuis} disabled={gestart} onChange={e => handleScore(m.id, 'thuis', e.target.value)} onClick={e=>e.stopPropagation()}/>
-                          <span>-</span>
-                          <input className="score-invoer" type="tel" value={v.uit} disabled={gestart} onChange={e => handleScore(m.id, 'uit', e.target.value)} onClick={e=>e.stopPropagation()}/>
+                    return (
+                      <div 
+                        key={m.id} 
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.95)', 
+                          borderRadius: '16px', 
+                          marginBottom: '15px', 
+                          border: gestart ? '3px solid #EF709D' : '3px solid #E9ECEF', 
+                          overflow: 'hidden',
+                          boxShadow: '0 10px 20px rgba(0,0,0,0.05)',
+                          cursor: gestart ? 'pointer' : 'default'
+                        }}
+                        onClick={() => gestart && setExpandedMatchId(expandedMatchId === m.id ? null : m.id)}
+                      >
+                        
+                        {/* HEADER: TIMER & JOKER KNOP */}
+                        <div style={{ 
+                          background: heeftUitslag ? '#F038FF' : '#E2EF70', 
+                          color: heeftUitslag ? 'white' : '#111827',
+                          padding: '12px 15px', 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center' 
+                        }}>
+                          <span style={{ fontSize: '0.8rem' }}>
+                            {heeftUitslag ? '🏆 EINDSTAND' : (gestart ? '🔒 GESLOTEN' : getMatchCountdown(m.datum))}
+                          </span>
+                          
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); if(!gestart) toggleJoker(m.id); }}
+                            disabled={gestart}
+                            style={{
+                              background: v.joker ? '#FFD700' : '#FFFFFF',
+                              color: v.joker ? '#000' : '#111827',
+                              border: v.joker ? '2px solid #E6C200' : '2px solid #DEE2E6',
+                              borderRadius: '20px',
+                              padding: '6px 12px',
+                              fontSize: '0.7rem',
+                              fontWeight: 900,
+                              cursor: gestart ? 'not-allowed' : 'pointer',
+                              boxShadow: v.joker ? '0 4px 10px rgba(255, 215, 0, 0.4)' : '0 2px 5px rgba(0,0,0,0.05)',
+                              transition: '0.2s',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            {v.joker ? '🌟 JOKER ACTIEF' : '⭐ GEBRUIK JOKER'}
+                          </button>
                         </div>
-                        <span className="team-naam">{m.uitploeg}</span>
-                      </div>
 
-                      {!gestart && (
-                        <div style={{padding: '0 15px 10px', fontSize:'0.6rem', color:'#999', display:'flex', flexWrap:'wrap', gap:4}}>
-                           {pVoorMatch.length} spelers vulden in: {pVoorMatch.map(av => <span key={av.speler_id} style={{background:'#eee', padding:'2px 5px', borderRadius:4}}>{av.spelers?.naam.split(' ')[0]}</span>)}
-                        </div>
-                      )}
+                        {/* EVENTUELE EINDSTAND BOVENAAN */}
+                        {heeftUitslag && (
+                          <div style={{ textAlign: 'center', padding: '10px 0', background: 'rgba(240, 56, 255, 0.1)', borderBottom: '1px solid #F038FF' }}>
+                            <span style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: '#F038FF' }}>
+                              {m.thuis_score} - {m.uit_score}
+                            </span>
+                          </div>
+                        )}
 
-                      {gestart && expandedMatchId === m.id && (
-                        <div style={{background:'#f9f9f9', padding:15, borderTop:'1px solid #eee'}}>
-                          {pVoorMatch.map(av => (
-                            <div key={av.id} style={{display:'flex', justifyContent:'space-between', fontSize:'0.8rem', fontWeight:800, padding:'4px 0'}}>
-                              <span>{av.spelers?.naam} {av.gouden_bal ? '🌟' : ''}</span>
-                              <span style={{color:'var(--magenta)'}}>{av.thuis_score} - {av.uit_score}</span>
+                        {/* BODY: VLAGGEN EN SCORES */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 10px' }}>
+                          
+                          {/* THUISPLOEG (CIRKEL + NAAM ONDERAAN) */}
+                          {(() => {
+                            const thuis = parseTeam(m.thuisploeg);
+                            return (
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                                <div style={{
+                                  width: '60px', height: '60px', borderRadius: '50%',
+                                  background: thuis.gradient,
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
+                                }}>
+                                  <div style={{
+                                    width: '52px', height: '52px', borderRadius: '50%',
+                                    background: '#fff',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: '1.8rem'
+                                  }}>
+                                    {thuis.emoji}
+                                  </div>
+                                </div>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 900, textAlign: 'center', marginTop: '8px', color: '#111827' }}>
+                                  {thuis.name}
+                                </span>
+                              </div>
+                            );
+                          })()}
+
+                          {/* SCORE INVOER */}
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', margin: '0 10px' }}>
+                            <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ADB5BD', marginBottom: '5px', letterSpacing: '1px' }}>JOUW PRONO</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <input 
+                                type="tel" 
+                                value={v.thuis} 
+                                disabled={gestart} 
+                                onClick={e => e.stopPropagation()} 
+                                onChange={e => handleScore(m.id, 'thuis', e.target.value)} 
+                                style={{ 
+                                  width: '45px', height: '50px', fontSize: '1.5rem', textAlign: 'center', 
+                                  borderRadius: '12px', border: '2px solid #DEE2E6', outline: 'none', 
+                                  fontWeight: 900, fontFamily: 'Bebas Neue', background: gestart ? '#f1f3f5' : '#fff',
+                                  color: gestart ? '#adb5bd' : '#111827'
+                                }} 
+                              />
+                              <span style={{ fontWeight: 900, color: '#ADB5BD' }}>-</span>
+                              <input 
+                                type="tel" 
+                                value={v.uit} 
+                                disabled={gestart} 
+                                onClick={e => e.stopPropagation()} 
+                                onChange={e => handleScore(m.id, 'uit', e.target.value)} 
+                                style={{ 
+                                  width: '45px', height: '50px', fontSize: '1.5rem', textAlign: 'center', 
+                                  borderRadius: '12px', border: '2px solid #DEE2E6', outline: 'none', 
+                                  fontWeight: 900, fontFamily: 'Bebas Neue', background: gestart ? '#f1f3f5' : '#fff',
+                                  color: gestart ? '#adb5bd' : '#111827'
+                                }} 
+                              />
                             </div>
-                          ))}
+                            {!gestart && save !== 'idle' && (
+                              <span style={{ fontSize: '0.6rem', fontWeight: 900, marginTop: '5px', color: save === 'saving' ? '#F038FF' : '#2ECC40' }}>
+                                {save === 'saving' ? '⏳ Opslaan...' : '✅ Opgeslagen'}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* UITPLOEG (CIRKEL + NAAM ONDERAAN) */}
+                          {(() => {
+                            const uit = parseTeam(m.uitploeg);
+                            return (
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+                                <div style={{
+                                  width: '60px', height: '60px', borderRadius: '50%',
+                                  background: uit.gradient,
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
+                                }}>
+                                  <div style={{
+                                    width: '52px', height: '52px', borderRadius: '50%',
+                                    background: '#fff',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: '1.8rem'
+                                  }}>
+                                    {uit.emoji}
+                                  </div>
+                                </div>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 900, textAlign: 'center', marginTop: '8px', color: '#111827' }}>
+                                  {uit.name}
+                                </span>
+                              </div>
+                            );
+                          })()}
+
                         </div>
-                      )}
-                      {gestart && expandedMatchId !== m.id && <div style={{textAlign:'center', fontSize:'0.6rem', paddingBottom:5, color:'var(--rose)', fontWeight:900}}>KLIK VOOR VOORSPELLINGEN 👁️</div>}
-                    </div>
-                  );
-                })}
+
+                        {/* WIE HEEFT ER AL INGEVULD? */}
+                        {!gestart && (
+                          <div style={{ background: '#F8F9FA', padding: '10px', borderTop: '1px dashed #DEE2E6', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+                            <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#ADB5BD' }}>{pVoorMatch.length} / {alleSpelers.length} spelers vulden dit al in:</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', justifyContent: 'center' }}>
+                              {pVoorMatch.map((av: any) => (
+                                <span key={av.speler_id} style={{ 
+                                  fontSize: '0.6rem', padding: '3px 8px', background: '#70E4EF', 
+                                  borderRadius: '8px', fontWeight: 900, color: '#3772FF' 
+                                }}>
+                                  {av.spelers?.naam.split(' ')[0]}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* UITSCHUIFMENU VOOR GESTARTE MATCHEN */}
+                        {gestart && expandedMatchId !== m.id && (
+                          <div style={{ textAlign: 'center', fontSize: '0.7rem', fontWeight: 900, color: '#EF709D', paddingBottom: '10px', textTransform: 'uppercase' }}>
+                            Klik om voorspellingen te zien 👁️
+                          </div>
+                        )}
+
+                        {gestart && expandedMatchId === m.id && (
+                          <div style={{ background: 'rgba(240, 244, 248, 0.9)', padding: '15px', borderTop: '2px solid #E9ECEF' }}>
+                            <div style={{ fontWeight: 900, color: '#3772FF', fontSize: '0.75rem', marginBottom: '10px', borderBottom: '2px solid #DEE2E6', paddingBottom: '5px' }}>
+                              IEDEREENS VOORSPELLING
+                            </div>
+                            {pVoorMatch.map((av: any) => (
+                              <div key={av.id} style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '0.85rem', padding: '6px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                                <span>{av.spelers?.naam} {av.gouden_bal ? '🌟' : ''}</span>
+                                <span style={{ color: '#F038FF', fontFamily: 'Bebas Neue', fontSize: '1.2rem' }}>{av.thuis_score} - {av.uit_score}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                      </div>
+                    );
+                  })
+                )}
               </div>
             )}
 
