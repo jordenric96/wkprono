@@ -172,6 +172,7 @@ export default function Home() {
   };
 
   const triggerAutoSave = (mId: number, data: { thuis: string, uit: string, joker: boolean }) => {
+    // Blokkeer opslaan als de match gestart is
     const m = matchen.find(x => x.id === mId);
     if (m && nu >= new Date(m.datum).getTime()) return;
 
@@ -282,12 +283,11 @@ export default function Home() {
     if (diff <= 0) return "🔒 GESLOTEN";
     const h = Math.floor(diff / (1000 * 60 * 60));
     const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const s = Math.floor((diff % (1000 * 60)) / 1000);
     const isUrgent = diff < (1000 * 60 * 60); 
     
     return (
       <span style={{ color: isUrgent ? '#FA5252' : 'inherit', fontWeight: 900 }}>
-        ⏱️ {h > 0 ? `${h}u ` : ''}{m}m {h === 0 ? `${s}s` : ''}
+        ⏱️ {h > 0 ? `${h}u ` : ''}{m}m
       </span>
     );
   };
@@ -388,12 +388,18 @@ export default function Home() {
         body::after { width: 350px; height: 350px; bottom: -80px; right: -80px; background: var(--aqua); animation: blob-movement-b 15s linear infinite; }
 
         .glass-card {
-          background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(15px); padding: 25px 20px; border-radius: 24px;
+          background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(15px); padding: 20px; border-radius: 24px;
           width: 100%; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 3px solid rgba(255, 255, 255, 0.4); margin-bottom: 20px;
         }
 
         .title { font-family: 'Bebas Neue', sans-serif; font-size: 4.5rem; text-align: center; color: #FFF; line-height: 1; text-shadow: 3px 3px 0px var(--magenta); margin: 0; animation: title-glow 3s linear infinite; }
         
+        /* HOOFD TIMER STYLING */
+        .timer { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .timer-box { background: var(--magenta); color: #FFF; padding: 8px 12px; border-radius: 12px; text-align: center; font-weight: 900; box-shadow: 0 4px 10px rgba(240, 56, 255, 0.3); }
+        .timer-value { font-size: 1.5rem; line-height: 1.1; }
+        .timer-label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.8; }
+
         .tab-container {
           display: flex; background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(15px); border-radius: 22px; padding: 6px;
           margin-bottom: 25px; overflow-x: auto; scrollbar-width: none; gap: 6px; border: 1px solid rgba(255, 255, 255, 0.1);
@@ -415,12 +421,34 @@ export default function Home() {
           border-radius: 50%; box-shadow: 0 0 10px var(--rose); animation: pulse-red 2s infinite;
         }
 
-        .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+        .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
         .info-content { background: rgba(255,255,255,0.9); padding: 15px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; margin-bottom: 20px; border-left: 4px solid var(--magenta); line-height: 1.5; }
-        .admin-btn { background: #111827; color: #fff; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 900; cursor: pointer; font-size: 0.8rem; margin: 0 auto 15px; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .admin-btn { background: #111827; color: #fff; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 900; cursor: pointer; font-size: 0.8rem; margin: 0 auto 15px; display: block; }
+
+        .match-card { background: rgba(255, 255, 255, 0.95); border-radius: 16px; margin-bottom: 12px; border: 3px solid #E9ECEF; overflow: hidden; position: relative; }
+        .match-header { background: var(--lime); padding: 10px 15px; font-size: 0.7rem; font-weight: 900; color: #111827; display: flex; justify-content: space-between; align-items: center; }
+        .match-body { display: flex; align-items: center; padding: 15px; }
+        .score-invoer { width: 45px; height: 50px; text-align: center; font-size: 1.5rem; font-family: 'Bebas Neue'; border-radius: 12px; border: 2px solid #DEE2E6; outline: none; }
+        .score-invoer:disabled { background: #f1f3f5; color: #adb5bd; cursor: not-allowed; }
+        
+        .save-indicator { position: absolute; right: 50px; top: 10px; font-size: 0.65rem; font-weight: 900; opacity: 0; transition: 0.3s; }
+        .save-indicator.saving { opacity: 1; color: var(--magenta); }
+        .save-indicator.saved { opacity: 1; color: #2ECC40; }
+
+        .ranking-item { background: rgba(255, 255, 255, 0.9); border-radius: 16px; padding: 15px; margin-bottom: 12px; border: 2px solid #E9ECEF; display: flex; align-items: center; gap: 15px; transition: 0.2s; }
+        .rank-badge { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue'; font-size: 1.8rem; color: white; background: var(--crayola); }
+        .rank-1 { border-color: #FFD700; background: linear-gradient(135deg, rgba(255,215,0,0.1), #fff); }
+        .rank-1 .rank-badge { background: #FFD700; color: #111827; }
+        .betaal-badge { font-size: 0.6rem; padding: 3px 6px; border-radius: 6px; font-weight: 900; margin-top: 5px; display: inline-block; }
+        .is-betaald { background: #d3f9d8; color: #2b8a3e; }
+        .niet-betaald { background: #ffe3e3; color: #e03131; }
 
         .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; font-weight: 800; font-size: 1rem; margin-bottom: 10px; }
         .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); }
+
+        .teller-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .teller-card { background: var(--crayola); color: white; padding: 20px; border-radius: 16px; text-align: center; }
+        .teller-val { font-family: 'Bebas Neue'; font-size: 3rem; line-height: 1; }
 
         @keyframes background-fade { 0%, 100% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } }
         @keyframes blob-movement-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(50px, 80px) scale(1.1); } }
@@ -430,7 +458,7 @@ export default function Home() {
         .main-container { padding: 25px 15px 80px 15px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
       `}</style>
 
-      {showConfetti && <div style={{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:999,textAlign:'center',fontSize:'5rem', pointerEvents:'none'}}>🎉🌟⚽</div>}
+      {showConfetti && <div style={{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:999,textAlign:'center',fontSize:'5rem'}}>🎉🌟⚽</div>}
 
       <div className="glass-card">
         <h1 className="title">WK 2026</h1>
@@ -439,16 +467,11 @@ export default function Home() {
           <span>ℹ️ Info & Betalen</span>
           <span>{infoOpen ? '▲' : '▼'}</span>
         </button>
-
         {infoOpen && (
           <div className="info-content">
-            <h4>📲 App Installeren op je GSM</h4>
-            <p style={{marginBottom:15}}>
-              <strong>iPhone (Safari):</strong> Klik op 'Deel' en kies <em>'Zet op beginscherm'</em>.<br/>
-              <strong>Android (Chrome):</strong> Klik op drie puntjes en kies <em>'Toevoegen aan startscherm'</em>.
-            </p>
-            <h4>💰 Inleggeld Betalen</h4>
-            <p>Deelname kost <strong>€10</strong>. Betalen via Payconiq of overschrijven naar Jorden Ricour.</p>
+            <h4>📲 App Installeren</h4>
+            <p><strong>iPhone:</strong> Tik op Deel-icoon &gt; <em>Zet op beginscherm</em>.<br/><strong>Android:</strong> Tik op drie puntjes &gt; <em>Toevoegen aan startscherm</em>.</p>
+            <p>Inleggeld: <strong>€10</strong> t.a.v. Jorden Ricour.</p>
           </div>
         )}
 
