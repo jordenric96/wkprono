@@ -28,11 +28,11 @@ export default function MatchenTab({
       return { name: teamString || 'TBD', emoji: '❓', gradient: 'linear-gradient(135deg, #e9ecef, #adb5bd)' };
     }
 
-    // 1. Emoji scheiden van tekst (als je deze in de spreadsheet hebt gezet)
+    // 1. Emoji scheiden van tekst
     const emojiMatch = teamString.match(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu);
     let emoji = emojiMatch ? emojiMatch.join('') : '';
 
-    // 2. Naam netjes maken (emoji weghalen en spaties trimmen)
+    // 2. Naam netjes maken
     let name = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '').trim();
 
     // 3. Exacte Vlagkleuren (voor het randje rond de cirkel)
@@ -49,12 +49,13 @@ export default function MatchenTab({
       'Italië': 'linear-gradient(135deg, #009246 33%, #FFF 33%, #FFF 66%, #CE2B37 66%)',
       'Mexico': 'linear-gradient(135deg, #006847 33%, #FFF 33%, #FFF 66%, #CE1126 66%)',
       'USA': 'linear-gradient(135deg, #B31942 33%, #FFF 33%, #FFF 66%, #0A3161 66%)',
+      'Verenigde Staten': 'linear-gradient(135deg, #B31942 33%, #FFF 33%, #FFF 66%, #0A3161 66%)',
       'Canada': 'linear-gradient(135deg, #FF0000 30%, #FFF 30%, #FFF 70%, #FF0000 70%)',
       'Zuid-Korea': 'linear-gradient(135deg, #FFF 40%, #CD2E3A 40%, #CD2E3A 60%, #0047A0 60%)',
       'Marokko': 'linear-gradient(135deg, #c1272d 45%, #006233 45%, #006233 55%, #c1272d 55%)'
     };
 
-    // 4. Automatische emoji als die mist in de tekst
+    // 4. Automatische emoji toevoegen als deze ontbreekt in de spreadsheet
     const defaultEmojis: any = {
       'België': '🇧🇪', 'Nederland': '🇳🇱', 'Frankrijk': '🇫🇷', 'Duitsland': '🇩🇪', 'Spanje': '🇪🇸',
       'Brazilië': '🇧🇷', 'Argentinië': '🇦🇷', 'Portugal': '🇵🇹', 'Italië': '🇮🇹', 'Engeland': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
@@ -62,9 +63,9 @@ export default function MatchenTab({
     };
 
     if (!emoji && defaultEmojis[name]) emoji = defaultEmojis[name];
-    if (!emoji) emoji = '🏳️'; // Fallback
+    if (!emoji) emoji = '🏳️'; // Standaard witte vlag als fail-safe
 
-    const gradient = colors[name] || 'linear-gradient(135deg, #3772FF, #70E4EF)'; // Default Blauw/Cyaan
+    const gradient = colors[name] || 'linear-gradient(135deg, #3772FF, #70E4EF)'; // Standaard blauwe tint
     
     return { name, emoji, gradient };
   };
@@ -107,7 +108,7 @@ export default function MatchenTab({
                 <button className={`joker-btn ${v.joker ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); if(!gestart) toggleJoker(m.id); }}>🌟</button>
               </div>
 
-              {/* OFFICIËLE SCORE BOVENAAN */}
+              {/* OFFICIËLE SCORE BOVENAAN ALS DEZE BEKEND IS */}
               {heeftUitslag && (
                 <div style={{ textAlign: 'center', padding: '10px 0', background: 'rgba(240, 56, 255, 0.1)', borderBottom: '1px solid var(--magenta)' }}>
                   <span style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: 'var(--magenta)' }}>
@@ -116,24 +117,30 @@ export default function MatchenTab({
                 </div>
               )}
 
-              {/* NIEUW VORMGEGEVEN MATCH BODY */}
+              {/* VLAGGEN EN SCORE INVOER */}
               <div className="match-body" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 15px' }}>
                 
-                {/* THUISPLOEG Cirkel */}
+                {/* THUISPLOEG */}
                 {(() => {
                   const thuis = parseTeam(m.thuisploeg);
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '85px' }}>
+                      {/* Buitenste gekleurde cirkel (de rand) */}
                       <div style={{
-                        width: '55px', height: '55px', borderRadius: '50%',
+                        width: '56px', height: '56px', borderRadius: '50%',
+                        background: thuis.gradient,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '1.8rem',
-                        fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
-                        background: `linear-gradient(#fff, #fff) padding-box, ${thuis.gradient} border-box`,
-                        border: '4px solid transparent',
-                        boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                        boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
                       }}>
-                        {thuis.emoji}
+                        {/* Binnenste witte cirkel */}
+                        <div style={{
+                          width: '48px', height: '48px', borderRadius: '50%',
+                          background: '#fff',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '1.6rem'
+                        }}>
+                          {thuis.emoji}
+                        </div>
                       </div>
                       <span style={{ fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase', textAlign: 'center', marginTop: '8px', lineHeight: 1.1, color: '#495057' }}>
                         {thuis.name}
@@ -152,21 +159,27 @@ export default function MatchenTab({
                   </div>
                 </div>
 
-                {/* UITPLOEG Cirkel */}
+                {/* UITPLOEG */}
                 {(() => {
                   const uit = parseTeam(m.uitploeg);
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '85px' }}>
+                      {/* Buitenste gekleurde cirkel (de rand) */}
                       <div style={{
-                        width: '55px', height: '55px', borderRadius: '50%',
+                        width: '56px', height: '56px', borderRadius: '50%',
+                        background: uit.gradient,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '1.8rem',
-                        fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
-                        background: `linear-gradient(#fff, #fff) padding-box, ${uit.gradient} border-box`,
-                        border: '4px solid transparent',
-                        boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                        boxShadow: '0 4px 10px rgba(0,0,0,0.15)'
                       }}>
-                        {uit.emoji}
+                        {/* Binnenste witte cirkel */}
+                        <div style={{
+                          width: '48px', height: '48px', borderRadius: '50%',
+                          background: '#fff',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '1.6rem'
+                        }}>
+                          {uit.emoji}
+                        </div>
                       </div>
                       <span style={{ fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase', textAlign: 'center', marginTop: '8px', lineHeight: 1.1, color: '#495057' }}>
                         {uit.name}
