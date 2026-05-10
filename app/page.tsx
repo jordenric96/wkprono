@@ -21,7 +21,10 @@ export default function Home() {
   const [actieveSpeler, setActieveSpeler] = useState<any>(null);
   const [alleSpelers, setAlleSpelers] = useState<any[]>([]); 
   const [actieveTab, setActieveTab] = useState('matchen');
-  const [filterRonde, setFilterRonde] = useState('Alle');
+  
+  // Voeg deze regel hier terug toe:
+  const [filterRonde, setFilterRonde] = useState('Alle'); 
+  
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
   const actieveTabRef = useRef(actieveTab);
 
@@ -177,39 +180,6 @@ export default function Home() {
     });
   };
 
-  const slaBonusOp = async () => {
-    if (isGesloten) return;
-    setOpslaanStatus('Bezig...');
-    await supabase.from('toernooi_voorspellingen').upsert({
-      speler_id: actieveSpeler.id, winnaar, halve_finalist_1: hf[0], halve_finalist_2: hf[1], halve_finalist_3: hf[2], halve_finalist_4: hf[3],
-      topschutter: meesteGoalsLand, beste_keeper: besteVerdedigingLand, eindstation_belgie: eindstation,
-      totaal_goals: parseInt(totaalGoals) || 0,
-      totaal_gele_kaarten: parseInt(totaalGeel) || 0, totaal_rode_kaarten: parseInt(totaalRood) || 0
-    }, { onConflict: 'speler_id' });
-    setOpslaanStatus('Opgeslagen! 🌟');
-    setShowConfetti(true);
-    setTimeout(() => { setShowConfetti(false); setOpslaanStatus(''); }, 3000);
-  };
-
-  const haalToernooiVoorspellingOp = async () => {
-    const { data } = await supabase.from('toernooi_voorspellingen').select('*').eq('speler_id', actieveSpeler.id).single();
-    if (data) {
-      setWinnaar(data.winnaar || ''); 
-      setHf([data.halve_finalist_1 || '', data.halve_finalist_2 || '', data.halve_finalist_3 || '', data.halve_finalist_4 || '']);
-      setMeesteGoalsLand(data.topschutter || '');
-      setBesteVerdedigingLand(data.beste_keeper || ''); 
-      setEindstation(data.eindstation_belgie || '');
-      setTotaalGoals(data.totaal_goals?.toString() || '');
-      setTotaalGeel(data.totaal_gele_kaarten?.toString() || '');
-      setTotaalRood(data.totaal_rode_kaarten?.toString() || '');
-    }
-  };
-
-  const haalAlleAntwoordenOp = async () => {
-    const { data } = await supabase.from('toernooi_voorspellingen').select('*, spelers(naam)');
-    if (data) setAlleToernooiV(data);
-  };
-
   const haalKlassementOp = async () => {
     const { data: s } = await supabase.from('spelers').select('*');
     const { data: m } = await supabase.from('matchen').select('*');
@@ -218,18 +188,29 @@ export default function Home() {
     const { data: uitslag } = await supabase.from('wk_uitslagen').select('*').single();
 
     if (s && m && v) {
+      // BEREKEN DE LIVE TOTALEN VOOR DE BONUS VRAGEN
+      let liveGoals = 0, liveGeel = 0, liveRood = 0;
+      m.forEach(match => {
+        if (match.thuis_score !== null && match.uit_score !== null) {
+          liveGoals += (match.thuis_score + match.uit_score);
+          liveGeel += (match.gele_kaarten || 0);
+          liveRood += (match.rode_kaarten || 0);
+        }
+      });
+
       let winnaarsGoals: any[] = [], winnaarsGeel: any[] = [], winnaarsRood: any[] = [];
       
-      if (uitslag) {
-        const diffG = bonusV?.map(bv => ({id: bv.speler_id, d: Math.abs((bv.totaal_goals || 0) - uitslag.totaal_goals)})) || [];
+      // Kijk wie er LIVE het dichtste bij de huidige stand zit
+      if (bonusV && bonusV.length > 0) {
+        const diffG = bonusV.map(bv => ({id: bv.speler_id, d: Math.abs((bv.totaal_goals || 0) - liveGoals)}));
         const minG = Math.min(...diffG.map(x => x.d));
         winnaarsGoals = diffG.filter(x => x.d === minG).map(x => x.id);
 
-        const diffY = bonusV?.map(bv => ({id: bv.speler_id, d: Math.abs((bv.totaal_gele_kaarten || 0) - uitslag.totaal_geel)})) || [];
+        const diffY = bonusV.map(bv => ({id: bv.speler_id, d: Math.abs((bv.totaal_gele_kaarten || 0) - liveGeel)}));
         const minY = Math.min(...diffY.map(x => x.d));
         winnaarsGeel = diffY.filter(x => x.d === minY).map(x => x.id);
 
-        const diffR = bonusV?.map(bv => ({id: bv.speler_id, d: Math.abs((bv.totaal_rode_kaarten || 0) - uitslag.totaal_rood)})) || [];
+        const diffR = bonusV.map(bv => ({id: bv.speler_id, d: Math.abs((bv.totaal_rode_kaarten || 0) - liveRood)}));
         const minR = Math.min(...diffR.map(x => x.d));
         winnaarsRood = diffR.filter(x => x.d === minR).map(x => x.id);
       }
@@ -237,6 +218,7 @@ export default function Home() {
       const stats = s.map(sp => {
         let pronoP = 0, bonusP = 0, ex = 0, wc = 0, f = 0;
         
+        // 1. Matchen (Pronostieken)
         v.filter(vo => vo.speler_id === sp.id).forEach(vo => {
           const match = m.find(ma => ma.id === vo.match_id);
           if (match && match.thuis_score !== null) {
@@ -249,23 +231,32 @@ export default function Home() {
           }
         });
 
+        // 2. Bonus (Zowel LIVE als EINDSTAND)
         const bv = bonusV?.find(b => b.speler_id === sp.id);
-        if (bv && uitslag) {
-          if (bv.winnaar === uitslag.winnaar) bonusP += 5;
-          if (bv.topschutter === uitslag.meeste_goals_land) bonusP += 3;
-          if (bv.beste_keeper === uitslag.minste_tegengoals_land) bonusP += 3;
-          if (bv.eindstation_belgie === uitslag.eindstation_belgie) bonusP += 3;
-          [bv.halve_finalist_1, bv.halve_finalist_2, bv.halve_finalist_3, bv.halve_finalist_4].forEach(l => {
-            if (uitslag.halve_finalisten?.includes(l)) bonusP += 3;
-          });
+        if (bv) {
+          // LIVE Schiftingsvragen (Dichtste bij live totaal = 5 punten)
           if (winnaarsGoals.includes(sp.id)) bonusP += 5;
           if (winnaarsGeel.includes(sp.id)) bonusP += 5;
           if (winnaarsRood.includes(sp.id)) bonusP += 5;
+
+          // EINDSTAND (Alleen als jij ze hebt ingevuld in de wk_uitslagen tabel)
+          if (uitslag) {
+            if (uitslag.winnaar && bv.winnaar === uitslag.winnaar) bonusP += 5;
+            if (uitslag.meeste_goals_land && bv.topschutter === uitslag.meeste_goals_land) bonusP += 3;
+            if (uitslag.minste_tegengoals_land && bv.beste_keeper === uitslag.minste_tegengoals_land) bonusP += 3;
+            if (uitslag.eindstation_belgie && bv.eindstation_belgie === uitslag.eindstation_belgie) bonusP += 3;
+            if (uitslag.halve_finalisten) {
+              [bv.halve_finalist_1, bv.halve_finalist_2, bv.halve_finalist_3, bv.halve_finalist_4].forEach(l => {
+                if (l && uitslag.halve_finalisten.includes(l)) bonusP += 3;
+              });
+            }
+          }
         }
         
+        // (De sortering gebeurt nu in de RankingTab, dus we geven gewoon de array mee)
         return { ...sp, prono_score: pronoP, bonus_score: bonusP, totaal_score: pronoP + bonusP, exact: ex, winnaarCorrect: wc, fout: f };
       });
-      setKlassement(stats.sort((a, b) => b.totaal_score - a.totaal_score));
+      setKlassement(stats);
     }
   };
 
@@ -289,10 +280,31 @@ export default function Home() {
     );
   };
 
-  const toggleBetaald = async (spelerId: number, huidigeStatus: boolean) => {
-    if (!isAdmin) return;
-    await supabase.from('spelers').update({ betaald: !huidigeStatus }).eq('id', spelerId);
-    haalKlassementOp();
+  const haalToernooiVoorspellingOp = async () => {
+    const { data } = await supabase.from('toernooi_voorspellingen').select('*').eq('speler_id', actieveSpeler.id).single();
+    if (data) {
+      setWinnaar(data.winnaar || ''); setHf([data.halve_finalist_1 || '', data.halve_finalist_2 || '', data.halve_finalist_3 || '', data.halve_finalist_4 || '']);
+      setMeesteGoalsLand(data.topschutter || ''); setBesteVerdedigingLand(data.beste_keeper || ''); setEindstation(data.eindstation_belgie || '');
+      setTotaalGoals(data.totaal_goals?.toString() || ''); setTotaalGeel(data.totaal_gele_kaarten?.toString() || ''); setTotaalRood(data.totaal_rode_kaarten?.toString() || '');
+    }
+  };
+
+  const slaBonusOp = async () => {
+    if (isGesloten) return;
+    setOpslaanStatus('Bezig...');
+    await supabase.from('toernooi_voorspellingen').upsert({
+      speler_id: actieveSpeler.id, winnaar, halve_finalist_1: hf[0], halve_finalist_2: hf[1], halve_finalist_3: hf[2], halve_finalist_4: hf[3],
+      topschutter: meesteGoalsLand, beste_keeper: besteVerdedigingLand, eindstation_belgie: eindstation,
+      totaal_goals: parseInt(totaalGoals) || 0, totaal_gele_kaarten: parseInt(totaalGeel) || 0, totaal_rode_kaarten: parseInt(totaalRood) || 0
+    }, { onConflict: 'speler_id' });
+    setOpslaanStatus('Opgeslagen! 🌟');
+    setShowConfetti(true);
+    setTimeout(() => { setShowConfetti(false); setOpslaanStatus(''); }, 3000);
+  };
+
+  const haalAlleAntwoordenOp = async () => {
+    const { data } = await supabase.from('toernooi_voorspellingen').select('*, spelers(naam)');
+    if (data) setAlleToernooiV(data);
   };
 
   const verstuurChat = async (e: React.FormEvent) => {
@@ -300,6 +312,12 @@ export default function Home() {
     if (!nieuwBericht.trim()) return;
     const { error } = await supabase.from('kleedkamer').insert([{ speler_id: actieveSpeler.id, bericht: nieuwBericht.trim() }]);
     if (!error) { setNieuwBericht(''); haalChatOp(); }
+  };
+
+  const toggleBetaald = async (spelerId: number, huidigeStatus: boolean) => {
+    if (!isAdmin) return;
+    await supabase.from('spelers').update({ betaald: !huidigeStatus }).eq('id', spelerId);
+    haalKlassementOp();
   };
 
   const parseTeam = (teamString: string) => {
