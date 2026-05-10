@@ -211,7 +211,6 @@ export default function Home() {
     if (data) setAlleToernooiV(data);
   };
 
-  // HET NIEUWE VOLAUTOMATISCHE KLASSEMENT
   const haalKlassementOp = async () => {
     const { data: s } = await supabase.from('spelers').select('*');
     const { data: m } = await supabase.from('matchen').select('*');
@@ -227,19 +226,16 @@ export default function Home() {
       let wkWinnaar = "";
 
       m.forEach(match => {
-        // A. Zoek de 4 Halve Finalisten (Spelen in Match 101 en 102)
         if (match.id === 101 || match.id === 102) {
           if (match.thuisploeg && !match.thuisploeg.toLowerCase().includes('winnaar')) halveFinalisten.push(match.thuisploeg);
           if (match.uitploeg && !match.uitploeg.toLowerCase().includes('winnaar')) halveFinalisten.push(match.uitploeg);
         }
 
-        // B. Zoek Wereldkampioen (Winnaar van Match 104)
         if (match.id === 104 && match.thuis_score !== null && match.uit_score !== null) {
           if (match.thuis_score > match.uit_score) wkWinnaar = match.thuisploeg;
           else if (match.uit_score > match.thuis_score) wkWinnaar = match.uitploeg;
         }
 
-        // C. Tel Goals en Kaarten per match en per ploeg
         if (match.thuis_score !== null && match.uit_score !== null) {
           liveGoals += (match.thuis_score + match.uit_score);
           liveGeel += (match.gele_kaarten || 0);
@@ -252,7 +248,6 @@ export default function Home() {
         }
       });
 
-      // D. Bepaal wiskundig de "Beste Aanval" en "Beste Verdediging" (Kan een ex-aequo zijn)
       const maxGoals = Math.max(...Object.values(teamGoalsVoor), -1);
       const topScorers = Object.keys(teamGoalsVoor).filter(t => teamGoalsVoor[t] === maxGoals && maxGoals > 0);
 
@@ -277,11 +272,10 @@ export default function Home() {
         winnaarsRood = diffR.filter(x => x.d === minR).map(x => x.id);
       }
 
-      // 3. PUNTEN UITDELEN AAN DE SPELERS
+      // 3. PUNTEN UITDELEN AAN DE SPELERS (MET BREAKDOWN)
       const stats = s.map(sp => {
         let pronoP = 0, bonusP = 0, ex = 0, wc = 0, f = 0;
         
-        // Pronostieken Matchen
         v.filter(vo => vo.speler_id === sp.id).forEach(vo => {
           const match = m.find(ma => ma.id === vo.match_id);
           if (match && match.thuis_score !== null) {
@@ -294,25 +288,30 @@ export default function Home() {
           }
         });
 
-        // Automatische Bonus Punten
+        // Automatische Bonus Punten Breakdown
         const bv = bonusV?.find(b => b.speler_id === sp.id);
+        const breakdown: {label: string, pt: number}[] = [];
+        
         if (bv) {
           // Getallen Schifting (Live)
-          if (winnaarsGoals.includes(sp.id)) bonusP += 5;
-          if (winnaarsGeel.includes(sp.id)) bonusP += 5;
-          if (winnaarsRood.includes(sp.id)) bonusP += 5;
+          if (winnaarsGoals.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Totaal Goals', pt: 5}); }
+          if (winnaarsGeel.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Gele Kaarten', pt: 5}); }
+          if (winnaarsRood.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Rode Kaarten', pt: 5}); }
 
-          // Landen (Wordt live meegeteld zodra de matchen worden ingevuld)
-          if (wkWinnaar && bv.winnaar === wkWinnaar) bonusP += 5;
-          if (topScorers.includes(bv.topschutter)) bonusP += 3;
-          if (bestDefenses.includes(bv.beste_keeper)) bonusP += 3;
+          // Landen
+          if (wkWinnaar && bv.winnaar === wkWinnaar) { bonusP += 5; breakdown.push({label: 'Wereldkampioen Juist', pt: 5}); }
+          if (topScorers.includes(bv.topschutter)) { bonusP += 3; breakdown.push({label: 'Beste Aanval', pt: 3}); }
+          if (bestDefenses.includes(bv.beste_keeper)) { bonusP += 3; breakdown.push({label: 'Beste Verdediging', pt: 3}); }
           
           [bv.halve_finalist_1, bv.halve_finalist_2, bv.halve_finalist_3, bv.halve_finalist_4].forEach(land => {
-            if (land && halveFinalisten.includes(land)) bonusP += 3;
+            if (land && halveFinalisten.includes(land)) { bonusP += 3; breakdown.push({label: `Halve Finalist (${land})`, pt: 3}); }
           });
         }
         
-        return { ...sp, prono_score: pronoP, bonus_score: bonusP, totaal_score: pronoP + bonusP, exact: ex, winnaarCorrect: wc, fout: f };
+        return { 
+          ...sp, prono_score: pronoP, bonus_score: bonusP, totaal_score: pronoP + bonusP, 
+          exact: ex, winnaarCorrect: wc, fout: f, bonus_breakdown: breakdown 
+        };
       });
       
       setKlassement(stats);
