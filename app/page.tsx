@@ -10,6 +10,7 @@ import AntwoordenTab from '../components/AntwoordenTab';
 import RankingTab from '../components/RankingTab';
 import TellersTab from '../components/TellersTab';
 import ChatTab from '../components/ChatTab';
+import PrijsTab from '../components/PrijsTab';
 
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
 
@@ -94,7 +95,7 @@ export default function Home() {
     if (actieveSpeler) {
       if (actieveTab === 'matchen') haalMatchenOp();
       if (actieveTab === 'bonus') haalToernooiVoorspellingOp();
-      if (actieveTab === 'ranking') haalKlassementOp();
+      if (actieveTab === 'ranking' || actieveTab === 'prijs') haalKlassementOp();
       if (actieveTab === 'kleedkamer') haalChatOp();
       if (actieveTab === 'antwoorden') haalAlleAntwoordenOp();
     }
@@ -210,7 +211,7 @@ export default function Home() {
     if (data) setAlleToernooiV(data);
   };
 
-  // --- HET NIEUWE VOLAUTOMATISCHE KLASSEMENT ---
+  // HET NIEUWE VOLAUTOMATISCHE KLASSEMENT
   const haalKlassementOp = async () => {
     const { data: s } = await supabase.from('spelers').select('*');
     const { data: m } = await supabase.from('matchen').select('*');
@@ -301,7 +302,7 @@ export default function Home() {
           if (winnaarsGeel.includes(sp.id)) bonusP += 5;
           if (winnaarsRood.includes(sp.id)) bonusP += 5;
 
-          // Landen (Wordt live meegeteld zodra de Google Sheet matchen worden ingevuld)
+          // Landen (Wordt live meegeteld zodra de matchen worden ingevuld)
           if (wkWinnaar && bv.winnaar === wkWinnaar) bonusP += 5;
           if (topScorers.includes(bv.topschutter)) bonusP += 3;
           if (bestDefenses.includes(bv.beste_keeper)) bonusP += 3;
@@ -570,7 +571,7 @@ export default function Home() {
         .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; font-weight: 800; font-size: 1rem; margin-bottom: 10px; }
         .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); }
 
-        .rule-item { display: flex; justify-content: space-between; border-bottom: 1px dashed #EEE; padding: 6px 0; font-weight: 800; }
+        .rule-item { display: flex; justify-content: space-between; border-bottom: 1px dashed #EEE; padding: 4px 0; font-weight: 800; }
 
         @keyframes background-fade { 0%, 100% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } }
         @keyframes blob-movement-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(50px, 80px) scale(1.1); } }
@@ -592,7 +593,7 @@ export default function Home() {
         {infoOpen && (
           <div className="info-content">
             <h3 style={{fontFamily:'Bebas Neue', fontSize:'1.5rem', color:'var(--crayola)', marginBottom:10}}>💰 DEELNAME & PRIJZEN</h3>
-            <p>Deelname kost <strong>€10</strong>. Betalen via Payconiq of overschrijven naar <strong>Jorden Ricour</strong>. De volledige pot wordt verdeeld onder de top van het klassement!</p>
+            <p>Deelname kost <strong>€10</strong>. Betalen via Payconiq of overschrijven naar <strong>Jorden Ricour</strong>. De volledige pot wordt verdeeld onder de winnaars!</p>
             
             <h3 style={{fontFamily:'Bebas Neue', fontSize:'1.5rem', color:'var(--magenta)', marginTop:20, marginBottom:10}}>⚽ PUNTEN MATCHEN</h3>
             <div className="rule-item"><span>Exacte uitslag juist</span><span>3 PT</span></div>
@@ -621,6 +622,7 @@ export default function Home() {
               {[
                 {id:'matchen', i:'⚽', n:'Matchen'},
                 {id:'bonus', i:'💎', n:'Bonus'},
+                {id:'prijs', i:'💰', n:'Prijzen'},
                 {id:'antwoorden', i:'👁️', n:'Antw.'},
                 {id:'ranking', i:'🏆', n:'Rank'},
                 {id:'tellers', i:'📊', n:'Data'},
@@ -747,6 +749,10 @@ export default function Home() {
                   })
                 )}
               </div>
+            )}
+
+            {actieveTab === 'prijs' && (
+              <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />
             )}
 
             {actieveTab === 'bonus' && (
