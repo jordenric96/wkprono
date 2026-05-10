@@ -3,13 +3,13 @@ import React, { useMemo } from 'react';
 
 export default function PrijsTab({ klassement, matchen, alleToernooiV }: any) {
   
-  // 1. Bereken de Pot (Aantal betaalde mensen * €10)
-  const betaaldeSpelers = klassement.filter((s: any) => s.betaald).length;
-  const totalePot = betaaldeSpelers * 10;
+  // 1. Bereken de Pot (ALLE deelnemers * €10)
+  const totaalAantalSpelers = klassement.length;
+  const totalePot = totaalAantalSpelers * 10;
 
   // 2. Definieer vaste prijzen voor Side-Quests
-  const prijsBonusKoning = betaaldeSpelers > 5 ? 20 : 0;
-  const prijsCijferVreter = betaaldeSpelers > 5 ? 20 : 0;
+  const prijsBonusKoning = totaalAantalSpelers > 5 ? 20 : 0;
+  const prijsCijferVreter = totaalAantalSpelers > 5 ? 20 : 0;
   
   const potVoorTop3 = totalePot - prijsBonusKoning - prijsCijferVreter;
 
@@ -76,7 +76,7 @@ export default function PrijsTab({ klassement, matchen, alleToernooiV }: any) {
       <div className="pot-header">
         <div style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--aqua)', textTransform: 'uppercase', letterSpacing: '2px' }}>Totale Prijzenpot</div>
         <div style={{ fontSize: '3.5rem', fontFamily: 'Bebas Neue', lineHeight: 1 }}>€{totalePot}</div>
-        <div style={{ fontSize: '0.65rem', opacity: 0.7 }}>Gebaseerd op {betaaldeSpelers} betalingen</div>
+        <div style={{ fontSize: '0.65rem', opacity: 0.7 }}>Gebaseerd op {totaalAantalSpelers} deelnemers</div>
       </div>
 
       <PrizeCircle titel="🥇 1e Plaats" spelerNaam={winnaars.eerste.speler?.naam} bedrag={winnaars.eerste.bedrag} sub="Algemeen Klassement" kleur="#FFD700" icon="🏆" />
