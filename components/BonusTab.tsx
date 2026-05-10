@@ -1,5 +1,5 @@
 // src/components/BonusTab.tsx
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 
 // --- HULPFUNCTIE: VLAGGEN & KLEUREN GENERATOR + BLACK FLAG FIX ---
 const parseTeam = (teamString: string) => {
@@ -259,9 +259,21 @@ export default function BonusTab({
   winnaar, setWinnaar, hf, setHf, meesteGoalsLand, setMeesteGoalsLand,
   besteVerdedigingLand, setBesteVerdedigingLand, eindstation, setEindstation,
   totaalGoals, setTotaalGoals, totaalGeel, setTotaalGeel, totaalRood, setTotaalRood,
-  isGesloten, slaBonusOp, opslaanStatus, WK_LANDEN
+  isGesloten, slaBonusOp, opslaanStatus, matchen // WE KRIJGEN NU DE MATCHEN MEE OM ZELF DE 48 LANDEN TE ZOEKEN
 }: any) {
   
+  // HAAL EXACT DE 48 DEELNEMENDE LANDEN UIT JOUW SPEELSCHEMA (matchen)
+  const actueleLanden = useMemo(() => {
+    if (!matchen || matchen.length === 0) return [];
+    const allePloegen = new Set<string>();
+    matchen.forEach((m: any) => {
+      if (m.thuisploeg && !m.thuisploeg.includes('TBD')) allePloegen.add(m.thuisploeg);
+      if (m.uitploeg && !m.uitploeg.includes('TBD')) allePloegen.add(m.uitploeg);
+    });
+    // Omzetten naar array en sorteren, én gelijk door de vertaler halen voor weergave
+    return Array.from(allePloegen).map(p => parseTeam(p).name).sort();
+  }, [matchen]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', overflowX: 'hidden' }}>
       
@@ -275,34 +287,38 @@ export default function BonusTab({
       {/* WERELDKAMPIOEN */}
       <div className="bonus-card">
         <h3 className="bonus-title" style={{color: 'var(--crayola)'}}>🏆 Wereldkampioen</h3>
-        <CountryCarousel options={WK_LANDEN} value={winnaar} onChange={setWinnaar} disabled={isGesloten} />
+        {actueleLanden.length > 0 ? (
+           <CountryCarousel options={actueleLanden} value={winnaar} onChange={setWinnaar} disabled={isGesloten} />
+        ) : <p style={{fontSize:'0.8rem', color:'#6c757d', textAlign:'center'}}>Geen landen gevonden in speelschema...</p>}
       </div>
 
       {/* HALVE FINALISTEN */}
       <div className="bonus-card">
         <h3 className="bonus-title" style={{color: 'var(--magenta)'}}>⚔️ De 4 Halve Finalisten</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '10px' }}>
-          <CountryCarousel options={WK_LANDEN} value={hf[0]} onChange={(v: string) => { const n = [...hf]; n[0] = v; setHf(n); }} disabled={isGesloten} />
-          <div style={{ height: '1px', background: '#E9ECEF', margin: '5px 0' }} />
-          <CountryCarousel options={WK_LANDEN} value={hf[1]} onChange={(v: string) => { const n = [...hf]; n[1] = v; setHf(n); }} disabled={isGesloten} />
-          <div style={{ height: '1px', background: '#E9ECEF', margin: '5px 0' }} />
-          <CountryCarousel options={WK_LANDEN} value={hf[2]} onChange={(v: string) => { const n = [...hf]; n[2] = v; setHf(n); }} disabled={isGesloten} />
-          <div style={{ height: '1px', background: '#E9ECEF', margin: '5px 0' }} />
-          <CountryCarousel options={WK_LANDEN} value={hf[3]} onChange={(v: string) => { const n = [...hf]; n[3] = v; setHf(n); }} disabled={isGesloten} />
-        </div>
+        {actueleLanden.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '10px' }}>
+            <CountryCarousel options={actueleLanden} value={hf[0]} onChange={(v: string) => { const n = [...hf]; n[0] = v; setHf(n); }} disabled={isGesloten} />
+            <div style={{ height: '1px', background: '#E9ECEF', margin: '5px 0' }} />
+            <CountryCarousel options={actueleLanden} value={hf[1]} onChange={(v: string) => { const n = [...hf]; n[1] = v; setHf(n); }} disabled={isGesloten} />
+            <div style={{ height: '1px', background: '#E9ECEF', margin: '5px 0' }} />
+            <CountryCarousel options={actueleLanden} value={hf[2]} onChange={(v: string) => { const n = [...hf]; n[2] = v; setHf(n); }} disabled={isGesloten} />
+            <div style={{ height: '1px', background: '#E9ECEF', margin: '5px 0' }} />
+            <CountryCarousel options={actueleLanden} value={hf[3]} onChange={(v: string) => { const n = [...hf]; n[3] = v; setHf(n); }} disabled={isGesloten} />
+          </div>
+        )}
       </div>
 
       {/* MEESTE GOALS & VERDEDIGING */}
       <div className="bonus-card">
         <h3 className="bonus-title" style={{color: '#40C057'}}>⚽ Meeste Goals</h3>
         <p style={{fontSize:'0.7rem', color:'#6C757D', margin:'0 0 10px 0', fontWeight:800}}>Welk land scoort het meest in het hele toernooi?</p>
-        <CountryCarousel options={WK_LANDEN} value={meesteGoalsLand} onChange={setMeesteGoalsLand} disabled={isGesloten} />
+        {actueleLanden.length > 0 && <CountryCarousel options={actueleLanden} value={meesteGoalsLand} onChange={setMeesteGoalsLand} disabled={isGesloten} />}
       </div>
       
       <div className="bonus-card">
         <h3 className="bonus-title" style={{color: '#228BE6'}}>🛡️ Beste Verdediging</h3>
         <p style={{fontSize:'0.7rem', color:'#6C757D', margin:'0 0 10px 0', fontWeight:800}}>Welk land krijgt de minste tegengoals?</p>
-        <CountryCarousel options={WK_LANDEN} value={besteVerdedigingLand} onChange={setBesteVerdedigingLand} disabled={isGesloten} />
+        {actueleLanden.length > 0 && <CountryCarousel options={actueleLanden} value={besteVerdedigingLand} onChange={setBesteVerdedigingLand} disabled={isGesloten} />}
       </div>
 
       {/* EINDSTATION BELGIË */}
