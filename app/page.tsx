@@ -44,7 +44,7 @@ export default function Home() {
   const [meesteGoalsLand, setMeesteGoalsLand] = useState('');
   const [besteVerdedigingLand, setBesteVerdedigingLand] = useState('');
   const [eindstation, setEindstation] = useState('');
-  const [totaalGoals, setTotaalGoals] = useState(''); // NIEUW
+  const [totaalGoals, setTotaalGoals] = useState('');
   const [totaalGeel, setTotaalGeel] = useState('');
   const [totaalRood, setTotaalRood] = useState('');
 
@@ -183,7 +183,7 @@ export default function Home() {
     await supabase.from('toernooi_voorspellingen').upsert({
       speler_id: actieveSpeler.id, winnaar, halve_finalist_1: hf[0], halve_finalist_2: hf[1], halve_finalist_3: hf[2], halve_finalist_4: hf[3],
       topschutter: meesteGoalsLand, beste_keeper: besteVerdedigingLand, eindstation_belgie: eindstation,
-      totaal_goals: parseInt(totaalGoals) || 0, // NIEUW
+      totaal_goals: parseInt(totaalGoals) || 0,
       totaal_gele_kaarten: parseInt(totaalGeel) || 0, totaal_rode_kaarten: parseInt(totaalRood) || 0
     }, { onConflict: 'speler_id' });
     setOpslaanStatus('Opgeslagen! 🌟');
@@ -199,7 +199,7 @@ export default function Home() {
       setMeesteGoalsLand(data.topschutter || '');
       setBesteVerdedigingLand(data.beste_keeper || ''); 
       setEindstation(data.eindstation_belgie || '');
-      setTotaalGoals(data.totaal_goals?.toString() || ''); // NIEUW
+      setTotaalGoals(data.totaal_goals?.toString() || '');
       setTotaalGeel(data.totaal_gele_kaarten?.toString() || '');
       setTotaalRood(data.totaal_rode_kaarten?.toString() || '');
     }
@@ -214,23 +214,46 @@ export default function Home() {
     const { data: s } = await supabase.from('spelers').select('*');
     const { data: m } = await supabase.from('matchen').select('*');
     const { data: v } = await supabase.from('match_voorspellingen').select('*');
+    const { data: b } = await supabase.from('toernooi_voorspellingen').select('*');
+
     if (s && m && v) {
       const stats = s.map(sp => {
-        let p = 0; let ex = 0; let wc = 0; let f = 0; let jk = false;
+        let pronoPunten = 0; 
+        let bonusPunten = 0;
+        let ex = 0; let wc = 0; let f = 0;
+        
         const spV = v.filter(vo => vo.speler_id === sp.id);
         spV.forEach(vo => {
-          if (vo.gouden_bal) jk = true;
           const match = m.find(ma => ma.id === vo.match_id);
           if (match && match.thuis_score !== null) {
             const fac = vo.gouden_bal ? 2 : 1;
             const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
             const pred = vo.thuis_score > vo.uit_score ? 1 : vo.thuis_score < vo.uit_score ? 2 : 0;
-            if (vo.thuis_score === match.thuis_score && vo.uit_score === match.uit_score) { p += (5 * fac); ex++; }
-            else if (echt === pred) { p += (3 * fac); wc++; }
+            
+            if (vo.thuis_score === match.thuis_score && vo.uit_score === match.uit_score) { 
+              pronoPunten += (5 * fac); ex++; 
+            }
+            else if (echt === pred) { 
+              pronoPunten += (3 * fac); wc++; 
+            }
             else f++;
           }
         });
-        return { ...sp, totaal_score: p, exact: ex, winnaarCorrect: wc, fout: f, jokerIngezet: jk };
+
+        const spB = b?.find(bo => bo.speler_id === sp.id);
+        if (spB) {
+          bonusPunten = spB.totaal_bonus_punten || 0; 
+        }
+
+        return { 
+          ...sp, 
+          prono_score: pronoPunten, 
+          bonus_score: bonusPunten,
+          totaal_score: pronoPunten + bonusPunten, 
+          exact: ex, 
+          winnaarCorrect: wc, 
+          fout: f 
+        };
       });
       setKlassement(stats.sort((a, b) => b.totaal_score - a.totaal_score));
     }
@@ -247,6 +270,14 @@ export default function Home() {
     if (!nieuwBericht.trim()) return;
     const { error } = await supabase.from('kleedkamer').insert([{ speler_id: actieveSpeler.id, bericht: nieuwBericht.trim() }]);
     if (!error) { setNieuwBericht(''); haalChatOp(); }
+  };
+
+  // --- DATUM FORMATTER ---
+  const formatMatchDate = (dateString: string) => {
+    const d = new Date(dateString);
+    const dag = d.toLocaleDateString('nl-BE', { weekday: 'short', day: 'numeric', month: 'short' });
+    const tijd = d.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
+    return `${dag} • ${tijd}`.toUpperCase();
   };
 
   const getMatchCountdown = (matchTime: string) => {
@@ -558,8 +589,18 @@ export default function Home() {
                         }}
                         onClick={() => gestart && setExpandedMatchId(expandedMatchId === m.id ? null : m.id)}
                       >
-                        <div style={{ background: heeftUitslag ? '#F038FF' : '#E2EF70', color: heeftUitslag ? 'white' : '#111827', padding: '12px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.8rem' }}>{heeftUitslag ? '🏆 EINDSTAND' : (gestart ? '🔒 GESLOTEN' : getMatchCountdown(m.datum))}</span>
+                        
+                        {/* AANGEPASTE HEADER MET DATUM & UUR */}
+                        <div style={{ background: heeftUitslag ? '#F038FF' : '#E2EF70', color: heeftUitslag ? 'white' : '#111827', padding: '10px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.7, letterSpacing: '0.5px' }}>
+                              📅 {formatMatchDate(m.datum)}
+                            </span>
+                            <span style={{ fontSize: '0.9rem', fontWeight: 900 }}>
+                              {heeftUitslag ? '🏆 EINDSTAND' : (gestart ? '🔒 GESLOTEN' : getMatchCountdown(m.datum))}
+                            </span>
+                          </div>
+
                           <button onClick={(e) => { e.stopPropagation(); if(!gestart) toggleJoker(m.id); }} disabled={gestart}
                             style={{
                               background: v.joker ? '#FFD700' : '#FFFFFF', color: v.joker ? '#000' : '#111827', border: v.joker ? '2px solid #E6C200' : '2px solid #DEE2E6',
