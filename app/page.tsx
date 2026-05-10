@@ -302,7 +302,6 @@ export default function Home() {
     if (!error) { setNieuwBericht(''); haalChatOp(); }
   };
 
-  // --- MEGA DATABASE MET VERTAALMACHINE EN VLAGGEN ---
   const parseTeam = (teamString: string) => {
     if (!teamString || teamString.includes('TBD')) {
       return { name: teamString || 'TBD', emoji: '❓', gradient: 'linear-gradient(135deg, #DEE2E6, #ADB5BD)' };
@@ -515,14 +514,14 @@ export default function Home() {
           border-radius: 50%; box-shadow: 0 0 10px var(--rose); animation: pulse-red 2s infinite;
         }
 
-        .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
-        .info-content { background: rgba(255,255,255,0.9); padding: 15px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; margin-bottom: 20px; border-left: 4px solid var(--magenta); line-height: 1.5; }
+        .info-toggle-btn { width: 100%; background: #FFF; border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+        .info-content { background: #FFF; padding: 15px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; margin-bottom: 20px; border-left: 4px solid var(--magenta); line-height: 1.5; }
         .admin-btn { background: #111827; color: #fff; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 900; cursor: pointer; font-size: 0.8rem; margin: 0 auto 15px; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
         .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; font-weight: 800; font-size: 1rem; margin-bottom: 10px; }
         .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); }
 
-        .rule-item { display: flex; justify-content: space-between; border-bottom: 1px dashed #EEE; padding: 6px 0; font-weight: 800; }
+        .rule-item { display: flex; justify-content: space-between; border-bottom: 1px dashed #EEE; padding: 4px 0; font-weight: 800; }
 
         @keyframes background-fade { 0%, 100% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } }
         @keyframes blob-movement-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(50px, 80px) scale(1.1); } }
@@ -544,11 +543,11 @@ export default function Home() {
         {infoOpen && (
           <div className="info-content">
             <h3 style={{fontFamily:'Bebas Neue', fontSize:'1.5rem', color:'var(--crayola)', marginBottom:10}}>💰 DEELNAME & PRIJZEN</h3>
-            <p>Deelname kost <strong>€10</strong>. Betalen via Payconiq of overschrijven naar <strong>Jorden Ricour</strong>. De volledige pot wordt verdeeld onder de winnaars!</p>
+            <p>Deelname kost <strong>€10</strong>. Betalen via Payconiq of overschrijven naar <strong>Jorden Ricour</strong>. De volledige pot wordt verdeeld onder de top van het klassement!</p>
             
             <h3 style={{fontFamily:'Bebas Neue', fontSize:'1.5rem', color:'var(--magenta)', marginTop:20, marginBottom:10}}>⚽ PUNTEN MATCHEN</h3>
             <div className="rule-item"><span>Exacte uitslag juist</span><span>3 PT</span></div>
-            <div className="rule-item"><span>Juiste winnaar / Gelijkspel</span><span>1 PT</span></div>
+            <div className="rule-item"><span>Juiste winnaar / Gelijk</span><span>1 PT</span></div>
             <div className="rule-item"><span>Foute pronostiek</span><span>0 PT</span></div>
             <p style={{fontSize:'0.7rem', marginTop:5}}><em>🌟 De Joker verdubbelt je punten voor die specifieke match!</em></p>
 
@@ -709,7 +708,7 @@ export default function Home() {
                 eindstation={eindstation} setEindstation={setEindstation} 
                 totaalGoals={totaalGoals} setTotaalGoals={setTotaalGoals}
                 totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} 
-                isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} matchen={matchen} 
+                isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} 
               />
             )}
 
