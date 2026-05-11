@@ -19,6 +19,7 @@ export default function Home() {
   const [ontgrendelNaam, setOntgrendelNaam] = useState('');
   const [invoerCode, setInvoerCode] = useState('');
   const [status, setStatus] = useState('');
+  const [isRegistreren, setIsRegistreren] = useState(false); // NIEUW: Toggle tussen Inloggen en Registreren
   
   const [actieveSpeler, setActieveSpeler] = useState<any>(null);
   const [alleSpelers, setAlleSpelers] = useState<any[]>([]); 
@@ -26,10 +27,8 @@ export default function Home() {
   const [filterRonde, setFilterRonde] = useState('Alle');
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
   
-  // Nieuwe state voor de Pop-up (Toast)
   const [toast, setToast] = useState<{naam: string, bericht: string} | null>(null);
 
-  // Refs zodat de live-database verbinding altijd de juiste data ziet
   const actieveTabRef = useRef(actieveTab);
   const actieveSpelerRef = useRef(actieveSpeler);
   const alleSpelersRef = useRef(alleSpelers);
@@ -71,7 +70,6 @@ export default function Home() {
     if (tab === 'kleedkamer') setOngelezenBerichten(false);
   };
 
-  // Sync state variables to refs
   useEffect(() => { actieveTabRef.current = actieveTab; }, [actieveTab]);
   useEffect(() => { actieveSpelerRef.current = actieveSpeler; }, [actieveSpeler]);
   useEffect(() => { alleSpelersRef.current = alleSpelers; }, [alleSpelers]);
@@ -98,25 +96,19 @@ export default function Home() {
     const chatSub = supabase.channel('chat').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kleedkamer' }, (payload) => {
       haalChatOp();
       
-      // ALs je niet in de chat zit...
       if (actieveTabRef.current !== 'kleedkamer') {
         setOngelezenBerichten(true);
 
-        // ...En het bericht is NIET van jouzelf
         if (payload.new.speler_id !== actieveSpelerRef.current?.id) {
-          
-          // Zoek op wie het verstuurd heeft
           const afzender = alleSpelersRef.current.find(s => s.id === payload.new.speler_id);
           const afzenderNaam = afzender ? afzender.naam.split(' ')[0] : 'Nieuw bericht';
           
-          // Toon pop-up en speel geluidje
           setToast({ naam: afzenderNaam, bericht: payload.new.bericht });
           try {
             const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
             audio.play();
-          } catch(e) {} // Failsafe voor sommige browsers die autoplay blokkeren
+          } catch(e) {} 
 
-          // Verberg pop-up na 4.5 seconden
           setTimeout(() => setToast(null), 4500); 
         }
       }
@@ -346,6 +338,60 @@ export default function Home() {
     if (!error) { setNieuwBericht(''); haalChatOp(); }
   };
 
+  // LOGICA VOOR INLOGGEN
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const naam = ontgrendelNaam.trim();
+    const code = invoerCode.trim();
+    
+    if (!naam || !code) {
+      setStatus('Vul een naam en pincode in! 🚩');
+      return;
+    }
+
+    const s = alleSpelers.find(x => x.naam.toLowerCase() === naam.toLowerCase() && String(x.code) === code);
+    if (s) {
+      setActieveSpeler(s);
+      localStorage.setItem('wk_speler_id', s.id.toString());
+      setStatus('');
+    } else {
+      setStatus('Naam of pincode is fout! 🚩');
+    }
+  };
+
+  // LOGICA VOOR REGISTREREN
+  const handleRegistreer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const naam = ontgrendelNaam.trim();
+    const code = invoerCode.trim();
+    
+    if (!naam || !code) {
+      setStatus('Vul je naam en een pincode in! 🚩');
+      return;
+    }
+
+    if (alleSpelers.some(s => s.naam.toLowerCase() === naam.toLowerCase())) {
+      setStatus('Deze naam bestaat al! Kies onderaan voor inloggen. 🚩');
+      return;
+    }
+
+    setStatus('Aanmaken... ⏳');
+    const { data, error } = await supabase
+      .from('spelers')
+      .insert([{ naam: naam, code: code, betaald: false }])
+      .select()
+      .single();
+
+    if (error) {
+      setStatus('Oeps, fout bij aanmaken! 🚩');
+    } else if (data) {
+      setAlleSpelers(prev => [...prev, data]);
+      setActieveSpeler(data);
+      localStorage.setItem('wk_speler_id', data.id.toString());
+      setStatus('');
+    }
+  };
+
   const tellersData = useMemo(() => {
     let totaleGoals = 0; let totaleGeleKaarten = 0; let totaleRodeKaarten = 0;
     const teamGoalsVoor: Record<string, number> = {};
@@ -408,7 +454,6 @@ export default function Home() {
         .timer-value { font-size: 1.5rem; line-height: 1.1; }
         .timer-label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.8; }
 
-        /* DE NIEUWE MAGIC BOTTOM APP BAR MET FROSTED GLASS */
         .bottom-nav {
           position: fixed;
           bottom: 20px;
@@ -487,8 +532,10 @@ export default function Home() {
         .info-content { background: rgba(255,255,255,0.9); padding: 15px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; margin-bottom: 20px; border-left: 4px solid var(--magenta); line-height: 1.5; }
         .admin-btn { background: #111827; color: #fff; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 900; cursor: pointer; font-size: 0.8rem; margin: 0 auto 15px; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
-        .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; font-weight: 800; font-size: 1rem; margin-bottom: 10px; }
-        .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); }
+        .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; font-weight: 800; font-size: 1rem; margin-bottom: 10px; outline: none; transition: 0.2s; }
+        .full-input:focus { border-color: var(--crayola); box-shadow: 0 0 0 4px rgba(55, 114, 255, 0.1); }
+        .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); transition: 0.2s; }
+        .btn-primary:active { transform: scale(0.98); }
 
         .rule-item { display: flex; justify-content: space-between; border-bottom: 1px dashed #EEE; padding: 4px 0; font-weight: 800; }
 
@@ -497,7 +544,6 @@ export default function Home() {
         @keyframes blob-movement-b { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-40px, -60px) scale(0.9); } }
         @keyframes title-glow { 0%, 100% { text-shadow: 3px 3px 0px var(--magenta); } 50% { text-shadow: 3px 3px 20px rgba(240, 56, 255, 0.8), 3px 3px 0px var(--magenta); } }
         
-        /* Slide down animatie voor de notificatie Toast */
         @keyframes slide-down {
           0% { top: -50px; opacity: 0; }
           100% { top: 20px; opacity: 1; }
@@ -582,12 +628,40 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          <form onSubmit={(e)=>{ e.preventDefault(); const s = alleSpelers.find(x=>x.naam.toLowerCase()===ontgrendelNaam.toLowerCase() && String(x.code)===invoerCode); if(s){setActieveSpeler(s); localStorage.setItem('wk_speler_id', s.id.toString());} else setStatus('Fout! 🚩');}}>
-            <input className="full-input" placeholder="Je Naam" value={ontgrendelNaam} onChange={e=>setOntgrendelNaam(e.target.value)} />
-            <input className="full-input" type="password" placeholder="Pincode" value={invoerCode} onChange={e=>setInvoerCode(e.target.value)} />
-            <button className="btn-primary" type="submit">HET VELD OP</button>
-            <p style={{color:'red', textAlign:'center', fontWeight:900}}>{status}</p>
-          </form>
+          <div style={{width: '100%'}}>
+            <form onSubmit={isRegistreren ? handleRegistreer : handleLogin}>
+              <h2 style={{fontFamily: 'Bebas Neue', color: 'var(--crayola)', textAlign: 'center', fontSize: '2.5rem', margin: '0 0 15px 0', letterSpacing: '1px'}}>
+                {isRegistreren ? 'Nieuwe Speler' : 'INLOGGEN'}
+              </h2>
+              
+              <input 
+                className="full-input" 
+                placeholder={isRegistreren ? "Voornaam + Familienaam" : "Je Naam"} 
+                value={ontgrendelNaam} 
+                onChange={e=>setOntgrendelNaam(e.target.value)} 
+              />
+              <input 
+                className="full-input" 
+                type="password" 
+                placeholder={isRegistreren ? "Kies een veilige pincode" : "Pincode"} 
+                value={invoerCode} 
+                onChange={e=>setInvoerCode(e.target.value)} 
+              />
+              
+              <button className="btn-primary" type="submit" style={{marginTop: '10px'}}>
+                {isRegistreren ? 'ACCOUNT AANMAKEN' : 'HET VELD OP ⚽'}
+              </button>
+              
+              <p style={{color:'red', textAlign:'center', fontWeight:900, marginTop: '10px'}}>{status}</p>
+            </form>
+
+            <button 
+              onClick={(e) => { e.preventDefault(); setIsRegistreren(!isRegistreren); setStatus(''); setOntgrendelNaam(''); setInvoerCode(''); }}
+              style={{width: '100%', background: 'transparent', border: 'none', color: '#6C757D', fontWeight: 900, marginTop: '5px', cursor: 'pointer', textDecoration: 'underline', padding: '10px'}}
+            >
+              {isRegistreren ? 'Heb je al een account? Log in' : 'Nieuw hier? Maak een account aan'}
+            </button>
+          </div>
         )}
       </div>
 
