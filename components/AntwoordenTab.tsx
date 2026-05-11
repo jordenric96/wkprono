@@ -1,6 +1,7 @@
 // src/components/AntwoordenTab.tsx
+import React, { useMemo } from 'react';
 
-// --- DE VERTAALMACHINE (Exact dezelfde als in de rest van je app) ---
+// --- DE VERTAALMACHINE ---
 const parseTeam = (teamString: string) => {
   if (!teamString || teamString.includes('TBD')) {
     return { name: teamString || 'TBD', emoji: '❓', gradient: 'linear-gradient(135deg, #DEE2E6, #ADB5BD)' };
@@ -130,10 +131,7 @@ const parseTeam = (teamString: string) => {
   return { name, emoji, gradient };
 };
 
-
 // --- DESIGN COMPONENTEN VOOR DE ANTWOORDEN ---
-
-// 1. Voor landen (Wereldkampioen, Goals, Verdediging)
 const AnswerCountry = ({ speler, land }: { speler: string, land: string }) => {
   const team = parseTeam(land);
   const voornaam = speler ? speler.split(' ')[0] : 'Onbekend';
@@ -151,7 +149,6 @@ const AnswerCountry = ({ speler, land }: { speler: string, land: string }) => {
   );
 };
 
-// 2. Voor Getallen (Totaal Goals, Rood, Geel)
 const AnswerNumber = ({ speler, num, gradient }: { speler: string, num: string, gradient: string }) => {
   const voornaam = speler ? speler.split(' ')[0] : 'Onbekend';
   return (
@@ -166,7 +163,6 @@ const AnswerNumber = ({ speler, num, gradient }: { speler: string, num: string, 
   );
 };
 
-// 3. Voor de Ronde (Eindstation België)
 const AnswerRound = ({ speler, ronde }: { speler: string, ronde: string }) => {
   const voornaam = speler ? speler.split(' ')[0] : 'Onbekend';
   const rondes: any = { 'Groepsfase': 'GF', 'Ronde van 32': '1/16', 'Achtste finale': '1/8', 'Kwartfinale': '1/4', 'Halve finale': '1/2', 'Troostfinale': '3e', 'Finale': 'FIN', 'Wereldkampioen': '🏆' };
@@ -185,130 +181,180 @@ const AnswerRound = ({ speler, ronde }: { speler: string, ronde: string }) => {
   );
 };
 
-
 // --- HET HOOFDCOMPONENT ---
 export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV }: any) {
   
-  // LET OP: DE LOCK IS TIJDELIJK VERWIJDERD OM TE TESTEN!
-  /*
-  if (nu < DEADLINE_DATE) {
-    return (
-      <div style={{textAlign:'center', padding:'40px 20px', background:'rgba(255,255,255,0.8)', borderRadius:16, border:'2px dashed #ADB5BD'}}>
-        <div style={{fontSize:'3.5rem', marginBottom:15}}>🔒</div>
-        <h3 style={{color:'#111827', margin:0, fontFamily:'Bebas Neue', fontSize:'2.5rem'}}>TOP SECRET</h3>
-        <p style={{color:'#6C757D', fontSize:'0.85rem', fontWeight:800, marginTop:10}}>
-          Om afkijken te voorkomen, blijven de antwoorden van je vrienden verborgen tot de allereerste WK-match is afgetrapt.
-        </p>
-      </div>
-    );
-  }
-  */
+  // Controle of de antwoorden nog geblokkeerd zijn
+  const isLocked = nu < DEADLINE_DATE;
+
+  const tijdOver = useMemo(() => {
+    const verschil = DEADLINE_DATE - nu;
+    if (verschil <= 0) return null;
+    return {
+      dagen: Math.floor(verschil / (1000 * 60 * 60 * 24)),
+      uren: Math.floor((verschil % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+      minuten: Math.floor((verschil % (1000 * 60 * 60)) / (1000 * 60)),
+      seconden: Math.floor((verschil % (1000 * 60)) / 1000)
+    };
+  }, [nu, DEADLINE_DATE]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
       
-      <style>{`
-        .antw-card { background: rgba(255, 255, 255, 0.95); border-radius: 16px; padding: 15px; border: 2px solid #E9ECEF; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .antw-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; margin: 0 0 15px 0; letter-spacing: 1px; line-height: 1; border-bottom: 2px dashed #E9ECEF; padding-bottom: 10px; }
-        .antw-grid { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
-      `}</style>
-
-      {/* WERELDKAMPIOEN */}
-      <div className="antw-card">
-        <h3 className="antw-title" style={{color: 'var(--crayola)'}}>🏆 Wereldkampioen</h3>
-        <div className="antw-grid">
-          {alleToernooiV.map((v: any) => (
-            <AnswerCountry key={v.id} speler={v.spelers?.naam} land={v.winnaar} />
-          ))}
-        </div>
-      </div>
-
-      {/* HALVE FINALISTEN */}
-      <div className="antw-card">
-        <h3 className="antw-title" style={{color: 'var(--magenta)'}}>⚔️ Halve Finalisten</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {alleToernooiV.map((v: any) => {
-            const p1 = parseTeam(v.halve_finalist_1);
-            const p2 = parseTeam(v.halve_finalist_2);
-            const p3 = parseTeam(v.halve_finalist_3);
-            const p4 = parseTeam(v.halve_finalist_4);
-            const voornaam = v.spelers?.naam ? v.spelers.naam.split(' ')[0] : 'Onbekend';
-
-            return (
-              <div key={v.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8F9FA', padding: '10px 15px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
-                <span style={{ fontWeight: 900, color: '#111827', width: '70px', fontSize: '0.8rem' }}>{voornaam}</span>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  {[p1, p2, p3, p4].map((p, i) => (
-                    <div key={i} title={p.name} style={{ width: '36px', height: '36px', borderRadius: '50%', background: p.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
-                      <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>
-                        {p.emoji}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+      {/* 🔒 DE LOCK OVERLAY (Alleen zichtbaar als isLocked true is) */}
+      {isLocked && tijdOver && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 10,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: '60px',
+        }}>
+          <div style={{
+            background: '#111827', padding: '30px 20px', borderRadius: '24px', textAlign: 'center',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.3)', border: '2px solid var(--crayola)', maxWidth: '90%'
+          }}>
+            <div style={{ fontSize: '4rem', marginBottom: '10px' }}>🕵️‍♂️</div>
+            <h2 style={{ fontFamily: 'Bebas Neue', color: '#FFF', fontSize: '2.2rem', margin: '0 0 10px 0', letterSpacing: '1px' }}>
+              STRIKT GEHEIM
+            </h2>
+            <p style={{ color: '#ADB5BD', fontSize: '0.8rem', fontWeight: 800, marginBottom: '20px', lineHeight: 1.5 }}>
+              Om afkijken te voorkomen, blijven alle voorspellingen van je tegenstanders vergrendeld tot de officiële aftrap!
+            </p>
+            
+            {/* Countdown Klokje in de Overlay */}
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+              <div style={{ background: 'var(--crayola)', color: '#FFF', padding: '10px', borderRadius: '12px', minWidth: '55px' }}>
+                <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.dagen}</div>
+                <div style={{ fontSize: '0.55rem', fontWeight: 900 }}>DAGEN</div>
               </div>
-            );
-          })}
+              <div style={{ background: 'var(--crayola)', color: '#FFF', padding: '10px', borderRadius: '12px', minWidth: '55px' }}>
+                <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.uren}</div>
+                <div style={{ fontSize: '0.55rem', fontWeight: 900 }}>UREN</div>
+              </div>
+              <div style={{ background: 'var(--magenta)', color: '#FFF', padding: '10px', borderRadius: '12px', minWidth: '55px' }}>
+                <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.minuten}</div>
+                <div style={{ fontSize: '0.55rem', fontWeight: 900 }}>MIN</div>
+              </div>
+              <div style={{ background: 'var(--magenta)', color: '#FFF', padding: '10px', borderRadius: '12px', minWidth: '55px' }}>
+                <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.seconden}</div>
+                <div style={{ fontSize: '0.55rem', fontWeight: 900 }}>SEC</div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* MEESTE GOALS & VERDEDIGING */}
-      <div className="antw-card">
-        <h3 className="antw-title" style={{color: '#40C057'}}>⚽ Meeste Goals</h3>
-        <div className="antw-grid">
-          {alleToernooiV.map((v: any) => (
-            <AnswerCountry key={v.id} speler={v.spelers?.naam} land={v.topschutter} />
-          ))}
+      {/* 📝 DE EIGENLIJKE ANTWOORDEN (Wordt geblurred via CSS als isLocked true is) */}
+      <div style={{
+        filter: isLocked ? 'blur(30px) grayscale(100%)' : 'none',
+        opacity: isLocked ? 0.3 : 1,
+        pointerEvents: isLocked ? 'none' : 'auto',
+        userSelect: isLocked ? 'none' : 'auto',
+        transition: 'filter 1s, opacity 1s',
+        display: 'flex', flexDirection: 'column', gap: '20px'
+      }}>
+        
+        <style>{`
+          .antw-card { background: rgba(255, 255, 255, 0.95); border-radius: 16px; padding: 15px; border: 2px solid #E9ECEF; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+          .antw-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; margin: 0 0 15px 0; letter-spacing: 1px; line-height: 1; border-bottom: 2px dashed #E9ECEF; padding-bottom: 10px; }
+          .antw-grid { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
+        `}</style>
+
+        {/* WERELDKAMPIOEN */}
+        <div className="antw-card">
+          <h3 className="antw-title" style={{color: 'var(--crayola)'}}>🏆 Wereldkampioen</h3>
+          <div className="antw-grid">
+            {alleToernooiV.map((v: any) => (
+              <AnswerCountry key={v.id} speler={v.spelers?.naam} land={v.winnaar} />
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="antw-card">
-        <h3 className="antw-title" style={{color: '#228BE6'}}>🛡️ Beste Verdediging</h3>
-        <div className="antw-grid">
-          {alleToernooiV.map((v: any) => (
-            <AnswerCountry key={v.id} speler={v.spelers?.naam} land={v.beste_keeper} />
-          ))}
+        {/* HALVE FINALISTEN */}
+        <div className="antw-card">
+          <h3 className="antw-title" style={{color: 'var(--magenta)'}}>⚔️ Halve Finalisten</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {alleToernooiV.map((v: any) => {
+              const p1 = parseTeam(v.halve_finalist_1);
+              const p2 = parseTeam(v.halve_finalist_2);
+              const p3 = parseTeam(v.halve_finalist_3);
+              const p4 = parseTeam(v.halve_finalist_4);
+              const voornaam = v.spelers?.naam ? v.spelers.naam.split(' ')[0] : 'Onbekend';
+
+              return (
+                <div key={v.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8F9FA', padding: '10px 15px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
+                  <span style={{ fontWeight: 900, color: '#111827', width: '70px', fontSize: '0.8rem' }}>{voornaam}</span>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    {[p1, p2, p3, p4].map((p, i) => (
+                      <div key={i} title={p.name} style={{ width: '36px', height: '36px', borderRadius: '50%', background: p.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
+                        <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>
+                          {p.emoji}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
 
-      {/* EINDSTATION BELGIË */}
-      <div className="antw-card">
-        <h3 className="antw-title" style={{color: '#111827'}}>📍 Eindstation België</h3>
-        <div className="antw-grid">
-          {alleToernooiV.map((v: any) => (
-            <AnswerRound key={v.id} speler={v.spelers?.naam} ronde={v.eindstation_belgie} />
-          ))}
+        {/* MEESTE GOALS & VERDEDIGING */}
+        <div className="antw-card">
+          <h3 className="antw-title" style={{color: '#40C057'}}>⚽ Meeste Goals</h3>
+          <div className="antw-grid">
+            {alleToernooiV.map((v: any) => (
+              <AnswerCountry key={v.id} speler={v.spelers?.naam} land={v.topschutter} />
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* CIJFERS (Goals, Geel, Rood) */}
-      <div className="antw-card" style={{ background: 'linear-gradient(135deg, #70E4EF, #3772FF)', borderColor: '#3772FF' }}>
-        <h3 className="antw-title" style={{color: '#FFF', borderBottomColor: 'rgba(255,255,255,0.2)'}}>⚽ Totaal Goals Toernooi</h3>
-        <div className="antw-grid">
-          {alleToernooiV.map((v: any) => (
-            <AnswerNumber key={v.id} speler={v.spelers?.naam} num={v.totaal_goals} gradient="linear-gradient(135deg, #3772FF, #70E4EF)" />
-          ))}
+        <div className="antw-card">
+          <h3 className="antw-title" style={{color: '#228BE6'}}>🛡️ Beste Verdediging</h3>
+          <div className="antw-grid">
+            {alleToernooiV.map((v: any) => (
+              <AnswerCountry key={v.id} speler={v.spelers?.naam} land={v.beste_keeper} />
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="antw-card" style={{ background: '#FCD116', borderColor: '#F1BF00' }}>
-        <h3 className="antw-title" style={{color: '#111827', borderBottomColor: 'rgba(0,0,0,0.1)'}}>🟨 Totaal Geel</h3>
-        <div className="antw-grid">
-          {alleToernooiV.map((v: any) => (
-            <AnswerNumber key={v.id} speler={v.spelers?.naam} num={v.totaal_gele_kaarten} gradient="linear-gradient(135deg, #FFD700, #F1BF00)" />
-          ))}
+        {/* EINDSTATION BELGIË */}
+        <div className="antw-card">
+          <h3 className="antw-title" style={{color: '#111827'}}>📍 Eindstation België</h3>
+          <div className="antw-grid">
+            {alleToernooiV.map((v: any) => (
+              <AnswerRound key={v.id} speler={v.spelers?.naam} ronde={v.eindstation_belgie} />
+            ))}
+          </div>
         </div>
-      </div>
 
-      <div className="antw-card" style={{ background: '#FA5252', borderColor: '#C92A2A' }}>
-        <h3 className="antw-title" style={{color: '#FFF', borderBottomColor: 'rgba(255,255,255,0.2)'}}>🟥 Totaal Rood</h3>
-        <div className="antw-grid">
-          {alleToernooiV.map((v: any) => (
-            <AnswerNumber key={v.id} speler={v.spelers?.naam} num={v.totaal_rode_kaarten} gradient="linear-gradient(135deg, #E03131, #C92A2A)" />
-          ))}
+        {/* CIJFERS (Goals, Geel, Rood) */}
+        <div className="antw-card" style={{ background: 'linear-gradient(135deg, #70E4EF, #3772FF)', borderColor: '#3772FF' }}>
+          <h3 className="antw-title" style={{color: '#FFF', borderBottomColor: 'rgba(255,255,255,0.2)'}}>⚽ Totaal Goals</h3>
+          <div className="antw-grid">
+            {alleToernooiV.map((v: any) => (
+              <AnswerNumber key={v.id} speler={v.spelers?.naam} num={v.totaal_goals} gradient="linear-gradient(135deg, #3772FF, #70E4EF)" />
+            ))}
+          </div>
         </div>
-      </div>
 
+        <div className="antw-card" style={{ background: '#FCD116', borderColor: '#F1BF00' }}>
+          <h3 className="antw-title" style={{color: '#111827', borderBottomColor: 'rgba(0,0,0,0.1)'}}>🟨 Totaal Geel</h3>
+          <div className="antw-grid">
+            {alleToernooiV.map((v: any) => (
+              <AnswerNumber key={v.id} speler={v.spelers?.naam} num={v.totaal_gele_kaarten} gradient="linear-gradient(135deg, #FFD700, #F1BF00)" />
+            ))}
+          </div>
+        </div>
+
+        <div className="antw-card" style={{ background: '#FA5252', borderColor: '#C92A2A' }}>
+          <h3 className="antw-title" style={{color: '#FFF', borderBottomColor: 'rgba(255,255,255,0.2)'}}>🟥 Totaal Rood</h3>
+          <div className="antw-grid">
+            {alleToernooiV.map((v: any) => (
+              <AnswerNumber key={v.id} speler={v.spelers?.naam} num={v.totaal_rode_kaarten} gradient="linear-gradient(135deg, #E03131, #C92A2A)" />
+            ))}
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }
