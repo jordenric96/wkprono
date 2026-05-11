@@ -22,26 +22,30 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald }:
         <button 
           onClick={() => setToonBonus(false)} 
           style={{ 
-            flex: 1, padding: '12px', borderRadius: '10px', border: 'none', 
+            flex: 1, padding: '10px 4px', borderRadius: '10px', border: 'none', 
             background: !toonBonus ? '#FFF' : 'transparent', 
             fontWeight: 900, color: !toonBonus ? 'var(--crayola)' : '#6C757D', 
             boxShadow: !toonBonus ? '0 2px 8px rgba(0,0,0,0.1)' : 'none', 
-            cursor: 'pointer', transition: '0.2s', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.75rem' 
+            cursor: 'pointer', transition: '0.2s', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.75rem',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px'
           }}
         >
-          ⚽ Zonder Bonus
+          <span>⚽ Zonder Bonus</span>
+          <span style={{ fontSize: '0.55rem', opacity: 0.7, letterSpacing: '1px' }}>(Tussenstand)</span>
         </button>
         <button 
           onClick={() => setToonBonus(true)} 
           style={{ 
-            flex: 1, padding: '12px', borderRadius: '10px', border: 'none', 
+            flex: 1, padding: '10px 4px', borderRadius: '10px', border: 'none', 
             background: toonBonus ? '#FFF' : 'transparent', 
             fontWeight: 900, color: toonBonus ? 'var(--magenta)' : '#6C757D', 
             boxShadow: toonBonus ? '0 2px 8px rgba(0,0,0,0.1)' : 'none', 
-            cursor: 'pointer', transition: '0.2s', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.75rem' 
+            cursor: 'pointer', transition: '0.2s', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '0.75rem',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px'
           }}
         >
-          💎 Met Live Bonus
+          <span>💎 Met Bonus</span>
+          <span style={{ fontSize: '0.55rem', opacity: 0.7, letterSpacing: '1px' }}>(Eindklassement)</span>
         </button>
       </div>
 
