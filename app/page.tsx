@@ -592,7 +592,7 @@ export default function Home() {
         {infoOpen && (
           <div className="info-content">
             <h3 style={{fontFamily:'Bebas Neue', fontSize:'1.5rem', color:'var(--crayola)', marginBottom:10}}>💰 DEELNAME & PRIJZEN</h3>
-            <p>Deelname kost <strong>€10</strong>. Betalen via Payconiq of overschrijven naar <strong>Jorden Ricour</strong>. De volledige pot wordt verdeeld onder de winnaars!</p>
+            <p>Deelname kost <strong>€10</strong>. Betalen via overschrijving naar <strong>BE85 0018 2075 8506 met vermelding van naam + WK2026. De volledige pot wordt verdeeld onder de winnaars!</p>
             
             <h3 style={{fontFamily:'Bebas Neue', fontSize:'1.5rem', color:'var(--magenta)', marginTop:20, marginBottom:10}}>⚽ PUNTEN MATCHEN</h3>
             <div className="rule-item"><span>Exacte uitslag juist</span><span>3 PT</span></div>
