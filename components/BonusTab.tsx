@@ -1,5 +1,5 @@
 // src/components/BonusTab.tsx
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 
 // --- HULPFUNCTIE: VLAGGEN & KLEUREN GENERATOR + BLACK FLAG FIX ---
 const parseTeam = (teamString: string) => {
@@ -133,8 +133,6 @@ const parseTeam = (teamString: string) => {
 const CountryCarousel = ({ value, onChange, options, disabled }: any) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // useEffect met scrollIntoView IS VERWIJDERD om spring-bug te fixen!
-
   return (
     <div style={{ position: 'relative', margin: '0 -15px' }}>
       <div 
@@ -254,6 +252,24 @@ export default function BonusTab({
   totaalGoals, setTotaalGoals, totaalGeel, setTotaalGeel, totaalRood, setTotaalRood,
   isGesloten, slaBonusOp, opslaanStatus, WK_LANDEN
 }: any) {
+
+  // Controleren wat er allemaal is ingevuld voor de checkmarks en de teller
+  const isVolledigHf = hf[0] && hf[1] && hf[2] && hf[3];
+  
+  const ingevuldeVelden = [
+    winnaar !== '',
+    isVolledigHf,
+    meesteGoalsLand !== '',
+    besteVerdedigingLand !== '',
+    eindstation !== '',
+    totaalGoals !== '',
+    totaalGeel !== '',
+    totaalRood !== ''
+  ];
+  
+  const totaalIngevuld = ingevuldeVelden.filter(Boolean).length;
+  const totaalVragen = 8;
+  const allesIngevuld = totaalIngevuld === totaalVragen;
   
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', overflowX: 'hidden' }}>
@@ -262,18 +278,25 @@ export default function BonusTab({
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .bonus-card { background: rgba(255, 255, 255, 0.95); border-radius: 16px; padding: 15px; border: 2px solid #E9ECEF; box-shadow: 0 4px 10px rgba(0,0,0,0.05); overflow: hidden; }
-        .bonus-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; margin: 0 0 5px 0; letter-spacing: 1px; line-height: 1; }
+        .bonus-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; margin: 0; letter-spacing: 1px; line-height: 1; }
+        .title-container { display: flex; justify-content: space-between; alignItems: center; margin-bottom: 5px; }
       `}</style>
 
       {/* WERELDKAMPIOEN */}
       <div className="bonus-card">
-        <h3 className="bonus-title" style={{color: 'var(--crayola)'}}>🏆 Wereldkampioen</h3>
+        <div className="title-container">
+          <h3 className="bonus-title" style={{color: 'var(--crayola)'}}>🏆 Wereldkampioen</h3>
+          {winnaar && <span style={{fontSize: '1.2rem'}} title="Ingevuld">✅</span>}
+        </div>
         <CountryCarousel options={WK_LANDEN} value={winnaar} onChange={setWinnaar} disabled={isGesloten} />
       </div>
 
       {/* HALVE FINALISTEN */}
       <div className="bonus-card">
-        <h3 className="bonus-title" style={{color: 'var(--magenta)'}}>⚔️ De 4 Halve Finalisten</h3>
+        <div className="title-container">
+          <h3 className="bonus-title" style={{color: 'var(--magenta)'}}>⚔️ De 4 Halve Finalisten</h3>
+          {isVolledigHf && <span style={{fontSize: '1.2rem'}} title="Ingevuld">✅</span>}
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '10px' }}>
           <CountryCarousel options={WK_LANDEN} value={hf[0]} onChange={(v: string) => { const n = [...hf]; n[0] = v; setHf(n); }} disabled={isGesloten} />
           <div style={{ height: '1px', background: '#E9ECEF', margin: '5px 0' }} />
@@ -287,27 +310,39 @@ export default function BonusTab({
 
       {/* MEESTE GOALS & VERDEDIGING */}
       <div className="bonus-card">
-        <h3 className="bonus-title" style={{color: '#40C057'}}>⚽ Meeste Goals</h3>
+        <div className="title-container">
+          <h3 className="bonus-title" style={{color: '#40C057'}}>⚽ Meeste Goals</h3>
+          {meesteGoalsLand && <span style={{fontSize: '1.2rem'}} title="Ingevuld">✅</span>}
+        </div>
         <p style={{fontSize:'0.7rem', color:'#6C757D', margin:'0 0 10px 0', fontWeight:800}}>Welk land scoort het meest in het hele toernooi?</p>
         <CountryCarousel options={WK_LANDEN} value={meesteGoalsLand} onChange={setMeesteGoalsLand} disabled={isGesloten} />
       </div>
       
       <div className="bonus-card">
-        <h3 className="bonus-title" style={{color: '#228BE6'}}>🛡️ Beste Verdediging</h3>
+        <div className="title-container">
+          <h3 className="bonus-title" style={{color: '#228BE6'}}>🛡️ Beste Verdediging</h3>
+          {besteVerdedigingLand && <span style={{fontSize: '1.2rem'}} title="Ingevuld">✅</span>}
+        </div>
         <p style={{fontSize:'0.7rem', color:'#6C757D', margin:'0 0 10px 0', fontWeight:800}}>Welk land krijgt de minste tegengoals?</p>
         <CountryCarousel options={WK_LANDEN} value={besteVerdedigingLand} onChange={setBesteVerdedigingLand} disabled={isGesloten} />
       </div>
 
       {/* EINDSTATION BELGIË */}
       <div className="bonus-card">
-        <h3 className="bonus-title" style={{color: '#111827'}}>📍 Eindstation België</h3>
+        <div className="title-container">
+          <h3 className="bonus-title" style={{color: '#111827'}}>📍 Eindstation België</h3>
+          {eindstation && <span style={{fontSize: '1.2rem'}} title="Ingevuld">✅</span>}
+        </div>
         <p style={{fontSize:'0.7rem', color:'#6C757D', margin:'0 0 5px 0', fontWeight:800}}>In welke ronde strandt België?</p>
         <RoundCarousel value={eindstation} onChange={setEindstation} disabled={isGesloten} />
       </div>
 
       {/* TOTAAL GOALS */}
       <div className="bonus-card" style={{ background: 'linear-gradient(135deg, #70E4EF, #3772FF)', borderColor: '#3772FF', padding: '20px 15px', textAlign: 'center' }}>
-        <h3 className="bonus-title" style={{color: '#FFF'}}>⚽ Totaal Aantal Doelpunten</h3>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', marginBottom: '5px' }}>
+          <h3 className="bonus-title" style={{color: '#FFF'}}>⚽ Totaal Aantal Doelpunten</h3>
+          {totaalGoals && <span style={{fontSize: '1.2rem'}} title="Ingevuld">✅</span>}
+        </div>
         <p style={{fontSize:'0.7rem', color:'rgba(255,255,255,0.8)', margin:'0 0 10px 0', fontWeight:800}}>Hoeveel goals vallen er in het hele toernooi?</p>
         <input 
           type="tel" value={totaalGoals} onChange={(e: any) => setTotaalGoals(e.target.value)} disabled={isGesloten}
@@ -325,6 +360,7 @@ export default function BonusTab({
           <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.6rem', color: '#111827', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
             <div style={{ width: '16px', height: '22px', background: '#FFD700', borderRadius: '3px', border: '1px solid rgba(0,0,0,0.2)' }} />
             TOTAAL GEEL
+            {totaalGeel && <span style={{fontSize: '1rem'}}>✅</span>}
           </div>
           <input 
             type="tel" value={totaalGeel} onChange={(e: any) => setTotaalGeel(e.target.value)} disabled={isGesloten}
@@ -340,6 +376,7 @@ export default function BonusTab({
           <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.6rem', color: '#FFF', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
             <div style={{ width: '16px', height: '22px', background: '#C92A2A', borderRadius: '3px', border: '1px solid rgba(0,0,0,0.2)' }} />
             TOTAAL ROOD
+            {totaalRood && <span style={{fontSize: '1rem'}}>✅</span>}
           </div>
           <input 
             type="tel" value={totaalRood} onChange={(e: any) => setTotaalRood(e.target.value)} disabled={isGesloten}
@@ -352,18 +389,20 @@ export default function BonusTab({
         </div>
       </div>
 
-      {/* OPSLAAN KNOP */}
+      {/* OPSLAAN KNOP (Met dynamische teller) */}
       {!isGesloten && (
         <button 
           onClick={slaBonusOp}
           style={{
-            width: '100%', padding: '20px', borderRadius: '16px', background: 'linear-gradient(135deg, var(--magenta), #FF6B6B)',
-            color: '#FFF', border: 'none', fontWeight: 900, fontSize: '1.3rem', cursor: 'pointer',
-            boxShadow: '0 8px 20px rgba(240, 56, 255, 0.4)', textTransform: 'uppercase', letterSpacing: '2px',
-            marginTop: '10px', transition: '0.2s'
+            width: '100%', padding: '20px', borderRadius: '16px', 
+            background: allesIngevuld ? 'linear-gradient(135deg, #40C057, #2F9E44)' : 'linear-gradient(135deg, var(--magenta), #FF6B6B)',
+            color: '#FFF', border: 'none', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer',
+            boxShadow: allesIngevuld ? '0 8px 20px rgba(64, 192, 87, 0.4)' : '0 8px 20px rgba(240, 56, 255, 0.4)', 
+            textTransform: 'uppercase', letterSpacing: '1px',
+            marginTop: '10px', transition: 'all 0.3s ease'
           }}
         >
-          BONUS OPSLAAN 💎
+          {allesIngevuld ? '✅ ALLES OPSLAAN (8/8)' : `💎 OPSLAAN (${totaalIngevuld}/${totaalVragen} INGEVULD)`}
         </button>
       )}
       
