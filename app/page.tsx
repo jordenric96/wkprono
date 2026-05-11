@@ -375,20 +375,22 @@ export default function Home() {
         .timer-value { font-size: 1.5rem; line-height: 1.1; }
         .timer-label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.8; }
 
+      /* DE NIEUWE MAGIC BOTTOM APP BAR */
         .bottom-nav {
           position: fixed;
           bottom: 20px;
           left: 50%;
           transform: translateX(-50%);
-          background: rgba(17, 24, 39, 0.95);
+          background: rgba(255, 255, 255, 0.4); /* 👈 Lichte glas-look met 40% transparantie */
           backdrop-filter: blur(20px);
-          border: 1px solid rgba(255,255,255,0.15);
+          -webkit-backdrop-filter: blur(20px); /* Zorgt dat blur ook op iPhones werkt */
+          border: 1px solid rgba(255, 255, 255, 0.7); /* Subtiel wit randje */
           padding: 6px;
           border-radius: 30px;
           display: flex;
           gap: 4px;
           z-index: 1000;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+          box-shadow: 0 10px 40px rgba(0,0,0,0.1); /* Zachtere, chiquere schaduw */
           width: 95%;
           max-width: 420px;
           justify-content: space-between;
@@ -402,7 +404,7 @@ export default function Home() {
           border-radius: 21px;
           cursor: pointer;
           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-          color: #9CA3AF;
+          color: #495057; /* 👈 Iets donkerder grijs voor perfect contrast op het glas */
           position: relative;
           overflow: hidden;
         }
