@@ -1,5 +1,5 @@
 // src/components/BonusTab.tsx
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 
 // --- HULPFUNCTIE: VLAGGEN & KLEUREN GENERATOR + BLACK FLAG FIX ---
 const parseTeam = (teamString: string) => {
@@ -133,14 +133,7 @@ const parseTeam = (teamString: string) => {
 const CountryCarousel = ({ value, onChange, options, disabled }: any) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (scrollRef.current && value) {
-      const selectedEl = scrollRef.current.querySelector(`[data-country="${value}"]`);
-      if (selectedEl) {
-        selectedEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
-      }
-    }
-  }, [value]);
+  // useEffect met scrollIntoView IS VERWIJDERD om spring-bug te fixen!
 
   return (
     <div style={{ position: 'relative', margin: '0 -15px' }}>
