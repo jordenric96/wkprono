@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { WK_LANDEN } from '../lib/data';
 
-import { CountdownTimer } from '../components/Shared';
 import MatchenTab from '../components/MatchenTab';
 import BonusTab from '../components/BonusTab';
 import AntwoordenTab from '../components/AntwoordenTab';
@@ -19,7 +18,7 @@ export default function Home() {
   const [ontgrendelNaam, setOntgrendelNaam] = useState('');
   const [invoerCode, setInvoerCode] = useState('');
   const [status, setStatus] = useState('');
-  const [isRegistreren, setIsRegistreren] = useState(false);
+  const [isRegistreren, setIsRegistreren] = useState(false); 
   
   const [actieveSpeler, setActieveSpeler] = useState<any>(null);
   const [alleSpelers, setAlleSpelers] = useState<any[]>([]); 
@@ -95,20 +94,16 @@ export default function Home() {
 
     const chatSub = supabase.channel('chat').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kleedkamer' }, (payload) => {
       haalChatOp();
-      
       if (actieveTabRef.current !== 'kleedkamer') {
         setOngelezenBerichten(true);
-
         if (payload.new.speler_id !== actieveSpelerRef.current?.id) {
           const afzender = alleSpelersRef.current.find(s => s.id === payload.new.speler_id);
           const afzenderNaam = afzender ? afzender.naam.split(' ')[0] : 'Nieuw bericht';
-          
           setToast({ naam: afzenderNaam, bericht: payload.new.bericht });
           try {
             const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
             audio.play();
           } catch(e) {} 
-
           setTimeout(() => setToast(null), 4500); 
         }
       }
@@ -226,109 +221,103 @@ export default function Home() {
   };
 
   const haalKlassementOp = async () => {
-    const { data: s } = await supabase.from('spelers').select('*');
-    const { data: m } = await supabase.from('matchen').select('*');
-    const { data: v } = await supabase.from('match_voorspellingen').select('*');
-    const { data: bonusV } = await supabase.from('toernooi_voorspellingen').select('*');
+    const { data: s, error: sErr } = await supabase.from('spelers').select('*');
+    const { data: m, error: mErr } = await supabase.from('matchen').select('*');
+    const { data: v, error: vErr } = await supabase.from('match_voorspellingen').select('*');
+    const { data: bonusV, error: bonusErr } = await supabase.from('toernooi_voorspellingen').select('*');
 
-    if (s && m && v) {
-      let liveGoals = 0, liveGeel = 0, liveRood = 0;
-      const teamGoalsVoor: Record<string, number> = {};
-      const teamGoalsTegen: Record<string, number> = {};
-      let halveFinalisten: string[] = [];
-      let wkWinnaar = "";
+    // DEZE REGEL LOST ALLE TYPESCRIPT "POSSIBLY NULL" ERRORS OP!
+    if (sErr || mErr || vErr || bonusErr || !s || !m || !v || !bonusV) return;
 
-      m.forEach(match => {
-        if (match.id === 101 || match.id === 102) {
-          if (match.thuisploeg && !match.thuisploeg.toLowerCase().includes('winnaar')) halveFinalisten.push(match.thuisploeg);
-          if (match.uitploeg && !match.uitploeg.toLowerCase().includes('winnaar')) halveFinalisten.push(match.uitploeg);
-        }
+    let liveGoals = 0, liveGeel = 0, liveRood = 0;
+    const teamGoalsVoor: Record<string, number> = {};
+    const teamGoalsTegen: Record<string, number> = {};
+    const halveFinalisten: string[] = [];
+    let wkWinnaar = "";
 
-        if (match.id === 104 && match.thuis_score !== null && match.uit_score !== null) {
-          if (match.thuis_score > match.uit_score) wkWinnaar = match.thuisploeg;
-          else if (match.uit_score > match.thuis_score) wkWinnaar = match.uitploeg;
-        }
-
-        if (match.thuis_score !== null && match.uit_score !== null) {
-          liveGoals += (match.thuis_score + match.uit_score);
-          liveGeel += (match.gele_kaarten || 0);
-          liveRood += (match.rode_kaarten || 0);
-
-          teamGoalsVoor[match.thuisploeg] = (teamGoalsVoor[match.thuisploeg] || 0) + match.thuis_score;
-          teamGoalsVoor[match.uitploeg] = (teamGoalsVoor[match.uitploeg] || 0) + match.uit_score;
-          teamGoalsTegen[match.thuisploeg] = (teamGoalsTegen[match.thuisploeg] || 0) + match.uit_score;
-          teamGoalsTegen[match.uitploeg] = (teamGoalsTegen[match.uitploeg] || 0) + match.thuis_score;
-        }
-      });
-
-      const maxGoals = Math.max(...Object.values(teamGoalsVoor), -1);
-      const topScorers = Object.keys(teamGoalsVoor).filter(t => teamGoalsVoor[t] === maxGoals && maxGoals > 0);
-
-      const gespeeldeTeams = Object.keys(teamGoalsTegen);
-      const minTegen = gespeeldeTeams.length > 0 ? Math.min(...Object.values(teamGoalsTegen)) : -1;
-      const bestDefenses = Object.keys(teamGoalsTegen).filter(t => teamGoalsTegen[t] === minTegen && minTegen >= 0);
-
-      let winnaarsGoals: any[] = [], winnaarsGeel: any[] = [], winnaarsRood: any[] = [];
-      
-      if (bonusV && bonusV.length > 0) {
-        const diffG = bonusV.map(bv => ({id: bv.speler_id, d: Math.abs((bv.totaal_goals || 0) - liveGoals)}));
-        const minG = Math.min(...diffG.map(x => x.d));
-        winnaarsGoals = diffG.filter(x => x.d === minG).map(x => x.id);
-
-        const diffY = bonusV.map(bv => ({id: bv.speler_id, d: Math.abs((bv.totaal_gele_kaarten || 0) - liveGeel)}));
-        const minY = Math.min(...diffY.map(x => x.d));
-        winnaarsGeel = diffY.filter(x => x.d === minY).map(x => x.id);
-
-        const diffR = bonusV.map(bv => ({id: bv.speler_id, d: Math.abs((bv.totaal_rode_kaarten || 0) - liveRood)}));
-        const minR = Math.min(...diffR.map(x => x.d));
-        winnaarsRood = diffR.filter(x => x.d === minR).map(x => x.id);
+    m.forEach(match => {
+      if (match.id === 101 || match.id === 102) {
+        if (match.thuisploeg && !match.thuisploeg.toLowerCase().includes('winnaar')) halveFinalisten.push(match.thuisploeg);
+        if (match.uitploeg && !match.uitploeg.toLowerCase().includes('winnaar')) halveFinalisten.push(match.uitploeg);
       }
+      if (match.id === 104 && match.thuis_score !== null && match.uit_score !== null) {
+        if (match.thuis_score > match.uit_score) wkWinnaar = match.thuisploeg;
+        else if (match.uit_score > match.thuis_score) wkWinnaar = match.uitploeg;
+      }
+      if (match.thuis_score !== null && match.uit_score !== null) {
+        liveGoals += (match.thuis_score + match.uit_score);
+        liveGeel += (match.gele_kaarten || 0);
+        liveRood += (match.rode_kaarten || 0);
+        teamGoalsVoor[match.thuisploeg] = (teamGoalsVoor[match.thuisploeg] || 0) + match.thuis_score;
+        teamGoalsVoor[match.uitploeg] = (teamGoalsVoor[match.uitploeg] || 0) + match.uit_score;
+        teamGoalsTegen[match.thuisploeg] = (teamGoalsTegen[match.thuisploeg] || 0) + match.uit_score;
+        teamGoalsTegen[match.uitploeg] = (teamGoalsTegen[match.uitploeg] || 0) + match.thuis_score;
+      }
+    });
 
-      const stats = s.map(sp => {
-        let pronoP = 0, bonusP = 0, ex = 0, wc = 0, f = 0;
-        
-        v.filter(vo => vo.speler_id === sp.id).forEach(vo => {
-          const match = m.find(ma => ma.id === vo.match_id);
-          if (match && match.thuis_score !== null) {
-            const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
-            const pred = vo.thuis_score > vo.uit_score ? 1 : vo.thuis_score < vo.uit_score ? 2 : 0;
-            if (vo.thuis_score === match.thuis_score && vo.uit_score === match.uit_score) { pronoP += 3; ex++; }
-            else if (echt === pred) { pronoP += 1; wc++; }
-            else f++;
-          }
-        });
+    const goalsValues = Object.values(teamGoalsVoor);
+    const maxGoals = goalsValues.length > 0 ? Math.max(...goalsValues, -1) : -1;
+    const topScorers = Object.keys(teamGoalsVoor).filter(t => teamGoalsVoor[t] === maxGoals && maxGoals > 0);
 
-        const bv = bonusV?.find(b => b.speler_id === sp.id);
-        const breakdown: {label: string, pt: number}[] = [];
-        
-        if (bv) {
-          if (winnaarsGoals.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Totaal Goals', pt: 5}); }
-          if (winnaarsGeel.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Gele Kaarten', pt: 5}); }
-          if (winnaarsRood.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Rode Kaarten', pt: 5}); }
+    const gespeeldeTeams = Object.keys(teamGoalsTegen);
+    const minTegen = gespeeldeTeams.length > 0 ? Math.min(...Object.values(teamGoalsTegen)) : -1;
+    const bestDefenses = Object.keys(teamGoalsTegen).filter(t => teamGoalsTegen[t] === minTegen && minTegen >= 0);
 
-          if (wkWinnaar && bv.winnaar === wkWinnaar) { bonusP += 5; breakdown.push({label: 'Wereldkampioen Juist', pt: 5}); }
-          if (topScorers.includes(bv.topschutter)) { bonusP += 3; breakdown.push({label: 'Beste Aanval', pt: 3}); }
-          if (bestDefenses.includes(bv.beste_keeper)) { bonusP += 3; breakdown.push({label: 'Beste Verdediging', pt: 3}); }
-          
-          [bv.halve_finalist_1, bv.halve_finalist_2, bv.halve_finalist_3, bv.halve_finalist_4].forEach(land => {
-            if (land && halveFinalisten.includes(land)) { bonusP += 3; breakdown.push({label: `Halve Finalist (${land})`, pt: 3}); }
-          });
-        }
-        
-        return { 
-          ...sp, prono_score: pronoP, bonus_score: bonusP, totaal_score: pronoP + bonusP, 
-          exact: ex, winnaarCorrect: wc, fout: f, bonus_breakdown: breakdown 
-        };
-      });
-      
-      setKlassement(stats);
+    let winnaarsGoals: any[] = [], winnaarsGeel: any[] = [], winnaarsRood: any[] = [];
+    
+    if (bonusV.length > 0) {
+      const diffG = bonusV.map(bv => ({id: bv.speler_id, d: Math.abs((bv.totaal_goals || 0) - liveGoals)}));
+      winnaarsGoals = diffG.filter(x => x.d === Math.min(...diffG.map(y => y.d))).map(x => x.id);
+
+      const diffY = bonusV.map(bv => ({id: bv.speler_id, d: Math.abs((bv.totaal_gele_kaarten || 0) - liveGeel)}));
+      winnaarsGeel = diffY.filter(x => x.d === Math.min(...diffY.map(y => y.d))).map(x => x.id);
+
+      const diffR = bonusV.map(bv => ({id: bv.speler_id, d: Math.abs((bv.totaal_rode_kaarten || 0) - liveRood)}));
+      winnaarsRood = diffR.filter(x => x.d === Math.min(...diffR.map(y => y.d))).map(x => x.id);
     }
+
+    const stats = s.map(sp => {
+      let pronoP = 0, bonusP = 0, ex = 0, wc = 0, f = 0;
+      
+      v.filter(vo => vo.speler_id === sp.id).forEach(vo => {
+        const match = m.find(ma => ma.id === vo.match_id);
+        if (match && match.thuis_score !== null) {
+          const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
+          const pred = vo.thuis_score > vo.uit_score ? 1 : vo.thuis_score < vo.uit_score ? 2 : 0;
+          if (vo.thuis_score === match.thuis_score && vo.uit_score === match.uit_score) { pronoP += 3; ex++; }
+          else if (echt === pred) { pronoP += 1; wc++; }
+          else f++;
+        }
+      });
+
+      const bv = bonusV.find(b => b.speler_id === sp.id);
+      const breakdown: {label: string, pt: number}[] = [];
+      
+      if (bv) {
+        if (winnaarsGoals.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Totaal Goals', pt: 5}); }
+        if (winnaarsGeel.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Gele Kaarten', pt: 5}); }
+        if (winnaarsRood.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Rode Kaarten', pt: 5}); }
+        if (wkWinnaar && bv.winnaar === wkWinnaar) { bonusP += 5; breakdown.push({label: 'Wereldkampioen Juist', pt: 5}); }
+        if (topScorers.includes(bv.topschutter)) { bonusP += 3; breakdown.push({label: 'Beste Aanval', pt: 3}); }
+        if (bestDefenses.includes(bv.beste_keeper)) { bonusP += 3; breakdown.push({label: 'Beste Verdediging', pt: 3}); }
+        [bv.halve_finalist_1, bv.halve_finalist_2, bv.halve_finalist_3, bv.halve_finalist_4].forEach(land => {
+          if (land && halveFinalisten.includes(land)) { bonusP += 3; breakdown.push({label: `Halve Finalist (${land})`, pt: 3}); }
+        });
+      }
+      
+      return { 
+        ...sp, prono_score: pronoP, bonus_score: bonusP, totaal_score: pronoP + bonusP, 
+        exact: ex, winnaarCorrect: wc, fout: f, bonus_breakdown: breakdown 
+      };
+    });
+    
+    setKlassement(stats);
   };
 
   const toggleBetaald = async (spelerId: number, huidigeStatus: boolean) => {
     if (!isAdmin) return;
-    await supabase.from('spelers').update({ betaald: !huidigeStatus }).eq('id', spelerId);
-    haalKlassementOp();
+    const { error } = await supabase.from('spelers').update({ betaald: !huidigeStatus }).eq('id', spelerId);
+    if (!error) haalKlassementOp();
   };
 
   const verstuurChat = async (e: React.FormEvent) => {
@@ -343,19 +332,11 @@ export default function Home() {
     const naam = ontgrendelNaam.trim();
     const code = invoerCode.trim();
     
-    if (!naam || !code) {
-      setStatus('Vul een naam en pincode in! 🚩');
-      return;
-    }
+    if (!naam || !code) { setStatus('Vul een naam en pincode in! 🚩'); return; }
 
     const s = alleSpelers.find(x => x.naam.toLowerCase() === naam.toLowerCase() && String(x.code) === code);
-    if (s) {
-      setActieveSpeler(s);
-      localStorage.setItem('wk_speler_id', s.id.toString());
-      setStatus('');
-    } else {
-      setStatus('Naam of pincode is fout! 🚩');
-    }
+    if (s) { setActieveSpeler(s); localStorage.setItem('wk_speler_id', s.id.toString()); setStatus(''); }
+    else { setStatus('Naam of pincode is fout! 🚩'); }
   };
 
   const handleRegistreer = async (e: React.FormEvent) => {
@@ -363,35 +344,18 @@ export default function Home() {
     const naam = ontgrendelNaam.trim();
     const code = invoerCode.trim();
     
-    if (!naam || !code) {
-      setStatus('Vul je naam en een pincode in! 🚩');
-      return;
-    }
-
-    if (alleSpelers.some(s => s.naam.toLowerCase() === naam.toLowerCase())) {
-      setStatus('Deze naam bestaat al! Kies onderaan voor inloggen. 🚩');
-      return;
-    }
+    if (!naam || !code) { setStatus('Vul je naam en een pincode in! 🚩'); return; }
+    if (alleSpelers.some(s => s.naam.toLowerCase() === naam.toLowerCase())) { setStatus('Deze naam bestaat al! Kies onderaan voor inloggen. 🚩'); return; }
 
     setStatus('Aanmaken... ⏳');
-    const { data, error } = await supabase
-      .from('spelers')
-      .insert([{ naam: naam, code: code, betaald: false }])
-      .select()
-      .single();
+    const { data, error } = await supabase.from('spelers').insert([{ naam: naam, code: code, betaald: false }]).select().single();
 
-    if (error) {
-      setStatus('Oeps, fout bij aanmaken! 🚩');
-    } else if (data) {
-      setAlleSpelers(prev => [...prev, data]);
-      setActieveSpeler(data);
-      localStorage.setItem('wk_speler_id', data.id.toString());
-      setStatus('');
-    }
+    if (error) { setStatus('Oeps, fout bij aanmaken! 🚩'); }
+    else if (data) { setAlleSpelers(prev => [...prev, data]); setActieveSpeler(data); localStorage.setItem('wk_speler_id', data.id.toString()); setStatus(''); }
   };
 
   const tellersData = useMemo(() => {
-    let totaleGoals = 0; let totaleGeleKaarten = 0; let totaleRodeKaarten = 0;
+    let totaleGoals = 0, totaleGeleKaarten = 0, totaleRodeKaarten = 0;
     const teamGoalsVoor: Record<string, number> = {};
     const teamGoalsTegen: Record<string, number> = {};
 
@@ -400,10 +364,8 @@ export default function Home() {
         totaleGoals += (m.thuis_score + m.uit_score);
         totaleGeleKaarten += (m.gele_kaarten || 0);
         totaleRodeKaarten += (m.rode_kaarten || 0);
-        
         teamGoalsVoor[m.thuisploeg] = (teamGoalsVoor[m.thuisploeg] || 0) + m.thuis_score;
         teamGoalsVoor[m.uitploeg] = (teamGoalsVoor[m.uitploeg] || 0) + m.uit_score;
-        
         teamGoalsTegen[m.thuisploeg] = (teamGoalsTegen[m.thuisploeg] || 0) + m.uit_score;
         teamGoalsTegen[m.uitploeg] = (teamGoalsTegen[m.uitploeg] || 0) + m.thuis_score;
       }
@@ -427,150 +389,47 @@ export default function Home() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@600;800;900&display=swap');
         :root { --crayola: #3772FF; --magenta: #F038FF; --rose: #EF709D; --lime: #E2EF70; --aqua: #70E4EF; }
-
-        html, body {
-          margin: 0; padding: 0; width: 100%; min-height: 100%; font-family: 'Nunito', sans-serif; color: #111827;
-          background: radial-gradient(circle at 30% 20%, var(--rose), transparent 30%),
-                      radial-gradient(circle at 70% 80%, var(--lime), transparent 30%),
-                      linear-gradient(135deg, var(--crayola), var(--aqua));
-          background-size: 200% 200%; animation: background-fade 10s ease-in-out infinite; overflow-x: hidden;
-        }
-
+        
+        html, body { margin: 0; padding: 0; width: 100%; min-height: 100%; font-family: 'Nunito', sans-serif; color: #111827; background: radial-gradient(circle at 30% 20%, var(--rose), transparent 30%), radial-gradient(circle at 70% 80%, var(--lime), transparent 30%), linear-gradient(135deg, var(--crayola), var(--aqua)); background-size: 200% 200%; animation: background-fade 10s ease-in-out infinite; overflow-x: hidden; }
         body::before, body::after { content: ''; position: fixed; border-radius: 50%; filter: blur(50px); opacity: 0.5; z-index: -1; pointer-events: none; }
         body::before { width: 400px; height: 400px; top: -100px; left: -100px; background: var(--magenta); animation: blob-movement-a 12s linear infinite; }
         body::after { width: 350px; height: 350px; bottom: -80px; right: -80px; background: var(--aqua); animation: blob-movement-b 15s linear infinite; }
-
-        .glass-card {
-          background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(15px); padding: 25px 20px; border-radius: 24px;
-          width: 100%; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 3px solid rgba(255, 255, 255, 0.4); margin-bottom: 20px;
-        }
-
-        .title { font-family: 'Bebas Neue', sans-serif; font-size: 4.5rem; text-align: center; color: #FFF; line-height: 1; text-shadow: 3px 3px 0px var(--magenta); margin: 0 0 15px 0; animation: title-glow 3s linear infinite; }
         
-        .timer { display: flex; justify(content: center; gap: 10px; margin-bottom: 25px; }
-        .timer-box { background: var(--magenta); color: #FFF; padding: 8px 12px; border-radius: 12px; text-align: center; font-weight: 900; box-shadow: 0 4px 10px rgba(240, 56, 255, 0.3); }
-        .timer-value { font-size: 1.5rem; line-height: 1.1; }
-        .timer-label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.8; }
+        .main-container { padding: 25px 15px 120px 15px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; box-sizing: border-box; min-height: 100vh; width: 100%; }
+        
+        .glass-card { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(15px); padding: 25px 20px; border-radius: 24px; width: 100%; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 3px solid rgba(255, 255, 255, 0.4); margin: 0 auto 20px auto; }
+        
+        .title { font-family: 'Bebas Neue', sans-serif; font-size: 4.5rem; text-align: center; color: #FFF; line-height: 1; text-shadow: 3px 3px 0px var(--magenta); margin: 0 0 15px 0; animation: title-glow 3s linear infinite; }
 
-        .bottom-nav {
-          position: fixed;
-          bottom: 20px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: rgba(255, 255, 255, 0.4);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.7);
-          padding: 6px;
-          border-radius: 30px;
-          display: flex;
-          gap: 4px;
-          z-index: 1000;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-          width: 95%;
-          max-width: 420px;
-          justify-content: space-between;
-        }
-
-        .nav-item {
-          display: flex;
-          align-items: center;
-          justify(content: center;
-          height: 42px;
-          border-radius: 21px;
-          cursor: pointer;
-          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-          color: #495057;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .nav-item.inactive {
-          width: 42px;
-          background: transparent;
-        }
-
-        .nav-item.active {
-          background: var(--crayola);
-          color: white;
-          padding: 0 16px;
-          width: auto;
-          box-shadow: 0 4px 12px rgba(55, 114, 255, 0.4);
-        }
-
-        .nav-icon {
-          font-size: 1.1rem;
-          z-index: 2;
-        }
-
-        .nav-text {
-          font-size: 0.75rem;
-          font-weight: 900;
-          margin-left: 6px;
-          white-space: nowrap;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          z-index: 2;
-        }
-
-        .unread-dot {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          width: 8px;
-          height: 8px;
-          background: var(--rose);
-          border-radius: 50%;
-          box-shadow: 0 0 8px var(--rose);
-          animation: pulse-red 2s infinite;
-          z-index: 3;
-        }
-
-        /* NIEUW: Speler naam titel */
-        .speler-naam-titel {
-          text-align: center;
-          font-size: 1.1rem;
-          font-weight: 800;
-          color: rgba(255, 255, 255, 0.9);
-          margin: -10px 0 20px 0;
-          text-shadow: 1px 1px 0px var(--magenta);
-          letter-spacing: 0.5px;
-          text-transform: uppercase;
-        }
-
-        .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 20px; display: flex; justify(content: space-between; align-items: center; transition: 0.2s; }
+        .bottom-nav { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.7); padding: 6px; border-radius: 30px; display: flex; gap: 4px; z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.1); width: 95%; max-width: 420px; justify-content: space-between; align-items: center; }
+        .nav-item { display: flex; align-items: center; justify-content: center; height: 42px; border-radius: 21px; cursor: pointer; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); color: #495057; position: relative; overflow: hidden; flex: 1; }
+        .nav-item.active { background: var(--crayola); color: white; padding: 0 16px; box-shadow: 0 4px 12px rgba(55, 114, 255, 0.4); flex: 0 0 auto; }
+        .nav-icon { font-size: 1.1rem; z-index: 2; }
+        .nav-text { font-size: 0.75rem; font-weight: 900; margin-left: 6px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px; z-index: 2; }
+        .unread-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; background: var(--rose); border-radius: 50%; box-shadow: 0 0 8px var(--rose); animation: pulse-red 2s infinite; z-index: 3; }
+        
+        .speler-header { display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center; font-size: 1.2rem; font-weight: 900; color: rgba(255, 255, 255, 0.95); margin: -10px 0 20px 0; text-shadow: 1px 1px 0px var(--magenta); letter-spacing: 0.5px; text-transform: uppercase; }
+        .avatar-icon { font-size: 1.3rem; margin-top: -3px; }
+        
+        .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
         .info-content { background: rgba(255,255,255,0.9); padding: 15px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; margin-bottom: 20px; border-left: 4px solid var(--magenta); line-height: 1.5; }
         .admin-btn { background: #111827; color: #fff; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 900; cursor: pointer; font-size: 0.8rem; margin: 0 auto 15px; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-
-        /* NIEUW: Inlog titel */
-        .login-title {
-          font-family: 'Bebas Neue', sans-serif;
-          color: var(--crayola);
-          text-align: center;
-          font-size: 2.5rem;
-          margin: 0 0 20px 0;
-          letter-spacing: 1px;
-        }
-
-        .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; font-weight: 800; font-size: 1rem; margin-bottom: 15px; outline: none; transition: 0.2s; }
+        
+        .login-title { font-family: 'Bebas Neue', sans-serif; color: var(--crayola); text-align: center; font-size: 2.5rem; margin: 0 0 20px 0; letter-spacing: 1px; }
+        .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; font-weight: 800; font-size: 1rem; margin-bottom: 15px; outline: none; transition: 0.2s; box-sizing: border-box; }
         .full-input::placeholder { text-align: center; color: #ADB5BD; font-weight: 700; }
         .full-input:focus { border-color: var(--crayola); box-shadow: 0 0 0 4px rgba(55, 114, 255, 0.1); }
-        .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); transition: 0.2s; margin-top: 15px; }
+        .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); transition: 0.2s; margin-top: 15px; display: block; box-sizing: border-box; }
         .btn-primary:active { transform: scale(0.98); }
-
-        .rule-item { display: flex; justify(content: space-between; border-bottom: 1px dashed #EEE; padding: 4px 0; font-weight: 800; }
-
+        
+        .rule-item { display: flex; justify-content: space-between; border-bottom: 1px dashed #EEE; padding: 4px 0; font-weight: 800; }
+        
         @keyframes background-fade { 0%, 100% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } }
         @keyframes blob-movement-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(50px, 80px) scale(1.1); } }
         @keyframes blob-movement-b { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-40px, -60px) scale(0.9); } }
         @keyframes title-glow { 0%, 100% { text-shadow: 3px 3px 0px var(--magenta); } 50% { text-shadow: 3px 3px 20px rgba(240, 56, 255, 0.8), 3px 3px 0px var(--magenta); } }
-        
-        @keyframes slide-down {
-          0% { top: -50px; opacity: 0; }
-          100% { top: 20px; opacity: 1; }
-        }
-
-        .main-container { padding: 25px 15px 120px 15px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; min-height: 100vh; }
+        @keyframes slide-down { 0% { top: -50px; opacity: 0; } 100% { top: 20px; opacity: 1; } }
+        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 112, 157, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(239, 112, 157, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 112, 157, 0); } }
       `}</style>
 
       {/* TOAST POP-UP MELDING */}
@@ -601,9 +460,12 @@ export default function Home() {
       <div className="glass-card">
         <h1 className="title">WK 2026</h1>
 
-        {/* NIEUW: Toon speler naam indien ingelogd */}
+        {/* HERSTELD: Avatar in plaats van "Speler:" */}
         {actieveSpeler && (
-          <div className="speler-naam-titel">Speler: {actieveSpeler.naam}</div>
+          <div className="speler-header">
+            <span className="avatar-icon">👤</span>
+            <span>{actieveSpeler.naam}</span>
+          </div>
         )}
 
         <button className="info-toggle-btn" onClick={() => setInfoOpen(!infoOpen)}>
@@ -634,16 +496,33 @@ export default function Home() {
           <button onClick={syncMetSpreadsheet} className="admin-btn">🔄 {syncStatus || 'SYNC MET GOOGLE SHEETS'}</button>
         )}
 
-        {!isGesloten && actieveSpeler && <CountdownTimer tijdOver={tijdOver} />}
+        {/* HERSTELD: Ingebouwde Timer (Lost DagenUrenMinSec fout op) */}
+        {!isGesloten && actieveSpeler && (
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '25px' }}>
+            <div style={{ background: 'var(--crayola)', color: '#FFF', padding: '10px', borderRadius: '12px', minWidth: '55px', textAlign: 'center', boxShadow: '0 4px 10px rgba(55, 114, 255, 0.3)' }}>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.dagen}</div>
+              <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase' }}>Dagen</div>
+            </div>
+            <div style={{ background: 'var(--crayola)', color: '#FFF', padding: '10px', borderRadius: '12px', minWidth: '55px', textAlign: 'center', boxShadow: '0 4px 10px rgba(55, 114, 255, 0.3)' }}>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.uren}</div>
+              <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase' }}>Uren</div>
+            </div>
+            <div style={{ background: 'var(--magenta)', color: '#FFF', padding: '10px', borderRadius: '12px', minWidth: '55px', textAlign: 'center', boxShadow: '0 4px 10px rgba(240, 56, 255, 0.3)' }}>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.minuten}</div>
+              <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase' }}>Min</div>
+            </div>
+            <div style={{ background: 'var(--magenta)', color: '#FFF', padding: '10px', borderRadius: '12px', minWidth: '55px', textAlign: 'center', boxShadow: '0 4px 10px rgba(240, 56, 255, 0.3)' }}>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.seconden}</div>
+              <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase' }}>Sec</div>
+            </div>
+          </div>
+        )}
 
         {actieveSpeler ? (
           <div>
             {actieveTab === 'matchen' && <MatchenTab gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} />}
-
             {actieveTab === 'prijs' && <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />}
-
             {actieveTab === 'bonus' && <BonusTab winnaar={winnaar} setWinnaar={setWinnaar} hf={hf} setHf={setHf} meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} eindstation={eindstation} setEindstation={setEindstation} totaalGoals={totaalGoals} setTotaalGoals={setTotaalGoals} totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} />}
-
             {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} />}
             {actieveTab === 'ranking' && <RankingTab klassement={klassement} actieveSpeler={actieveSpeler} toggleBetaald={toggleBetaald} />}
             {actieveTab === 'tellers' && <TellersTab tellersData={tellersData} />}
@@ -654,37 +533,21 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          <div style={{width: '100%'}}>
-            <form onSubmit={isRegistreren ? handleRegistreer : handleLogin}>
-              {/* NIEUW: Klasse voor inlog titel */}
+          <div style={{width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
+            <form onSubmit={isRegistreren ? handleRegistreer : handleLogin} style={{width: '100%'}}>
               <h2 className="login-title">
                 {isRegistreren ? 'Nieuwe Speler' : 'INLOGGEN'}
               </h2>
-              
-              <input 
-                className="full-input" 
-                placeholder={isRegistreren ? "Voornaam + Familienaam" : "Je Naam"} 
-                value={ontgrendelNaam} 
-                onChange={e=>setOntgrendelNaam(e.target.value)} 
-              />
-              <input 
-                className="full-input" 
-                type="password" 
-                placeholder={isRegistreren ? "Kies een veilige pincode" : "Pincode"} 
-                value={invoerCode} 
-                onChange={e=>setInvoerCode(e.target.value)} 
-              />
-              
-              <button className="btn-primary" type="submit" style={{marginTop: '15px'}}> {/* updated style property for margin-top */}
+              <input className="full-input" placeholder={isRegistreren ? "Voornaam + Familienaam" : "Je Naam"} value={ontgrendelNaam} onChange={e=>setOntgrendelNaam(e.target.value)} />
+              <input className="full-input" type="password" placeholder={isRegistreren ? "Kies een veilige pincode" : "Pincode"} value={invoerCode} onChange={e=>setInvoerCode(e.target.value)} />
+              <button className="btn-primary" type="submit">
                 {isRegistreren ? 'ACCOUNT AANMAKEN' : 'HET VELD OP ⚽'}
               </button>
-              
               <p style={{color:'red', textAlign:'center', fontWeight:900, marginTop: '10px'}}>{status}</p>
             </form>
-
             <button 
               onClick={(e) => { e.preventDefault(); setIsRegistreren(!isRegistreren); setStatus(''); setOntgrendelNaam(''); setInvoerCode(''); }}
-              style={{width: '100%', background: 'transparent', border: 'none', color: '#6C757D', fontWeight: 900, marginTop: '10px', cursor: 'pointer', textDecoration: 'underline', padding: '10px'}} /* updated style property for margin-top */
+              style={{background: 'transparent', border: 'none', color: '#6C757D', fontWeight: 900, marginTop: '10px', cursor: 'pointer', textDecoration: 'underline', padding: '10px'}}
             >
               {isRegistreren ? 'Heb je al een account? Log in' : 'Nieuw hier? Maak een account aan'}
             </button>
