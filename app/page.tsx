@@ -388,24 +388,78 @@ export default function Home() {
         .timer-value { font-size: 1.5rem; line-height: 1.1; }
         .timer-label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.8; }
 
-        /* NIEUWE MENU STYLING MET FLEX-WRAP VOOR MOBIEL */
-        .tab-container {
-          display: flex; background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(15px); border-radius: 22px; padding: 6px;
-          margin-bottom: 25px; flex-wrap: wrap; justify-content: center; gap: 6px; border: 1px solid rgba(255, 255, 255, 0.1);
-          position: sticky; top: 10px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        /* DE NIEUWE MAGIC BOTTOM APP BAR */
+        .bottom-nav {
+          position: fixed;
+          bottom: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: rgba(17, 24, 39, 0.95);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255,255,255,0.15);
+          padding: 6px;
+          border-radius: 30px;
+          display: flex;
+          gap: 4px;
+          z-index: 1000;
+          box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+          width: 95%;
+          max-width: 420px;
+          justify-content: space-between;
         }
-        .tab {
-          flex: 1 1 calc(25% - 10px); min-width: 65px; max-width: 90px; text-align: center; padding: 8px 4px; font-size: 0.55rem; font-weight: 900;
-          border-radius: 14px; cursor: pointer; color: #9CA3AF; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          display: flex; flex-direction: column; align-items: center; gap: 4px; text-transform: uppercase; letter-spacing: 0.5px;
-        }
-        .tab-icon { font-size: 1.3rem; transition: transform 0.3s ease; }
-        .tab.active { background: var(--crayola); color: #FFF; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(55, 114, 255, 0.4); }
-        .tab.active .tab-icon { transform: scale(1.2); }
 
-        .unread-badge {
-          position: absolute; top: 8px; right: 15px; width: 8px; height: 8px; background: var(--rose);
-          border-radius: 50%; box-shadow: 0 0 10px var(--rose); animation: pulse-red 2s infinite;
+        .nav-item {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 42px;
+          border-radius: 21px;
+          cursor: pointer;
+          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          color: #9CA3AF;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .nav-item.inactive {
+          width: 42px;
+          background: transparent;
+        }
+
+        .nav-item.active {
+          background: var(--crayola);
+          color: white;
+          padding: 0 16px;
+          width: auto;
+          box-shadow: 0 4px 12px rgba(55, 114, 255, 0.4);
+        }
+
+        .nav-icon {
+          font-size: 1.1rem;
+          z-index: 2;
+        }
+
+        .nav-text {
+          font-size: 0.75rem;
+          font-weight: 900;
+          margin-left: 6px;
+          white-space: nowrap;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          z-index: 2;
+        }
+
+        .unread-dot {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          width: 8px;
+          height: 8px;
+          background: var(--rose);
+          border-radius: 50%;
+          box-shadow: 0 0 8px var(--rose);
+          animation: pulse-red 2s infinite;
+          z-index: 3;
         }
 
         .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
@@ -421,7 +475,9 @@ export default function Home() {
         @keyframes blob-movement-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(50px, 80px) scale(1.1); } }
         @keyframes blob-movement-b { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-40px, -60px) scale(0.9); } }
         @keyframes title-glow { 0%, 100% { text-shadow: 3px 3px 0px var(--magenta); } 50% { text-shadow: 3px 3px 20px rgba(240, 56, 255, 0.8), 3px 3px 0px var(--magenta); } }
-        .main-container { padding: 25px 15px 80px 15px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; }
+        
+        /* Extra padding onderaan zodat de dock de knoppen niet bedekt */
+        .main-container { padding: 25px 15px 120px 15px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; min-height: 100vh; }
       `}</style>
 
       {showConfetti && <div style={{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:999,textAlign:'center',fontSize:'5rem', pointerEvents:'none'}}>🎉🌟⚽</div>}
@@ -462,24 +518,6 @@ export default function Home() {
 
         {actieveSpeler ? (
           <div>
-            <div className="tab-container">
-              {[
-                {id:'ranking', i:'🏆', n:'Rank'},
-                {id:'matchen', i:'⚽', n:'Matchen'},
-                {id:'bonus', i:'💎', n:'Bonus'},
-                {id:'kleedkamer', i:'💬', n:'Chat'},
-                {id:'antwoorden', i:'👁️', n:'Antw.'},
-                {id:'tellers', i:'📊', n:'Data'},
-                {id:'prijs', i:'💰', n:'Prijzen'}
-              ].map(t => (
-                <div key={t.id} className={`tab ${actieveTab === t.id ? 'active' : ''}`} onClick={() => veranderTab(t.id)}>
-                  <span className="tab-icon">{t.i}</span>
-                  <span>{t.n}</span>
-                  {t.id === 'kleedkamer' && ongelezenBerichten && <span className="unread-badge" />}
-                </div>
-              ))}
-            </div>
-
             {actieveTab === 'matchen' && <MatchenTab gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} toggleJoker={toggleJoker} handleScore={handleScore} />}
 
             {actieveTab === 'prijs' && <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />}
@@ -491,7 +529,7 @@ export default function Home() {
             {actieveTab === 'tellers' && <TellersTab tellersData={tellersData} />}
             {actieveTab === 'kleedkamer' && <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} chatEindeRef={chatEindeRef} nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} />}
             
-            <div style={{textAlign:'center', marginTop:20}}>
+            <div style={{textAlign:'center', marginTop:30, paddingBottom: 20}}>
               <button style={{background:'none', border:'none', color:'#111827', fontWeight:900, cursor:'pointer', opacity: 0.6}} onClick={() => {localStorage.removeItem('wk_speler_id'); window.location.reload();}}>UITLOGGEN</button>
             </div>
           </div>
@@ -504,6 +542,35 @@ export default function Home() {
           </form>
         )}
       </div>
+
+      {/* MAGIC BOTTOM APP BAR - Drijft onderaan het scherm */}
+      {actieveSpeler && (
+        <div className="bottom-nav">
+          {[
+            {id:'ranking', i:'🏆', n:'Rank'},
+            {id:'matchen', i:'⚽', n:'Match'},
+            {id:'bonus', i:'💎', n:'Bonus'},
+            {id:'kleedkamer', i:'💬', n:'Chat'},
+            {id:'antwoorden', i:'👁️', n:'Antw'},
+            {id:'tellers', i:'📊', n:'Data'},
+            {id:'prijs', i:'💰', n:'Prijs'}
+          ].map(t => {
+            const isActive = actieveTab === t.id;
+            return (
+              <div 
+                key={t.id} 
+                className={`nav-item ${isActive ? 'active' : 'inactive'}`} 
+                onClick={() => veranderTab(t.id)}
+              >
+                <span className="nav-icon">{t.i}</span>
+                {isActive && <span className="nav-text">{t.n}</span>}
+                {t.id === 'kleedkamer' && ongelezenBerichten && !isActive && <span className="unread-dot" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
     </main>
   );
 }
