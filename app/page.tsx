@@ -4,9 +4,8 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { WK_LANDEN } from '../lib/data';
 
-// Componenten inladen
 import { CountdownTimer } from '../components/Shared';
-import MatchenTab from '../components/MatchenTab'; // NIEUW INGEKORT COMPONENT!
+import MatchenTab from '../components/MatchenTab';
 import BonusTab from '../components/BonusTab';
 import AntwoordenTab from '../components/AntwoordenTab';
 import RankingTab from '../components/RankingTab';
@@ -389,16 +388,15 @@ export default function Home() {
         .timer-value { font-size: 1.5rem; line-height: 1.1; }
         .timer-label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.8; }
 
+        /* NIEUWE MENU STYLING MET FLEX-WRAP VOOR MOBIEL */
         .tab-container {
           display: flex; background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(15px); border-radius: 22px; padding: 6px;
-          margin-bottom: 25px; overflow-x: auto; scrollbar-width: none; gap: 6px; border: 1px solid rgba(255, 255, 255, 0.1);
+          margin-bottom: 25px; flex-wrap: wrap; justify-content: center; gap: 6px; border: 1px solid rgba(255, 255, 255, 0.1);
           position: sticky; top: 10px; z-index: 100; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
-        .tab-container::-webkit-scrollbar { display: none; }
-
         .tab {
-          flex: 1; min-width: 85px; text-align: center; padding: 10px 5px; font-size: 0.6rem; font-weight: 900;
-          border-radius: 16px; cursor: pointer; color: #9CA3AF; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          flex: 1 1 calc(25% - 10px); min-width: 65px; max-width: 90px; text-align: center; padding: 8px 4px; font-size: 0.55rem; font-weight: 900;
+          border-radius: 14px; cursor: pointer; color: #9CA3AF; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           display: flex; flex-direction: column; align-items: center; gap: 4px; text-transform: uppercase; letter-spacing: 0.5px;
         }
         .tab-icon { font-size: 1.3rem; transition: transform 0.3s ease; }
