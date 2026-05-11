@@ -226,7 +226,6 @@ export default function Home() {
     const { data: v, error: vErr } = await supabase.from('match_voorspellingen').select('*');
     const { data: bonusV, error: bonusErr } = await supabase.from('toernooi_voorspellingen').select('*');
 
-    // DEZE REGEL LOST ALLE TYPESCRIPT "POSSIBLY NULL" ERRORS OP!
     if (sErr || mErr || vErr || bonusErr || !s || !m || !v || !bonusV) return;
 
     let liveGoals = 0, liveGeel = 0, liveRood = 0;
@@ -390,12 +389,15 @@ export default function Home() {
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@600;800;900&display=swap');
         :root { --crayola: #3772FF; --magenta: #F038FF; --rose: #EF709D; --lime: #E2EF70; --aqua: #70E4EF; }
         
+        /* DE BELANGRIJKSTE FIX VOOR MOBIEL OVERFLOWEN */
+        *, *::before, *::after { box-sizing: border-box; }
+
         html, body { margin: 0; padding: 0; width: 100%; min-height: 100%; font-family: 'Nunito', sans-serif; color: #111827; background: radial-gradient(circle at 30% 20%, var(--rose), transparent 30%), radial-gradient(circle at 70% 80%, var(--lime), transparent 30%), linear-gradient(135deg, var(--crayola), var(--aqua)); background-size: 200% 200%; animation: background-fade 10s ease-in-out infinite; overflow-x: hidden; }
         body::before, body::after { content: ''; position: fixed; border-radius: 50%; filter: blur(50px); opacity: 0.5; z-index: -1; pointer-events: none; }
         body::before { width: 400px; height: 400px; top: -100px; left: -100px; background: var(--magenta); animation: blob-movement-a 12s linear infinite; }
         body::after { width: 350px; height: 350px; bottom: -80px; right: -80px; background: var(--aqua); animation: blob-movement-b 15s linear infinite; }
         
-        .main-container { padding: 25px 15px 120px 15px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; box-sizing: border-box; min-height: 100vh; width: 100%; }
+        .main-container { padding: 25px 15px 120px 15px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; width: 100%; }
         
         .glass-card { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(15px); padding: 25px 20px; border-radius: 24px; width: 100%; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 3px solid rgba(255, 255, 255, 0.4); margin: 0 auto 20px auto; }
         
@@ -408,18 +410,18 @@ export default function Home() {
         .nav-text { font-size: 0.75rem; font-weight: 900; margin-left: 6px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px; z-index: 2; }
         .unread-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; background: var(--rose); border-radius: 50%; box-shadow: 0 0 8px var(--rose); animation: pulse-red 2s infinite; z-index: 3; }
         
-        .speler-header { display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center; font-size: 1.2rem; font-weight: 900; color: rgba(255, 255, 255, 0.95); margin: -10px 0 20px 0; text-shadow: 1px 1px 0px var(--magenta); letter-spacing: 0.5px; text-transform: uppercase; }
-        .avatar-icon { font-size: 1.3rem; margin-top: -3px; }
+        .speler-badge { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: rgba(255, 255, 255, 0.8); padding: 6px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: 900; color: var(--crayola); text-transform: uppercase; letter-spacing: 0.5px; border: 2px solid #FFF; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        .avatar-icon { font-size: 1.1rem; margin-top: -2px; }
         
         .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
         .info-content { background: rgba(255,255,255,0.9); padding: 15px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; margin-bottom: 20px; border-left: 4px solid var(--magenta); line-height: 1.5; }
         .admin-btn { background: #111827; color: #fff; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 900; cursor: pointer; font-size: 0.8rem; margin: 0 auto 15px; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         
         .login-title { font-family: 'Bebas Neue', sans-serif; color: var(--crayola); text-align: center; font-size: 2.5rem; margin: 0 0 20px 0; letter-spacing: 1px; }
-        .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; font-weight: 800; font-size: 1rem; margin-bottom: 15px; outline: none; transition: 0.2s; box-sizing: border-box; }
+        .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; font-weight: 800; font-size: 1rem; margin-bottom: 15px; outline: none; transition: 0.2s; }
         .full-input::placeholder { text-align: center; color: #ADB5BD; font-weight: 700; }
         .full-input:focus { border-color: var(--crayola); box-shadow: 0 0 0 4px rgba(55, 114, 255, 0.1); }
-        .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); transition: 0.2s; margin-top: 15px; display: block; box-sizing: border-box; }
+        .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); transition: 0.2s; margin-top: 5px; display: block; }
         .btn-primary:active { transform: scale(0.98); }
         
         .rule-item { display: flex; justify-content: space-between; border-bottom: 1px dashed #EEE; padding: 4px 0; font-weight: 800; }
@@ -460,11 +462,13 @@ export default function Home() {
       <div className="glass-card">
         <h1 className="title">WK 2026</h1>
 
-        {/* HERSTELD: Avatar in plaats van "Speler:" */}
+        {/* STRAKKE AVATAR BADGE */}
         {actieveSpeler && (
-          <div className="speler-header">
-            <span className="avatar-icon">👤</span>
-            <span>{actieveSpeler.naam}</span>
+          <div style={{ textAlign: 'center' }}>
+            <div className="speler-badge">
+              <span className="avatar-icon">👤</span>
+              <span>{actieveSpeler.naam}</span>
+            </div>
           </div>
         )}
 
@@ -496,24 +500,24 @@ export default function Home() {
           <button onClick={syncMetSpreadsheet} className="admin-btn">🔄 {syncStatus || 'SYNC MET GOOGLE SHEETS'}</button>
         )}
 
-        {/* HERSTELD: Ingebouwde Timer (Lost DagenUrenMinSec fout op) */}
+        {/* TIMER FLEXBOX FIX VOOR MOBIEL */}
         {!isGesloten && actieveSpeler && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '25px' }}>
-            <div style={{ background: 'var(--crayola)', color: '#FFF', padding: '10px', borderRadius: '12px', minWidth: '55px', textAlign: 'center', boxShadow: '0 4px 10px rgba(55, 114, 255, 0.3)' }}>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.dagen}</div>
-              <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase' }}>Dagen</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', marginBottom: '25px', width: '100%' }}>
+            <div style={{ flex: 1, background: 'var(--crayola)', color: '#FFF', padding: '10px 5px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 10px rgba(55, 114, 255, 0.3)' }}>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.6rem', lineHeight: 1 }}>{tijdOver.dagen}</div>
+              <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Dagen</div>
             </div>
-            <div style={{ background: 'var(--crayola)', color: '#FFF', padding: '10px', borderRadius: '12px', minWidth: '55px', textAlign: 'center', boxShadow: '0 4px 10px rgba(55, 114, 255, 0.3)' }}>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.uren}</div>
-              <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase' }}>Uren</div>
+            <div style={{ flex: 1, background: 'var(--crayola)', color: '#FFF', padding: '10px 5px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 10px rgba(55, 114, 255, 0.3)' }}>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.6rem', lineHeight: 1 }}>{tijdOver.uren}</div>
+              <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Uren</div>
             </div>
-            <div style={{ background: 'var(--magenta)', color: '#FFF', padding: '10px', borderRadius: '12px', minWidth: '55px', textAlign: 'center', boxShadow: '0 4px 10px rgba(240, 56, 255, 0.3)' }}>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.minuten}</div>
-              <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase' }}>Min</div>
+            <div style={{ flex: 1, background: 'var(--magenta)', color: '#FFF', padding: '10px 5px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 10px rgba(240, 56, 255, 0.3)' }}>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.6rem', lineHeight: 1 }}>{tijdOver.minuten}</div>
+              <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Min</div>
             </div>
-            <div style={{ background: 'var(--magenta)', color: '#FFF', padding: '10px', borderRadius: '12px', minWidth: '55px', textAlign: 'center', boxShadow: '0 4px 10px rgba(240, 56, 255, 0.3)' }}>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.seconden}</div>
-              <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase' }}>Sec</div>
+            <div style={{ flex: 1, background: 'var(--magenta)', color: '#FFF', padding: '10px 5px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 10px rgba(240, 56, 255, 0.3)' }}>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.6rem', lineHeight: 1 }}>{tijdOver.seconden}</div>
+              <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Sec</div>
             </div>
           </div>
         )}
