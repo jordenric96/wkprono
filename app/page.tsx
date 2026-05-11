@@ -25,7 +25,14 @@ export default function Home() {
   const [actieveTab, setActieveTab] = useState('ranking');
   const [filterRonde, setFilterRonde] = useState('Alle');
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
+  
+  // Nieuwe state voor de Pop-up (Toast)
+  const [toast, setToast] = useState<{naam: string, bericht: string} | null>(null);
+
+  // Refs zodat de live-database verbinding altijd de juiste data ziet
   const actieveTabRef = useRef(actieveTab);
+  const actieveSpelerRef = useRef(actieveSpeler);
+  const alleSpelersRef = useRef(alleSpelers);
 
   const [infoOpen, setInfoOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState('');
@@ -64,8 +71,12 @@ export default function Home() {
     if (tab === 'kleedkamer') setOngelezenBerichten(false);
   };
 
+  // Sync state variables to refs
+  useEffect(() => { actieveTabRef.current = actieveTab; }, [actieveTab]);
+  useEffect(() => { actieveSpelerRef.current = actieveSpeler; }, [actieveSpeler]);
+  useEffect(() => { alleSpelersRef.current = alleSpelers; }, [alleSpelers]);
+
   useEffect(() => {
-    actieveTabRef.current = actieveTab;
     const opgeslagenId = localStorage.getItem('wk_speler_id');
     haalSpelersOp(opgeslagenId);
     
@@ -84,9 +95,31 @@ export default function Home() {
       }
     }, 1000);
 
-    const chatSub = supabase.channel('chat').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kleedkamer' }, () => {
+    const chatSub = supabase.channel('chat').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kleedkamer' }, (payload) => {
       haalChatOp();
-      if (actieveTabRef.current !== 'kleedkamer') setOngelezenBerichten(true);
+      
+      // ALs je niet in de chat zit...
+      if (actieveTabRef.current !== 'kleedkamer') {
+        setOngelezenBerichten(true);
+
+        // ...En het bericht is NIET van jouzelf
+        if (payload.new.speler_id !== actieveSpelerRef.current?.id) {
+          
+          // Zoek op wie het verstuurd heeft
+          const afzender = alleSpelersRef.current.find(s => s.id === payload.new.speler_id);
+          const afzenderNaam = afzender ? afzender.naam.split(' ')[0] : 'Nieuw bericht';
+          
+          // Toon pop-up en speel geluidje
+          setToast({ naam: afzenderNaam, bericht: payload.new.bericht });
+          try {
+            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+            audio.play();
+          } catch(e) {} // Failsafe voor sommige browsers die autoplay blokkeren
+
+          // Verberg pop-up na 4.5 seconden
+          setTimeout(() => setToast(null), 4500); 
+        }
+      }
     }).subscribe();
 
     return () => { clearInterval(klokInterval); supabase.removeChannel(chatSub); };
@@ -375,22 +408,22 @@ export default function Home() {
         .timer-value { font-size: 1.5rem; line-height: 1.1; }
         .timer-label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.8; }
 
-      /* DE NIEUWE MAGIC BOTTOM APP BAR */
+        /* DE NIEUWE MAGIC BOTTOM APP BAR MET FROSTED GLASS */
         .bottom-nav {
           position: fixed;
           bottom: 20px;
           left: 50%;
           transform: translateX(-50%);
-          background: rgba(255, 255, 255, 0.4); /* 👈 Lichte glas-look met 40% transparantie */
+          background: rgba(255, 255, 255, 0.4);
           backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px); /* Zorgt dat blur ook op iPhones werkt */
-          border: 1px solid rgba(255, 255, 255, 0.7); /* Subtiel wit randje */
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.7);
           padding: 6px;
           border-radius: 30px;
           display: flex;
           gap: 4px;
           z-index: 1000;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.1); /* Zachtere, chiquere schaduw */
+          box-shadow: 0 10px 40px rgba(0,0,0,0.1);
           width: 95%;
           max-width: 420px;
           justify-content: space-between;
@@ -404,7 +437,7 @@ export default function Home() {
           border-radius: 21px;
           cursor: pointer;
           transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-          color: #495057; /* 👈 Iets donkerder grijs voor perfect contrast op het glas */
+          color: #495057;
           position: relative;
           overflow: hidden;
         }
@@ -464,8 +497,37 @@ export default function Home() {
         @keyframes blob-movement-b { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-40px, -60px) scale(0.9); } }
         @keyframes title-glow { 0%, 100% { text-shadow: 3px 3px 0px var(--magenta); } 50% { text-shadow: 3px 3px 20px rgba(240, 56, 255, 0.8), 3px 3px 0px var(--magenta); } }
         
+        /* Slide down animatie voor de notificatie Toast */
+        @keyframes slide-down {
+          0% { top: -50px; opacity: 0; }
+          100% { top: 20px; opacity: 1; }
+        }
+
         .main-container { padding: 25px 15px 120px 15px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; min-height: 100vh; }
       `}</style>
+
+      {/* TOAST POP-UP MELDING */}
+      {toast && (
+        <div 
+          onClick={() => { setActieveTab('kleedkamer'); setToast(null); }}
+          style={{
+            position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+            background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)',
+            padding: '12px 16px', borderRadius: '16px', zIndex: 9999,
+            boxShadow: '0 10px 30px rgba(0,0,0,0.15)', display: 'flex', gap: '12px',
+            alignItems: 'center', width: '90%', maxWidth: '350px', cursor: 'pointer',
+            border: '2px solid rgba(240, 56, 255, 0.3)', animation: 'slide-down 0.4s ease-out'
+          }}
+        >
+          <div style={{ background: 'linear-gradient(135deg, var(--crayola), var(--magenta))', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+            💬
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <span style={{ fontWeight: 900, color: '#111827', fontSize: '0.8rem', marginBottom: '2px' }}>{toast.naam}</span>
+            <span style={{ color: '#6C757D', fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 800 }}>{toast.bericht}</span>
+          </div>
+        </div>
+      )}
 
       {showConfetti && <div style={{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:999,textAlign:'center',fontSize:'5rem', pointerEvents:'none'}}>🎉🌟⚽</div>}
 
@@ -504,7 +566,7 @@ export default function Home() {
 
         {actieveSpeler ? (
           <div>
-           {actieveTab === 'matchen' && <MatchenTab gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} />}
+            {actieveTab === 'matchen' && <MatchenTab gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} />}
 
             {actieveTab === 'prijs' && <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />}
 
