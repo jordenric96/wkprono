@@ -19,7 +19,7 @@ export default function Home() {
   const [ontgrendelNaam, setOntgrendelNaam] = useState('');
   const [invoerCode, setInvoerCode] = useState('');
   const [status, setStatus] = useState('');
-  const [isRegistreren, setIsRegistreren] = useState(false); // NIEUW: Toggle tussen Inloggen en Registreren
+  const [isRegistreren, setIsRegistreren] = useState(false);
   
   const [actieveSpeler, setActieveSpeler] = useState<any>(null);
   const [alleSpelers, setAlleSpelers] = useState<any[]>([]); 
@@ -119,11 +119,10 @@ export default function Home() {
 
   useEffect(() => {
     if (actieveSpeler) {
-      if (actieveTab === 'matchen') haalMatchenOp();
+      if (actieveTab === 'matchen' && actieveTab === 'ranking' && actieveTab === 'prijs' && actieveTab === 'kleedkamer' && actieveTab === 'antwoorden') {
+        haalMatchenOp(); haalKlassementOp(); haalChatOp(); haalAlleAntwoordenOp();
+      }
       if (actieveTab === 'bonus') haalToernooiVoorspellingOp();
-      if (actieveTab === 'ranking' || actieveTab === 'prijs') haalKlassementOp();
-      if (actieveTab === 'kleedkamer') haalChatOp();
-      if (actieveTab === 'antwoorden') haalAlleAntwoordenOp();
     }
   }, [actieveSpeler, actieveTab]);
 
@@ -338,7 +337,6 @@ export default function Home() {
     if (!error) { setNieuwBericht(''); haalChatOp(); }
   };
 
-  // LOGICA VOOR INLOGGEN
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const naam = ontgrendelNaam.trim();
@@ -359,7 +357,6 @@ export default function Home() {
     }
   };
 
-  // LOGICA VOOR REGISTREREN
   const handleRegistreer = async (e: React.FormEvent) => {
     e.preventDefault();
     const naam = ontgrendelNaam.trim();
@@ -447,9 +444,9 @@ export default function Home() {
           width: 100%; max-width: 500px; box-shadow: 0 20px 40px rgba(0,0,0,0.15); border: 3px solid rgba(255, 255, 255, 0.4); margin-bottom: 20px;
         }
 
-        .title { font-family: 'Bebas Neue', sans-serif; font-size: 4.5rem; text-align: center; color: #FFF; line-height: 1; text-shadow: 3px 3px 0px var(--magenta); margin: 0; animation: title-glow 3s linear infinite; }
+        .title { font-family: 'Bebas Neue', sans-serif; font-size: 4.5rem; text-align: center; color: #FFF; line-height: 1; text-shadow: 3px 3px 0px var(--magenta); margin: 0 0 15px 0; animation: title-glow 3s linear infinite; }
         
-        .timer { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+        .timer { display: flex; justify(content: center; gap: 10px; margin-bottom: 25px; }
         .timer-box { background: var(--magenta); color: #FFF; padding: 8px 12px; border-radius: 12px; text-align: center; font-weight: 900; box-shadow: 0 4px 10px rgba(240, 56, 255, 0.3); }
         .timer-value { font-size: 1.5rem; line-height: 1.1; }
         .timer-label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.8; }
@@ -477,7 +474,7 @@ export default function Home() {
         .nav-item {
           display: flex;
           align-items: center;
-          justify-content: center;
+          justify(content: center;
           height: 42px;
           border-radius: 21px;
           cursor: pointer;
@@ -528,16 +525,39 @@ export default function Home() {
           z-index: 3;
         }
 
-        .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
+        /* NIEUW: Speler naam titel */
+        .speler-naam-titel {
+          text-align: center;
+          font-size: 1.1rem;
+          font-weight: 800;
+          color: rgba(255, 255, 255, 0.9);
+          margin: -10px 0 20px 0;
+          text-shadow: 1px 1px 0px var(--magenta);
+          letter-spacing: 0.5px;
+          text-transform: uppercase;
+        }
+
+        .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 20px; display: flex; justify(content: space-between; align-items: center; transition: 0.2s; }
         .info-content { background: rgba(255,255,255,0.9); padding: 15px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; margin-bottom: 20px; border-left: 4px solid var(--magenta); line-height: 1.5; }
         .admin-btn { background: #111827; color: #fff; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 900; cursor: pointer; font-size: 0.8rem; margin: 0 auto 15px; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
 
-        .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; font-weight: 800; font-size: 1rem; margin-bottom: 10px; outline: none; transition: 0.2s; }
+        /* NIEUW: Inlog titel */
+        .login-title {
+          font-family: 'Bebas Neue', sans-serif;
+          color: var(--crayola);
+          text-align: center;
+          font-size: 2.5rem;
+          margin: 0 0 20px 0;
+          letter-spacing: 1px;
+        }
+
+        .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; font-weight: 800; font-size: 1rem; margin-bottom: 15px; outline: none; transition: 0.2s; }
+        .full-input::placeholder { text-align: center; color: #ADB5BD; font-weight: 700; }
         .full-input:focus { border-color: var(--crayola); box-shadow: 0 0 0 4px rgba(55, 114, 255, 0.1); }
-        .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); transition: 0.2s; }
+        .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); transition: 0.2s; margin-top: 15px; }
         .btn-primary:active { transform: scale(0.98); }
 
-        .rule-item { display: flex; justify-content: space-between; border-bottom: 1px dashed #EEE; padding: 4px 0; font-weight: 800; }
+        .rule-item { display: flex; justify(content: space-between; border-bottom: 1px dashed #EEE; padding: 4px 0; font-weight: 800; }
 
         @keyframes background-fade { 0%, 100% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } }
         @keyframes blob-movement-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(50px, 80px) scale(1.1); } }
@@ -579,6 +599,11 @@ export default function Home() {
 
       <div className="glass-card">
         <h1 className="title">WK 2026</h1>
+
+        {/* NIEUW: Toon speler naam indien ingelogd */}
+        {actieveSpeler && (
+          <div className="speler-naam-titel">Speler: {actieveSpeler.naam}</div>
+        )}
 
         <button className="info-toggle-btn" onClick={() => setInfoOpen(!infoOpen)}>
           <span>📋 Spelregels & Betalen</span>
@@ -630,7 +655,8 @@ export default function Home() {
         ) : (
           <div style={{width: '100%'}}>
             <form onSubmit={isRegistreren ? handleRegistreer : handleLogin}>
-              <h2 style={{fontFamily: 'Bebas Neue', color: 'var(--crayola)', textAlign: 'center', fontSize: '2.5rem', margin: '0 0 15px 0', letterSpacing: '1px'}}>
+              {/* NIEUW: Klasse voor inlog titel */}
+              <h2 className="login-title">
                 {isRegistreren ? 'Nieuwe Speler' : 'INLOGGEN'}
               </h2>
               
@@ -648,7 +674,7 @@ export default function Home() {
                 onChange={e=>setInvoerCode(e.target.value)} 
               />
               
-              <button className="btn-primary" type="submit" style={{marginTop: '10px'}}>
+              <button className="btn-primary" type="submit" style={{marginTop: '15px'}}> {/* updated style property for margin-top */}
                 {isRegistreren ? 'ACCOUNT AANMAKEN' : 'HET VELD OP ⚽'}
               </button>
               
@@ -657,7 +683,7 @@ export default function Home() {
 
             <button 
               onClick={(e) => { e.preventDefault(); setIsRegistreren(!isRegistreren); setStatus(''); setOntgrendelNaam(''); setInvoerCode(''); }}
-              style={{width: '100%', background: 'transparent', border: 'none', color: '#6C757D', fontWeight: 900, marginTop: '5px', cursor: 'pointer', textDecoration: 'underline', padding: '10px'}}
+              style={{width: '100%', background: 'transparent', border: 'none', color: '#6C757D', fontWeight: 900, marginTop: '10px', cursor: 'pointer', textDecoration: 'underline', padding: '10px'}} /* updated style property for margin-top */
             >
               {isRegistreren ? 'Heb je al een account? Log in' : 'Nieuw hier? Maak een account aan'}
             </button>
