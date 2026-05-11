@@ -4,7 +4,7 @@ import { parseTeam } from '../lib/helpers';
 
 export default function MatchenTab({
   gefilterdeMatchen, nu, matchVoorspellingen, matchSaveStatus, alleMatchVoorspellingen,
-  alleSpelers, expandedMatchId, setExpandedMatchId, toggleJoker, handleScore
+  alleSpelers, expandedMatchId, setExpandedMatchId, handleScore
 }: any) {
 
   const formatMatchDate = (dateString: string) => {
@@ -35,7 +35,7 @@ export default function MatchenTab({
     <div>
       {gefilterdeMatchen.map((m: any) => {
         const gestart = nu > new Date(m.datum).getTime();
-        const v = matchVoorspellingen[m.id] || { thuis: '', uit: '', joker: false };
+        const v = matchVoorspellingen[m.id] || { thuis: '', uit: '' };
         const save = matchSaveStatus[m.id] || 'idle';
         const pVoorMatch = alleMatchVoorspellingen.filter((av: any) => av.match_id === m.id);
         const heeftUitslag = m.thuis_score !== null;
@@ -62,15 +62,6 @@ export default function MatchenTab({
                   {heeftUitslag ? '🏆 EINDSTAND' : (gestart ? '🔒 GESLOTEN' : getMatchCountdown(m.datum))}
                 </span>
               </div>
-
-              <button onClick={(e) => { e.stopPropagation(); if(!gestart) toggleJoker(m.id); }} disabled={gestart}
-                style={{
-                  background: v.joker ? '#FFD700' : '#FFFFFF', color: v.joker ? '#000' : '#111827', border: v.joker ? '2px solid #E6C200' : '2px solid #DEE2E6',
-                  borderRadius: '20px', padding: '6px 12px', fontSize: '0.7rem', fontWeight: 900, cursor: gestart ? 'not-allowed' : 'pointer',
-                  boxShadow: v.joker ? '0 4px 10px rgba(255, 215, 0, 0.4)' : '0 2px 5px rgba(0,0,0,0.05)', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '4px'
-                }}>
-                {v.joker ? '🌟 JOKER ACTIEF' : '⭐ GEBRUIK JOKER'}
-              </button>
             </div>
 
             {/* Eventuele officiële uitslag */}
@@ -135,7 +126,7 @@ export default function MatchenTab({
                 <div style={{ fontWeight: 900, color: '#3772FF', fontSize: '0.75rem', marginBottom: '10px', borderBottom: '2px solid #DEE2E6', paddingBottom: '5px' }}>IEDEREENS VOORSPELLING</div>
                 {pVoorMatch.map((av: any) => (
                   <div key={av.id} style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '0.85rem', padding: '6px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-                    <span>{av.spelers?.naam} {av.gouden_bal ? '🌟' : ''}</span>
+                    <span>{av.spelers?.naam}</span>
                     <span style={{ color: '#F038FF', fontFamily: 'Bebas Neue', fontSize: '1.2rem' }}>{av.thuis_score} - {av.uit_score}</span>
                   </div>
                 ))}

@@ -32,7 +32,7 @@ export default function Home() {
   const isAdmin = actieveSpeler?.naam?.toLowerCase() === 'jorden ricour'.toLowerCase();
 
   const [matchen, setMatchen] = useState<any[]>([]);
-  const [matchVoorspellingen, setMatchVoorspellingen] = useState<Record<number, {thuis: string, uit: string, joker: boolean}>>({});
+  const [matchVoorspellingen, setMatchVoorspellingen] = useState<Record<number, {thuis: string, uit: string}>>({});
   const [alleMatchVoorspellingen, setAlleMatchVoorspellingen] = useState<any[]>([]); 
   const [matchSaveStatus, setMatchSaveStatus] = useState<Record<number, 'idle' | 'saving' | 'saved'>>({});
   const [alleToernooiV, setAlleToernooiV] = useState<any[]>([]);
@@ -139,13 +139,13 @@ export default function Home() {
       const mijnV = vData.filter(v => v.speler_id === actieveSpeler.id);
       const obj: any = {};
       mijnV.forEach(v => {
-        obj[v.match_id] = { thuis: v.thuis_score?.toString() || '', uit: v.uit_score?.toString() || '', joker: v.gouden_bal };
+        obj[v.match_id] = { thuis: v.thuis_score?.toString() || '', uit: v.uit_score?.toString() || '' };
       });
       setMatchVoorspellingen(stateObj => ({...stateObj, ...obj}));
     }
   };
 
-  const triggerAutoSave = (mId: number, data: { thuis: string, uit: string, joker: boolean }) => {
+  const triggerAutoSave = (mId: number, data: { thuis: string, uit: string }) => {
     const m = matchen.find(x => x.id === mId);
     if (m && nu >= new Date(m.datum).getTime()) return;
     if (data.thuis === '' || data.uit === '') return;
@@ -153,7 +153,7 @@ export default function Home() {
     setMatchSaveStatus(prev => ({ ...prev, [mId]: 'saving' }));
     saveTimeoutRef.current[mId] = setTimeout(async () => {
       const { error } = await supabase.from('match_voorspellingen').upsert({
-        speler_id: actieveSpeler.id, match_id: mId, thuis_score: parseInt(data.thuis), uit_score: parseInt(data.uit), gouden_bal: data.joker
+        speler_id: actieveSpeler.id, match_id: mId, thuis_score: parseInt(data.thuis), uit_score: parseInt(data.uit)
       }, { onConflict: 'speler_id, match_id' });
       setMatchSaveStatus(prev => ({ ...prev, [mId]: error ? 'idle' : 'saved' }));
       if (!error) haalMatchenOp(); 
@@ -161,22 +161,10 @@ export default function Home() {
   };
 
   const handleScore = (mId: number, veld: 'thuis'|'uit', waarde: string) => {
-    const v = matchVoorspellingen[mId] || { thuis: '', uit: '', joker: false };
+    const v = matchVoorspellingen[mId] || { thuis: '', uit: '' };
     const newData = { ...v, [veld]: waarde };
     setMatchVoorspellingen(prev => ({ ...prev, [mId]: newData }));
     triggerAutoSave(mId, newData);
-  };
-
-  const toggleJoker = (mId: number) => {
-    setMatchVoorspellingen(prev => {
-      const isNuJoker = prev[mId]?.joker || false;
-      const nieuwStaat = { ...prev };
-      Object.keys(nieuwStaat).forEach(key => { if (nieuwStaat[Number(key)]) nieuwStaat[Number(key)].joker = false; });
-      const newData = { ...prev[mId], joker: !isNuJoker, thuis: prev[mId]?.thuis || '', uit: prev[mId]?.uit || '' };
-      nieuwStaat[mId] = newData;
-      triggerAutoSave(mId, newData);
-      return nieuwStaat;
-    });
   };
 
   const slaBonusOp = async () => {
@@ -277,11 +265,10 @@ export default function Home() {
         v.filter(vo => vo.speler_id === sp.id).forEach(vo => {
           const match = m.find(ma => ma.id === vo.match_id);
           if (match && match.thuis_score !== null) {
-            const fac = vo.gouden_bal ? 2 : 1;
             const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
             const pred = vo.thuis_score > vo.uit_score ? 1 : vo.thuis_score < vo.uit_score ? 2 : 0;
-            if (vo.thuis_score === match.thuis_score && vo.uit_score === match.uit_score) { pronoP += (3 * fac); ex++; }
-            else if (echt === pred) { pronoP += (1 * fac); wc++; }
+            if (vo.thuis_score === match.thuis_score && vo.uit_score === match.uit_score) { pronoP += 3; ex++; }
+            else if (echt === pred) { pronoP += 1; wc++; }
             else f++;
           }
         });
@@ -388,7 +375,6 @@ export default function Home() {
         .timer-value { font-size: 1.5rem; line-height: 1.1; }
         .timer-label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.8; }
 
-        /* DE NIEUWE MAGIC BOTTOM APP BAR */
         .bottom-nav {
           position: fixed;
           bottom: 20px;
@@ -476,7 +462,6 @@ export default function Home() {
         @keyframes blob-movement-b { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-40px, -60px) scale(0.9); } }
         @keyframes title-glow { 0%, 100% { text-shadow: 3px 3px 0px var(--magenta); } 50% { text-shadow: 3px 3px 20px rgba(240, 56, 255, 0.8), 3px 3px 0px var(--magenta); } }
         
-        /* Extra padding onderaan zodat de dock de knoppen niet bedekt */
         .main-container { padding: 25px 15px 120px 15px; display: flex; flex-direction: column; align-items: center; box-sizing: border-box; min-height: 100vh; }
       `}</style>
 
@@ -499,7 +484,6 @@ export default function Home() {
             <div className="rule-item"><span>Exacte uitslag juist</span><span>3 PT</span></div>
             <div className="rule-item"><span>Juiste winnaar / Gelijkspel</span><span>1 PT</span></div>
             <div className="rule-item"><span>Foute pronostiek</span><span>0 PT</span></div>
-            <p style={{fontSize:'0.7rem', marginTop:5}}><em>🌟 De Joker verdubbelt je punten voor die specifieke match!</em></p>
 
             <h3 style={{fontFamily:'Bebas Neue', fontSize:'1.5rem', color:'#40C057', marginTop:20, marginBottom:10}}>💎 PUNTEN BONUS</h3>
             <div className="rule-item"><span>Wereldkampioen juist</span><span>5 PT</span></div>
@@ -518,7 +502,7 @@ export default function Home() {
 
         {actieveSpeler ? (
           <div>
-            {actieveTab === 'matchen' && <MatchenTab gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} toggleJoker={toggleJoker} handleScore={handleScore} />}
+            {actieveTab === 'matchen' && <MatchenTab gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} />}
 
             {actieveTab === 'prijs' && <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />}
 
@@ -543,7 +527,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* MAGIC BOTTOM APP BAR - Drijft onderaan het scherm */}
       {actieveSpeler && (
         <div className="bottom-nav">
           {[
