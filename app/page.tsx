@@ -618,14 +618,15 @@ export default function Home() {
         {actieveSpeler ? (
           <div>
             <div className="tab-container">
-              {[
+              {[{id:'ranking', i:'🏆', n:'Rank'},
                 {id:'matchen', i:'⚽', n:'Matchen'},
                 {id:'bonus', i:'💎', n:'Bonus'},
-                {id:'prijs', i:'💰', n:'Prijzen'},
+                {id:'kleedkamer', i:'💬', n:'Chat'},
                 {id:'antwoorden', i:'👁️', n:'Antw.'},
-                {id:'ranking', i:'🏆', n:'Rank'},
+                
                 {id:'tellers', i:'📊', n:'Data'},
-                {id:'kleedkamer', i:'💬', n:'Chat'}
+                {id:'prijs', i:'💰', n:'Prijzen'}
+                
               ].map(t => (
                 <div key={t.id} className={`tab ${actieveTab === t.id ? 'active' : ''}`} onClick={() => veranderTab(t.id)}>
                   <span className="tab-icon">{t.i}</span>
