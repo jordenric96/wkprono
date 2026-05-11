@@ -119,10 +119,11 @@ export default function Home() {
 
   useEffect(() => {
     if (actieveSpeler) {
-      if (actieveTab === 'matchen' && actieveTab === 'ranking' && actieveTab === 'prijs' && actieveTab === 'kleedkamer' && actieveTab === 'antwoorden') {
-        haalMatchenOp(); haalKlassementOp(); haalChatOp(); haalAlleAntwoordenOp();
-      }
+      if (actieveTab === 'matchen') haalMatchenOp();
       if (actieveTab === 'bonus') haalToernooiVoorspellingOp();
+      if (actieveTab === 'ranking' || actieveTab === 'prijs') haalKlassementOp();
+      if (actieveTab === 'kleedkamer') haalChatOp();
+      if (actieveTab === 'antwoorden') haalAlleAntwoordenOp();
     }
   }, [actieveSpeler, actieveTab]);
 
