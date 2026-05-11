@@ -21,7 +21,7 @@ export default function Home() {
   
   const [actieveSpeler, setActieveSpeler] = useState<any>(null);
   const [alleSpelers, setAlleSpelers] = useState<any[]>([]); 
-  const [actieveTab, setActieveTab] = useState('matchen');
+  const [actieveTab, setActieveTab] = useState('ranking');
   const [filterRonde, setFilterRonde] = useState('Alle');
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
   const actieveTabRef = useRef(actieveTab);
@@ -218,7 +218,6 @@ export default function Home() {
     const { data: bonusV } = await supabase.from('toernooi_voorspellingen').select('*');
 
     if (s && m && v) {
-      // 1. DE APP LEEST LIVE HET TOERNOOI UIT
       let liveGoals = 0, liveGeel = 0, liveRood = 0;
       const teamGoalsVoor: Record<string, number> = {};
       const teamGoalsTegen: Record<string, number> = {};
@@ -255,7 +254,6 @@ export default function Home() {
       const minTegen = gespeeldeTeams.length > 0 ? Math.min(...Object.values(teamGoalsTegen)) : -1;
       const bestDefenses = Object.keys(teamGoalsTegen).filter(t => teamGoalsTegen[t] === minTegen && minTegen >= 0);
 
-      // 2. WIE ZIT ER HET DICHTSTE BIJ DE GETALLEN?
       let winnaarsGoals: any[] = [], winnaarsGeel: any[] = [], winnaarsRood: any[] = [];
       
       if (bonusV && bonusV.length > 0) {
@@ -272,7 +270,6 @@ export default function Home() {
         winnaarsRood = diffR.filter(x => x.d === minR).map(x => x.id);
       }
 
-      // 3. PUNTEN UITDELEN AAN DE SPELERS (MET BREAKDOWN)
       const stats = s.map(sp => {
         let pronoP = 0, bonusP = 0, ex = 0, wc = 0, f = 0;
         
@@ -288,17 +285,14 @@ export default function Home() {
           }
         });
 
-        // Automatische Bonus Punten Breakdown
         const bv = bonusV?.find(b => b.speler_id === sp.id);
         const breakdown: {label: string, pt: number}[] = [];
         
         if (bv) {
-          // Getallen Schifting (Live)
           if (winnaarsGoals.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Totaal Goals', pt: 5}); }
           if (winnaarsGeel.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Gele Kaarten', pt: 5}); }
           if (winnaarsRood.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Rode Kaarten', pt: 5}); }
 
-          // Landen
           if (wkWinnaar && bv.winnaar === wkWinnaar) { bonusP += 5; breakdown.push({label: 'Wereldkampioen Juist', pt: 5}); }
           if (topScorers.includes(bv.topschutter)) { bonusP += 3; breakdown.push({label: 'Beste Aanval', pt: 3}); }
           if (bestDefenses.includes(bv.beste_keeper)) { bonusP += 3; breakdown.push({label: 'Beste Verdediging', pt: 3}); }
@@ -592,7 +586,7 @@ export default function Home() {
         {infoOpen && (
           <div className="info-content">
             <h3 style={{fontFamily:'Bebas Neue', fontSize:'1.5rem', color:'var(--crayola)', marginBottom:10}}>💰 DEELNAME & PRIJZEN</h3>
-            <p>Deelname kost <strong>€10</strong>. Betalen via overschrijving naar <strong>BE85 0018 2075 8506 </strong> met vermelding van naam + WK2026. De volledige pot wordt verdeeld onder de winnaars!</p>
+            <p>Deelname kost <strong>€10</strong>. Betalen via overschrijving naar <strong>BE85 0018 2075 8506</strong> met vermelding van <strong>naam + WK2026</strong>. De volledige pot wordt verdeeld onder de winnaars!</p>
             
             <h3 style={{fontFamily:'Bebas Neue', fontSize:'1.5rem', color:'var(--magenta)', marginTop:20, marginBottom:10}}>⚽ PUNTEN MATCHEN</h3>
             <div className="rule-item"><span>Exacte uitslag juist</span><span>3 PT</span></div>
@@ -618,15 +612,14 @@ export default function Home() {
         {actieveSpeler ? (
           <div>
             <div className="tab-container">
-              {[{id:'ranking', i:'🏆', n:'Rank'},
+              {[
+                {id:'ranking', i:'🏆', n:'Rank'},
                 {id:'matchen', i:'⚽', n:'Matchen'},
                 {id:'bonus', i:'💎', n:'Bonus'},
                 {id:'kleedkamer', i:'💬', n:'Chat'},
                 {id:'antwoorden', i:'👁️', n:'Antw.'},
-                
                 {id:'tellers', i:'📊', n:'Data'},
                 {id:'prijs', i:'💰', n:'Prijzen'}
-                
               ].map(t => (
                 <div key={t.id} className={`tab ${actieveTab === t.id ? 'active' : ''}`} onClick={() => veranderTab(t.id)}>
                   <span className="tab-icon">{t.i}</span>
