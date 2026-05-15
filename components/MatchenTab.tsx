@@ -2,22 +2,6 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 
-// --- HARDE GROEPSINDELING (LowerCase voor absolute veiligheid) ---
-const WK_GROEPEN: Record<string, string> = {
-  'mexico': 'Groep A', 'zuid-afrika': 'Groep A', 'zuid-korea': 'Groep A', 'tsjechië': 'Groep A',
-  'canada': 'Groep B', 'qatar': 'Groep B', 'zwitserland': 'Groep B', 'bosnië': 'Groep B',
-  'brazilië': 'Groep C', 'marokko': 'Groep C', 'haïti': 'Groep C', 'schotland': 'Groep C',
-  'verenigde staten': 'Groep D', 'paraguay': 'Groep D', 'australië': 'Groep D', 'turkije': 'Groep D',
-  'duitsland': 'Groep E', 'curaçao': 'Groep E', 'ivoorkust': 'Groep E', 'ecuador': 'Groep E',
-  'nederland': 'Groep F', 'japan': 'Groep F', 'tunesië': 'Groep F', 'zweden': 'Groep F',
-  'belgië': 'Groep G', 'egypte': 'Groep G', 'iran': 'Groep G', 'nieuw-zeeland': 'Groep G',
-  'spanje': 'Groep H', 'kaapverdië': 'Groep H', 'saudi-arabië': 'Groep H', 'uruguay': 'Groep H',
-  'frankrijk': 'Groep I', 'senegal': 'Groep I', 'noorwegen': 'Groep I', 'irak': 'Groep I',
-  'argentinië': 'Groep J', 'algerije': 'Groep J', 'oostenrijk': 'Groep J', 'jordanië': 'Groep J',
-  'portugal': 'Groep K', 'oezbekistan': 'Groep K', 'colombia': 'Groep K', 'congo': 'Groep K',
-  'engeland': 'Groep L', 'kroatië': 'Groep L', 'ghana': 'Groep L', 'panama': 'Groep L'
-};
-
 // --- SLIMME VLAGGEN & KLEUREN GENERATOR ---
 const parseTeam = (teamString: string) => {
   if (!teamString) return { name: '', emoji: '🏳️', gradient: 'linear-gradient(135deg, #DEE2E6, #ADB5BD)' };
@@ -25,7 +9,6 @@ const parseTeam = (teamString: string) => {
   let cleanString = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
   let searchKey = cleanString.toLowerCase();
 
-  // Mega-vertalingsmap ZONDER dubbele sleutels (Senegal, Peru etc. staan er nu maar 1x in)
   const vertalingen: Record<string, string> = {
     'brazil': 'Brazilië', 'brazilië': 'Brazilië',
     'morocco': 'Marokko', 'marokko': 'Marokko',
@@ -202,53 +185,64 @@ export default function MatchenTab({
   handleScore, filterRonde, setFilterRonde
 }: any) {
   
-  const [geselecteerdTeam, setGeselecteerdTeam] = useState<string | null>(null);
+  const [geselecteerdTeamRaw, setGeselecteerdTeamRaw] = useState<string | null>(null);
 
   const rondes = ['Alle', 'Nog in te vullen', 'Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale'];
 
-  // --- GROEPSSTAND BEREKENEN ---
-  const genereerGroepsStand = (rawTeamNaam: string) => {
-    const targetNL = parseTeam(rawTeamNaam).name.toLowerCase();
-    const groepsNaam = WK_GROEPEN[targetNL];
-    if (!groepsNaam) return null;
+  // --- DYNAMISCH GROEPSSTAND BEREKENEN (GEGARANDEERD 4 TEAMS) ---
+  const genereerGroepsStand = (rawNaam: string) => {
+    // 1. Zoek alle groepsfase matchen van dit team in de DB
+    const groepsMatchenVanDitTeam = gefilterdeMatchen.filter((m: any) => 
+      m.ronde === 'Groepsfase' && (m.thuisploeg === rawNaam || m.uitploeg === rawNaam)
+    );
+    if (groepsMatchenVanDitTeam.length === 0) return null;
 
-    const teamsInGroepNL_lower = Object.keys(WK_GROEPEN).filter(t => WK_GROEPEN[t] === groepsNaam);
-    let stand = teamsInGroepNL_lower.map((t) => ({ team: t, ges: 0, w: 0, g: 0, v: 0, dv: 0, dt: 0, pt: 0 }));
-
-    const groepMatchen = gefilterdeMatchen.filter((m: any) => {
-      const thuisLower = parseTeam(m.thuisploeg).name.toLowerCase();
-      const uitLower = parseTeam(m.uitploeg).name.toLowerCase();
-      return teamsInGroepNL_lower.includes(thuisLower) && teamsInGroepNL_lower.includes(uitLower);
+    // 2. Haal de 4 teams uit de groep (Het team zelf + zijn 3 tegenstanders)
+    const teamsInDeGroep = new Set<string>();
+    teamsInDeGroep.add(rawNaam);
+    groepsMatchenVanDitTeam.forEach((m: any) => {
+      teamsInDeGroep.add(m.thuisploeg);
+      teamsInDeGroep.add(m.uitploeg);
     });
+    const groepsNamenArray = Array.from(teamsInDeGroep);
 
-    const gespeeldeMatchen = groepMatchen.filter((m: any) => m.thuis_score !== null && m.uit_score !== null);
-    
-    gespeeldeMatchen.forEach((m: any) => {
-      const thuisLower = parseTeam(m.thuisploeg).name.toLowerCase();
-      const uitLower = parseTeam(m.uitploeg).name.toLowerCase();
-      const thuis = stand.find(s => s.team === thuisLower);
-      const uit = stand.find(s => s.team === uitLower);
+    // 3. Haal nu ALLE matchen op tussen deze 4 specifieke teams
+    const alleGroepsMatchen = gefilterdeMatchen.filter((m: any) => 
+      m.ronde === 'Groepsfase' && 
+      groepsNamenArray.includes(m.thuisploeg) && 
+      groepsNamenArray.includes(m.uitploeg)
+    );
 
+    // 4. Initialiseer de stand
+    let stand = groepsNamenArray.map(t => ({ teamRaw: t, ges: 0, w: 0, g: 0, v: 0, dv: 0, dt: 0, pt: 0 }));
+
+    // 5. Punten berekenen
+    alleGroepsMatchen.filter((m: any) => m.thuis_score !== null && m.uit_score !== null).forEach((m: any) => {
+      const thuis = stand.find(s => s.teamRaw === m.thuisploeg);
+      const uit = stand.find(s => s.teamRaw === m.uitploeg);
       if (thuis && uit) {
         thuis.ges += 1; uit.ges += 1;
-        thuis.dv += m.thuis_score; thuis.dt += m.uit_score;
-        uit.dv += m.uit_score; uit.dt += m.thuis_score;
+        thuis.dv += Number(m.thuis_score); thuis.dt += Number(m.uit_score);
+        uit.dv += Number(m.uit_score); uit.dt += Number(m.thuis_score);
 
-        if (m.thuis_score > m.uit_score) { thuis.w += 1; thuis.pt += 3; uit.v += 1; }
-        else if (m.thuis_score < m.uit_score) { uit.w += 1; uit.pt += 3; thuis.v += 1; }
+        if (Number(m.thuis_score) > Number(m.uit_score)) { thuis.w += 1; thuis.pt += 3; uit.v += 1; }
+        else if (Number(m.thuis_score) < Number(m.uit_score)) { uit.w += 1; uit.pt += 3; thuis.v += 1; }
         else { thuis.g += 1; uit.g += 1; thuis.pt += 1; uit.pt += 1; }
       }
     });
 
+    // 6. Sorteren
     stand.sort((a, b) => {
       if (b.pt !== a.pt) return b.pt - a.pt;
       const dsA = a.dv - a.dt; const dsB = b.dv - b.dt;
       if (dsB !== dsA) return dsB - dsA;
       if (b.dv !== a.dv) return b.dv - a.dv;
-      return a.team.localeCompare(b.team);
+      return a.teamRaw.localeCompare(b.teamRaw);
     });
 
-    return { groepsNaam, stand };
+    // Haal groepsnaam op als die toevallig in de DB zit
+    const groepsNaamTonen = groepsMatchenVanDitTeam[0].groep || 'Groepsfase';
+    return { groepsNaamTonen, stand };
   };
 
   return (
@@ -259,12 +253,12 @@ export default function MatchenTab({
         @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        .stand-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-        .stand-table th { text-align: center; padding: 6px 4px; color: #ADB5BD; font-weight: 900; border-bottom: 2px solid #E9ECEF; }
+        .stand-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+        .stand-table th { text-align: center; padding: 4px 2px; color: #ADB5BD; font-weight: 900; border-bottom: 2px solid #E9ECEF; }
         .stand-table th:first-child { text-align: left; }
-        .stand-table td { padding: 8px 4px; text-align: center; font-weight: 900; color: #495057; border-bottom: 1px solid #F1F3F5; }
+        .stand-table td { padding: 6px 2px; text-align: center; font-weight: 900; color: #495057; border-bottom: 1px solid #F1F3F5; }
         .stand-table td:first-child { text-align: left; color: #111827; }
-        .stand-table tr.highlight td { background: rgba(55, 114, 255, 0.05); }
+        .stand-table tr.highlight td { background: rgba(55, 114, 255, 0.08); font-weight: 900; color: var(--crayola); }
       `}</style>
 
       {/* FILTER KNOPPEN */}
@@ -301,14 +295,12 @@ export default function MatchenTab({
 
           const thuisInfo = parseTeam(match.thuisploeg);
           const uitInfo = parseTeam(match.uitploeg);
-          
-          const matchGroep = match.ronde === 'Groepsfase' ? WK_GROEPEN[thuisInfo.name.toLowerCase()] : '';
 
           return (
             <div key={match.id} style={{ background: 'rgba(255, 255, 255, 0.95)', borderRadius: '16px', border: '2px solid #E9ECEF', boxShadow: '0 4px 15px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
               
               <div style={{ background: '#F8F9FA', padding: '8px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E9ECEF', fontSize: '0.7rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>
-                <span>{dateStr} • {timeStr} • {match.ronde} {matchGroep ? `(${matchGroep})` : ''}</span>
+                <span>{dateStr} • {timeStr} • {match.ronde} {match.groep ? `(${match.groep})` : ''}</span>
                 {saveStatus === 'saving' && <span style={{ color: 'var(--crayola)' }}>Opslaan... ⏳</span>}
                 {saveStatus === 'saved' && <span style={{ color: '#40C057' }}>Opgeslagen ✅</span>}
                 {isMatchGesloten && <span style={{ color: '#FA5252' }}>🔒 GESLOTEN</span>}
@@ -317,7 +309,7 @@ export default function MatchenTab({
               <div style={{ padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '5px' }}>
                 
                 <div 
-                  onClick={() => setGeselecteerdTeam(match.thuisploeg)}
+                  onClick={() => setGeselecteerdTeamRaw(match.thuisploeg)}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', transition: 'transform 0.2s' }}
                   onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                   onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
@@ -345,7 +337,7 @@ export default function MatchenTab({
                 </div>
 
                 <div 
-                  onClick={() => setGeselecteerdTeam(match.uitploeg)}
+                  onClick={() => setGeselecteerdTeamRaw(match.uitploeg)}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', transition: 'transform 0.2s' }}
                   onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                   onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
@@ -411,61 +403,56 @@ export default function MatchenTab({
         })
       )}
 
-      {/* TEAM DOSSIER POP-UP MET KLASSEMENT */}
-      {geselecteerdTeam && typeof document !== 'undefined' && ReactDOM.createPortal(
+      {/* TEAM DOSSIER POP-UP - COMPACTER & SLIMMER */}
+      {geselecteerdTeamRaw && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div 
-          onClick={() => setGeselecteerdTeam(null)} 
+          onClick={() => setGeselecteerdTeamRaw(null)} 
           style={{
             position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-            background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(5px)', 
-            zIndex: 999999, 
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '20px'
+            background: 'rgba(0, 0, 0, 0.65)', backdropFilter: 'blur(6px)', zIndex: 999999, 
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px'
           }}
         >
           <div 
             onClick={(e) => e.stopPropagation()} 
             style={{
-              background: '#FFF', width: '100%', maxWidth: '400px', maxHeight: '85vh',
-              borderRadius: '24px', padding: '25px 20px', boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
-              display: 'flex', flexDirection: 'column',
-              animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              background: '#FFF', width: '100%', maxWidth: '420px', maxHeight: '88vh',
+              borderRadius: '24px', padding: '20px', boxShadow: '0 15px 50px rgba(0,0,0,0.3)',
+              display: 'flex', flexDirection: 'column', animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
               overflowY: 'auto'
             }}
           >
-            {/* Header Pop-up */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {(() => {
-                  const teamData = parseTeam(geselecteerdTeam);
+                  const teamData = parseTeam(geselecteerdTeamRaw);
                   return (
                     <>
-                      <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: teamData.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #FFF', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
+                      <div style={{ width: '45px', height: '45px', borderRadius: '50%', background: teamData.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #FFF', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
+                        <div style={{ width: '35px', height: '35px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
                           {teamData.emoji}
                         </div>
                       </div>
                       <div>
-                        <h2 style={{ margin: 0, fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: 'var(--crayola)', lineHeight: 1 }}>{teamData.name}</h2>
-                        <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '1px' }}>Team Dossier & Statistieken</div>
+                        <h2 style={{ margin: 0, fontFamily: 'Bebas Neue', fontSize: '2rem', color: 'var(--crayola)', lineHeight: 1 }}>{teamData.name}</h2>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '1px' }}>Team Dossier & Statistieken</div>
                       </div>
                     </>
                   );
                 })()}
               </div>
-              <button onClick={() => setGeselecteerdTeam(null)} style={{ background: '#F1F3F5', border: 'none', width: '35px', height: '35px', borderRadius: '50%', fontSize: '1rem', fontWeight: 900, color: '#495057', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setGeselecteerdTeamRaw(null)} style={{ background: '#F1F3F5', border: 'none', width: '32px', height: '32px', borderRadius: '50%', fontSize: '0.9rem', fontWeight: 900, color: '#495057', cursor: 'pointer' }}>✕</button>
             </div>
 
-            {/* LIVE KLASSEMENT VAN DE GROEP */}
+            {/* LIVE KLASSEMENT (Strak & Compact) */}
             {(() => {
-              const groepData = genereerGroepsStand(geselecteerdTeam);
-              const geselecteerdeTeamNL = parseTeam(geselecteerdTeam).name.toLowerCase();
-              
+              const groepData = genereerGroepsStand(geselecteerdTeamRaw);
               if (groepData) {
                 return (
-                  <div style={{ marginBottom: '20px', background: '#F8F9FA', borderRadius: '16px', border: '1px solid #E9ECEF', padding: '12px', overflow: 'hidden' }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--magenta)', textTransform: 'uppercase', marginBottom: '8px' }}>
-                      📊 Stand {groepData.groepsNaam}
+                  <div style={{ marginBottom: '15px', background: '#F8F9FA', borderRadius: '12px', border: '1px solid #E9ECEF', padding: '10px' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--magenta)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                      📊 Stand {groepData.groepsNaamTonen}
                     </div>
                     <table className="stand-table">
                       <thead>
@@ -478,12 +465,12 @@ export default function MatchenTab({
                       </thead>
                       <tbody>
                         {groepData.stand.map((s, idx) => {
-                          const sInfo = parseTeam(s.team);
-                          const isHuidigTeam = s.team === geselecteerdeTeamNL;
+                          const sInfo = parseTeam(s.teamRaw);
+                          const isHuidigTeam = s.teamRaw === geselecteerdTeamRaw;
                           return (
-                            <tr key={s.team} className={isHuidigTeam ? 'highlight' : ''}>
+                            <tr key={s.teamRaw} className={isHuidigTeam ? 'highlight' : ''}>
                               <td>
-                                <span style={{ marginRight: '5px' }}>{idx + 1}.</span> 
+                                <span style={{ marginRight: '4px', opacity: 0.6 }}>{idx + 1}.</span> 
                                 {sInfo.emoji} <span style={{ fontWeight: isHuidigTeam ? 900 : 800 }}>{sInfo.name}</span>
                               </td>
                               <td>{s.ges}</td>
@@ -500,48 +487,48 @@ export default function MatchenTab({
               return null;
             })()}
 
-            {/* MATCHEN HISTORIEK */}
-            <div style={{ fontSize: '0.8rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '8px' }}>
-              ⚽ Gespeelde & Geplande Matchen
+            {/* MATCHEN HISTORIEK (Compacter) */}
+            <div style={{ fontSize: '0.75rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '6px' }}>
+              ⚽ Matchen overzicht
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {gefilterdeMatchen
-                .filter((m: any) => m.thuisploeg === geselecteerdTeam || m.uitploeg === geselecteerdTeam)
+                .filter((m: any) => m.thuisploeg === geselecteerdTeamRaw || m.uitploeg === geselecteerdTeamRaw)
                 .map((m: any) => {
                   const isGespeeld = m.thuis_score !== null;
-                  const isThuis = m.thuisploeg === geselecteerdTeam;
-                  const tegenstander = isThuis ? m.uitploeg : m.thuisploeg;
-                  const tegenstanderInfo = parseTeam(tegenstander);
+                  const isThuis = m.thuisploeg === geselecteerdTeamRaw;
+                  const tegenstanderRaw = isThuis ? m.uitploeg : m.thuisploeg;
+                  const tegenstanderInfo = parseTeam(tegenstanderRaw);
                   
                   let uitslagKleur = '#111827';
                   let statusIcoon = '⏳';
                   if (isGespeeld) {
-                    if ((isThuis && m.thuis_score > m.uit_score) || (!isThuis && m.uit_score > m.thuis_score)) { uitslagKleur = '#40C057'; statusIcoon = '🟢'; } 
-                    else if (m.thuis_score === m.uit_score) { uitslagKleur = '#228BE6'; statusIcoon = '➖'; } 
+                    if ((isThuis && Number(m.thuis_score) > Number(m.uit_score)) || (!isThuis && Number(m.uit_score) > Number(m.thuis_score))) { uitslagKleur = '#40C057'; statusIcoon = '🟢'; } 
+                    else if (Number(m.thuis_score) === Number(m.uit_score)) { uitslagKleur = '#228BE6'; statusIcoon = '➖'; } 
                     else { uitslagKleur = '#FA5252'; statusIcoon = '🔴'; } 
                   }
 
                   return (
-                    <div key={m.id} style={{ background: '#FFF', padding: '12px 15px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #E9ECEF' }}>
+                    <div key={m.id} style={{ background: '#FFF', padding: '10px 12px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #E9ECEF' }}>
                       <div>
-                        <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '2px' }}>
+                        <div style={{ fontSize: '0.6rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '2px' }}>
                           {new Date(m.datum).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' })} • {m.ronde}
                         </div>
-                        <div style={{ fontWeight: 900, fontSize: '1.05rem', color: '#111827', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '0.7rem', color: '#6C757D' }}>vs</span> {tegenstanderInfo.name} <span style={{fontSize: '1.2rem'}}>{tegenstanderInfo.emoji}</span>
+                        <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#111827', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <span style={{ fontSize: '0.65rem', color: '#6C757D' }}>vs</span> {tegenstanderInfo.name} <span style={{fontSize: '1rem'}}>{tegenstanderInfo.emoji}</span>
                         </div>
                       </div>
 
                       <div style={{ textAlign: 'right' }}>
                         {isGespeeld ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: uitslagKleur }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <span style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem', color: uitslagKleur }}>
                               {isThuis ? `${m.thuis_score} - ${m.uit_score}` : `${m.uit_score} - ${m.thuis_score}`}
                             </span>
-                            <span style={{ fontSize: '0.8rem' }}>{statusIcoon}</span>
+                            <span style={{ fontSize: '0.7rem' }}>{statusIcoon}</span>
                           </div>
                         ) : (
-                          <div style={{ background: '#F1F3F5', color: '#6C757D', padding: '4px 10px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase' }}>
+                          <div style={{ background: '#F1F3F5', color: '#6C757D', padding: '3px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase' }}>
                             Te spelen
                           </div>
                         )}
@@ -549,10 +536,6 @@ export default function MatchenTab({
                     </div>
                   );
                 })}
-              
-              <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 800 }}>
-                (Tip: Zet je filter op "Alle" om de hele historiek te zien).
-              </div>
             </div>
 
           </div>
