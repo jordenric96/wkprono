@@ -124,8 +124,9 @@ export default function MatchenTab({
                     </div>
                   )}
 
+                  {/* Hier zat het foutje: setExpandedId is nu correct setExpandedMatchId */}
                   <div 
-                    onClick={() => setExpandedId(isExpanded ? null : match.id)}
+                    onClick={() => setExpandedMatchId(isExpanded ? null : match.id)}
                     style={{ padding: '10px', textAlign: 'center', background: isExpanded ? '#FDF0FF' : 'transparent', color: 'var(--magenta)', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer', transition: '0.2s' }}
                   >
                     {isExpanded ? '▲ SLUIT VOORSPELLINGEN' : '👁️ KLIK OM VOORSPELLINGEN TE ZIEN'}
