@@ -140,6 +140,50 @@ export default function MatchenTab({
 
   const rondes = ['Alle', 'Nog in te vullen', 'Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale'];
 
+  // --- GROEPSSTAND BEREKENEN ---
+  const genereerGroepsStand = (teamNaam: string) => {
+    // Zoek in alle matchen de groep van dit team
+    const matchMetTeam = gefilterdeMatchen.find((m: any) => m.thuisploeg === teamNaam || m.uitploeg === teamNaam);
+    if (!matchMetTeam || !matchMetTeam.groep) return null;
+
+    const groepsNaam = matchMetTeam.groep;
+    const alleGroepMatchen = gefilterdeMatchen.filter((m: any) => m.groep === groepsNaam);
+    
+    // Haal alle unieke teams op die in deze groep zitten
+    const teamsInGroep = Array.from(new Set(alleGroepMatchen.flatMap((m: any) => [m.thuisploeg, m.uitploeg])));
+    
+    // Basis klassement object aanmaken
+    let stand = teamsInGroep.map((team: any) => ({ team, ges: 0, w: 0, g: 0, v: 0, dv: 0, dt: 0, pt: 0 }));
+
+    // Verwerk enkel gespeelde matchen
+    const gespeeldeMatchen = alleGroepMatchen.filter((m: any) => m.thuis_score !== null && m.uit_score !== null);
+    
+    gespeeldeMatchen.forEach((m: any) => {
+      const thuis = stand.find(s => s.team === m.thuisploeg);
+      const uit = stand.find(s => s.team === m.uitploeg);
+      if (thuis && uit) {
+        thuis.ges += 1; uit.ges += 1;
+        thuis.dv += m.thuis_score; thuis.dt += m.uit_score;
+        uit.dv += m.uit_score; uit.dt += m.thuis_score;
+
+        if (m.thuis_score > m.uit_score) { thuis.w += 1; thuis.pt += 3; uit.v += 1; }
+        else if (m.thuis_score < m.uit_score) { uit.w += 1; uit.pt += 3; thuis.v += 1; }
+        else { thuis.g += 1; uit.g += 1; thuis.pt += 1; uit.pt += 1; }
+      }
+    });
+
+    // Sorteren op: Punten > Doelsaldo > Doelpunten voor > Alfabetisch
+    stand.sort((a, b) => {
+      if (b.pt !== a.pt) return b.pt - a.pt;
+      const dsA = a.dv - a.dt; const dsB = b.dv - b.dt;
+      if (dsB !== dsA) return dsB - dsA;
+      if (b.dv !== a.dv) return b.dv - a.dv;
+      return a.team.localeCompare(b.team);
+    });
+
+    return { groepsNaam, stand };
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
       <style>{`
@@ -147,6 +191,13 @@ export default function MatchenTab({
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .stand-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        .stand-table th { text-align: center; padding: 6px 4px; color: #ADB5BD; font-weight: 900; border-bottom: 2px solid #E9ECEF; }
+        .stand-table th:first-child { text-align: left; }
+        .stand-table td { padding: 8px 4px; text-align: center; font-weight: 900; color: #495057; border-bottom: 1px solid #F1F3F5; }
+        .stand-table td:first-child { text-align: left; color: #111827; }
+        .stand-table tr.highlight td { background: rgba(55, 114, 255, 0.05); }
       `}</style>
 
       {/* FILTER KNOPPEN */}
@@ -187,18 +238,15 @@ export default function MatchenTab({
           return (
             <div key={match.id} style={{ background: 'rgba(255, 255, 255, 0.95)', borderRadius: '16px', border: '2px solid #E9ECEF', boxShadow: '0 4px 15px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
               
-              {/* MATCH HEADER */}
               <div style={{ background: '#F8F9FA', padding: '8px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E9ECEF', fontSize: '0.7rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>
-                <span>{dateStr} • {timeStr} • {match.ronde}</span>
+                <span>{dateStr} • {timeStr} • {match.ronde} {match.groep ? `(${match.groep})` : ''}</span>
                 {saveStatus === 'saving' && <span style={{ color: 'var(--crayola)' }}>Opslaan... ⏳</span>}
                 {saveStatus === 'saved' && <span style={{ color: '#40C057' }}>Opgeslagen ✅</span>}
                 {isMatchGesloten && <span style={{ color: '#FA5252' }}>🔒 GESLOTEN</span>}
               </div>
 
-              {/* MATCH BODY */}
               <div style={{ padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '5px' }}>
                 
-                {/* THUISPLOEG (Klikbaar, met mooie gradient bollen) */}
                 <div 
                   onClick={() => setGeselecteerdTeam(match.thuisploeg)}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', transition: 'transform 0.2s' }}
@@ -213,7 +261,6 @@ export default function MatchenTab({
                   <span style={{ fontWeight: 900, fontSize: '0.8rem', color: '#111827', textAlign: 'center', lineHeight: 1.1 }}>{thuisInfo.name}</span>
                 </div>
 
-                {/* SCORES INVULLEN */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <input 
                     type="tel" value={voorspelling.thuis} disabled={isMatchGesloten}
@@ -228,7 +275,6 @@ export default function MatchenTab({
                   />
                 </div>
 
-                {/* UITPLOEG (Klikbaar, met mooie gradient bollen) */}
                 <div 
                   onClick={() => setGeselecteerdTeam(match.uitploeg)}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', transition: 'transform 0.2s' }}
@@ -244,7 +290,6 @@ export default function MatchenTab({
                 </div>
               </div>
 
-              {/* Uitslag & Spionage */}
               {isMatchGesloten && (
                 <div style={{ borderTop: '1px dashed #E9ECEF' }}>
                   {match.thuis_score !== null && (
@@ -297,14 +342,14 @@ export default function MatchenTab({
         })
       )}
 
-      {/* TEAM DOSSIER POP-UP - OPGELOST MET PORTAL ZODAT HIJ ALTIJD BOVENOP STAAT */}
+      {/* TEAM DOSSIER POP-UP MET KLASSEMENT */}
       {geselecteerdTeam && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div 
           onClick={() => setGeselecteerdTeam(null)} 
           style={{
             position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
             background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(5px)', 
-            zIndex: 999999, // Dit garandeert dat hij écht boven alles staat
+            zIndex: 999999, 
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             padding: '20px'
           }}
@@ -312,13 +357,14 @@ export default function MatchenTab({
           <div 
             onClick={(e) => e.stopPropagation()} 
             style={{
-              background: '#FFF', width: '100%', maxWidth: '400px', maxHeight: '80vh',
+              background: '#FFF', width: '100%', maxWidth: '400px', maxHeight: '85vh',
               borderRadius: '24px', padding: '25px 20px', boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
               display: 'flex', flexDirection: 'column',
               animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
               overflowY: 'auto'
             }}
           >
+            {/* Header Pop-up */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {(() => {
@@ -332,7 +378,7 @@ export default function MatchenTab({
                       </div>
                       <div>
                         <h2 style={{ margin: 0, fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: 'var(--crayola)', lineHeight: 1 }}>{teamData.name}</h2>
-                        <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '1px' }}>Team Dossier en Uitslagen</div>
+                        <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '1px' }}>Team Dossier & Statistieken</div>
                       </div>
                     </>
                   );
@@ -341,6 +387,51 @@ export default function MatchenTab({
               <button onClick={() => setGeselecteerdTeam(null)} style={{ background: '#F1F3F5', border: 'none', width: '35px', height: '35px', borderRadius: '50%', fontSize: '1rem', fontWeight: 900, color: '#495057', cursor: 'pointer' }}>✕</button>
             </div>
 
+            {/* LIVE KLASSEMENT VAN DE GROEP */}
+            {(() => {
+              const groepData = genereerGroepsStand(geselecteerdTeam);
+              if (groepData) {
+                return (
+                  <div style={{ marginBottom: '20px', background: '#F8F9FA', borderRadius: '16px', border: '1px solid #E9ECEF', padding: '12px', overflow: 'hidden' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--magenta)', textTransform: 'uppercase', marginBottom: '8px' }}>
+                      📊 Stand {groepData.groepsNaam}
+                    </div>
+                    <table className="stand-table">
+                      <thead>
+                        <tr>
+                          <th>Land</th>
+                          <th title="Gespeeld">G</th>
+                          <th title="Doelsaldo">DS</th>
+                          <th title="Punten">PT</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {groepData.stand.map((s, idx) => {
+                          const sInfo = parseTeam(s.team);
+                          return (
+                            <tr key={s.team} className={s.team === geselecteerdTeam ? 'highlight' : ''}>
+                              <td>
+                                <span style={{ marginRight: '5px' }}>{idx + 1}.</span> 
+                                {sInfo.emoji} <span style={{ fontWeight: s.team === geselecteerdTeam ? 900 : 800 }}>{sInfo.name}</span>
+                              </td>
+                              <td>{s.ges}</td>
+                              <td>{s.dv - s.dt > 0 ? `+${s.dv - s.dt}` : s.dv - s.dt}</td>
+                              <td style={{ color: 'var(--crayola)' }}>{s.pt}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
+            {/* MATCHEN HISTORIEK */}
+            <div style={{ fontSize: '0.8rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '8px' }}>
+              ⚽ Gespeelde & Geplande Matchen
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {gefilterdeMatchen
                 .filter((m: any) => m.thuisploeg === geselecteerdTeam || m.uitploeg === geselecteerdTeam)
@@ -359,7 +450,7 @@ export default function MatchenTab({
                   }
 
                   return (
-                    <div key={m.id} style={{ background: '#F8F9FA', padding: '12px 15px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #E9ECEF' }}>
+                    <div key={m.id} style={{ background: '#FFF', padding: '12px 15px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #E9ECEF' }}>
                       <div>
                         <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '2px' }}>
                           {new Date(m.datum).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' })} • {m.ronde}
@@ -378,7 +469,7 @@ export default function MatchenTab({
                             <span style={{ fontSize: '0.8rem' }}>{statusIcoon}</span>
                           </div>
                         ) : (
-                          <div style={{ background: 'var(--crayola)', color: '#FFF', padding: '4px 10px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase' }}>
+                          <div style={{ background: '#F1F3F5', color: '#6C757D', padding: '4px 10px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase' }}>
                             Te spelen
                           </div>
                         )}
@@ -388,7 +479,7 @@ export default function MatchenTab({
                 })}
               
               <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 800 }}>
-                (Tip: Zorg dat je filter op &quot;Alle&quot; staat voor de volledige historiek).
+                (Tip: Zorg dat je filter bovenaan op "Alle" staat voor de volledige historiek).
               </div>
             </div>
 
