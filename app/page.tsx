@@ -11,6 +11,7 @@ import RankingTab from '../components/RankingTab';
 import TellersTab from '../components/TellersTab';
 import ChatTab from '../components/ChatTab';
 import PrijsTab from '../components/PrijsTab';
+import GroepenTab from '../components/GroepenTab'; // <-- Correcte import!
 
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
 
@@ -114,7 +115,7 @@ export default function Home() {
 
   useEffect(() => {
     if (actieveSpeler) {
-      if (actieveTab === 'matchen') haalMatchenOp();
+      if (actieveTab === 'matchen' || actieveTab === 'groepen') haalMatchenOp(); // Matchen nodig voor beide!
       if (actieveTab === 'bonus') haalToernooiVoorspellingOp();
       if (actieveTab === 'ranking' || actieveTab === 'prijs') haalKlassementOp();
       if (actieveTab === 'kleedkamer') haalChatOp();
@@ -389,7 +390,6 @@ export default function Home() {
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@600;800;900&display=swap');
         :root { --crayola: #3772FF; --magenta: #F038FF; --rose: #EF709D; --lime: #E2EF70; --aqua: #70E4EF; }
         
-        /* DE BELANGRIJKSTE FIX VOOR MOBIEL OVERFLOWEN */
         *, *::before, *::after { box-sizing: border-box; }
 
         html, body { margin: 0; padding: 0; width: 100%; min-height: 100%; font-family: 'Nunito', sans-serif; color: #111827; background: radial-gradient(circle at 30% 20%, var(--rose), transparent 30%), radial-gradient(circle at 70% 80%, var(--lime), transparent 30%), linear-gradient(135deg, var(--crayola), var(--aqua)); background-size: 200% 200%; animation: background-fade 10s ease-in-out infinite; overflow-x: hidden; }
@@ -407,7 +407,7 @@ export default function Home() {
         .nav-item { display: flex; align-items: center; justify-content: center; height: 42px; border-radius: 21px; cursor: pointer; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); color: #495057; position: relative; overflow: hidden; flex: 1; }
         .nav-item.active { background: var(--crayola); color: white; padding: 0 16px; box-shadow: 0 4px 12px rgba(55, 114, 255, 0.4); flex: 0 0 auto; }
         .nav-icon { font-size: 1.1rem; z-index: 2; }
-        .nav-text { font-size: 0.75rem; font-weight: 900; margin-left: 6px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px; z-index: 2; }
+        .nav-text { font-size: 0.65rem; font-weight: 900; margin-left: 4px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px; z-index: 2; }
         .unread-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; background: var(--rose); border-radius: 50%; box-shadow: 0 0 8px var(--rose); animation: pulse-red 2s infinite; z-index: 3; }
         
         .speler-badge { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: rgba(255, 255, 255, 0.8); padding: 6px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: 900; color: var(--crayola); text-transform: uppercase; letter-spacing: 0.5px; border: 2px solid #FFF; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 25px; }
@@ -525,6 +525,7 @@ export default function Home() {
         {actieveSpeler ? (
           <div>
             {actieveTab === 'matchen' && <MatchenTab gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} />}
+            {actieveTab === 'groepen' && <GroepenTab alleMatchen={matchen} />}
             {actieveTab === 'prijs' && <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />}
             {actieveTab === 'bonus' && <BonusTab winnaar={winnaar} setWinnaar={setWinnaar} hf={hf} setHf={setHf} meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} eindstation={eindstation} setEindstation={setEindstation} totaalGoals={totaalGoals} setTotaalGoals={setTotaalGoals} totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} />}
             {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} />}
@@ -564,6 +565,7 @@ export default function Home() {
           {[
             {id:'ranking', i:'🏆', n:'Rank'},
             {id:'matchen', i:'⚽', n:'Match'},
+            {id:'groepen', i:'🌍', n:'Groep'},
             {id:'bonus', i:'💎', n:'Bonus'},
             {id:'kleedkamer', i:'💬', n:'Chat'},
             {id:'antwoorden', i:'👁️', n:'Antw'},
