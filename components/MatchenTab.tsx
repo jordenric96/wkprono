@@ -1,9 +1,11 @@
 // src/components/MatchenTab.tsx
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 
-// --- HULPFUNCTIE: VLAGGEN & KLEUREN GENERATOR ---
+// --- VOLLEDIGE VLAGGEN & KLEUREN GENERATOR ---
 const parseTeam = (teamString: string) => {
   if (!teamString) return { name: '', emoji: '🏳️', gradient: 'linear-gradient(135deg, #DEE2E6, #ADB5BD)' };
+
   let rawName = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
 
   const vertalingen: any = {
@@ -15,14 +17,19 @@ const parseTeam = (teamString: string) => {
     'USA': 'Verenigde Staten', 'United States': 'Verenigde Staten', 'Canada': 'Canada', 'Mexico': 'Mexico', 
     'Japan': 'Japan', 'Croatia': 'Kroatië', 'Uruguay': 'Uruguay', 'Senegal': 'Senegal', 'Ghana': 'Ghana', 
     'Nigeria': 'Nigeria', 'Ecuador': 'Ecuador', 'Sweden': 'Zweden', 'Denmark': 'Denemarken', 'Poland': 'Polen', 
-    'Serbia': 'Servië', 'Iran': 'Iran', 'Saudi Arabia': 'Saudi-Arabië', 'Ukraine': 'Oekraïne', 'Peru': 'Peru', 
-    'Panama': 'Panama', 'Egypt': 'Egypte', 'Tunisia': 'Tunesië', 'New Zealand': 'Nieuw-Zeeland', 'Qatar': 'Qatar', 
-    'Ireland': 'Ierland', 'Turkey': 'Turkije', 'Romania': 'Roemenië', 'Hungary': 'Hongarije', 'Norway': 'Noorwegen', 
-    'Iceland': 'IJsland', 'Slovakia': 'Slowakije', 'Iraq': 'Irak', 'Paraguay': 'Paraguay', 'Venezuela': 'Venezuela', 
-    'Mali': 'Mali', 'Algeria': 'Algerije', 'Zambia': 'Zambia', 'Honduras': 'Honduras', 'El Salvador': 'El Salvador', 
-    'Ivory Coast': 'Ivoorkust', 'Cameroon': 'Kameroen', 'Chile': 'Chili', 'Colombia': 'Colombia', 
-    'Costa Rica': 'Costa Rica', 'Austria': 'Oostenrijk', 'Australia': 'Australië', 'Cabo Verde': 'Kaapverdië', 
-    'Haiti': 'Haïti', 'Curacao': 'Curaçao', 'Jordan': 'Jordanië', 'Congo DR': 'Congo', 'Uzbekistan': 'Oezbekistan'
+    'Serbia': 'Servië', 'Iran': 'Iran', 'IR Iran': 'Iran', 'Islamic Republic of Iran': 'Iran', 
+    'Saudi Arabia': 'Saudi-Arabië', 'Ukraine': 'Oekraïne', 'Peru': 'Peru', 'Panama': 'Panama', 
+    'Egypt': 'Egypte', 'Tunisia': 'Tunesië', 'New Zealand': 'Nieuw-Zeeland', 'Qatar': 'Qatar', 
+    'Ireland': 'Ierland', 'Turkey': 'Turkije', 'Turkiye': 'Turkije', 'Türkiye': 'Turkije',
+    'Romania': 'Roemenië', 'Hungary': 'Hongarije', 'Norway': 'Noorwegen', 'Iceland': 'IJsland', 
+    'Slovakia': 'Slowakije', 'Iraq': 'Irak', 'Paraguay': 'Paraguay', 'Venezuela': 'Venezuela', 
+    'Mali': 'Mali', 'Algeria': 'Algerije', 'Zambia': 'Zambia', 'Honduras': 'Honduras', 
+    'El Salvador': 'El Salvador', 'Ivory Coast': 'Ivoorkust', 'Cote d\'Ivoire': 'Ivoorkust', 
+    "Côte d'Ivoire": 'Ivoorkust', "Cote dIvoire": 'Ivoorkust', 'Cameroon': 'Kameroen', 
+    'Chile': 'Chili', 'Colombia': 'Colombia', 'Costa Rica': 'Costa Rica', 'Austria': 'Oostenrijk', 
+    'Australia': 'Australië', 'Cabo Verde': 'Kaapverdië', 'Cape Verde': 'Kaapverdië', 
+    'Haiti': 'Haïti', 'Curacao': 'Curaçao', 'Curaçao': 'Curaçao', 'Jordan': 'Jordanië', 
+    'Congo DR': 'Congo', 'DR Congo': 'Congo', 'Uzbekistan': 'Oezbekistan'
   };
 
   let name = vertalingen[rawName] || rawName;
@@ -42,11 +49,61 @@ const parseTeam = (teamString: string) => {
     'Verenigde Staten': 'linear-gradient(135deg, #B31942 33%, #FFF 33%, #FFF 66%, #0A3161 66%)',
     'Canada': 'linear-gradient(135deg, #FF0000 30%, #FFF 30%, #FFF 70%, #FF0000 70%)',
     'Marokko': 'linear-gradient(135deg, #c1272d 45%, #006233 45%, #006233 55%, #c1272d 55%)',
-    'Kroatië': 'linear-gradient(135deg, #FF0000 33%, #FFF 33%, #FFF 66%, #0000FF 66%)',
+    'Chili': 'linear-gradient(135deg, #0039A6 33%, #FFF 33%, #FFF 66%, #D52B1E 66%)',
+    'Kameroen': 'linear-gradient(135deg, #007A5E 33%, #CE1126 33%, #CE1126 66%, #FCD116 66%)',
+    'Colombia': 'linear-gradient(135deg, #FCD116 50%, #003893 50%, #003893 75%, #CE1126 75%)',
+    'Costa Rica': 'linear-gradient(135deg, #002B7F 20%, #FFF 20%, #FFF 40%, #CE1126 40%, #CE1126 60%, #FFF 60%, #FFF 80%, #002B7F 80%)',
+    'Zwitserland': 'linear-gradient(135deg, #FF0000 40%, #FFF 40%, #FFF 60%, #FF0000 60%)',
+    'Ivoorkust': 'linear-gradient(135deg, #FF8200 33%, #FFF 33%, #FFF 66%, #009A44 66%)',
+    'Oostenrijk': 'linear-gradient(135deg, #ED2939 33%, #FFF 33%, #FFF 66%, #ED2939 66%)',
+    'Australië': 'linear-gradient(135deg, #012169 40%, #FFF 40%, #FFF 50%, #E4002B 50%)',
+    'Japan': 'linear-gradient(135deg, #FFF 40%, #BC002D 40%, #BC002D 60%, #FFF 60%)',
     'Zuid-Korea': 'linear-gradient(135deg, #FFF 40%, #CD2E3A 40%, #CD2E3A 60%, #0047A0 60%)',
+    'Kroatië': 'linear-gradient(135deg, #FF0000 33%, #FFF 33%, #FFF 66%, #0000FF 66%)',
+    'Uruguay': 'linear-gradient(135deg, #0038A8 40%, #FFF 40%, #FFF 60%, #0038A8 60%)',
+    'Senegal': 'linear-gradient(135deg, #00853F 33%, #FDEF42 33%, #FDEF42 66%, #E31B23 66%)',
+    'Ghana': 'linear-gradient(135deg, #CE1126 33%, #FCD116 33%, #FCD116 66%, #006B3F 66%)',
+    'Nigeria': 'linear-gradient(135deg, #008751 33%, #FFF 33%, #FFF 66%, #008751 66%)',
+    'Ecuador': 'linear-gradient(135deg, #FFD100 50%, #003893 50%, #003893 75%, #CE1126 75%)',
+    'Zweden': 'linear-gradient(135deg, #004B87 40%, #FFCD00 40%, #FFCD00 60%, #004B87 60%)',
+    'Denemarken': 'linear-gradient(135deg, #C60C30 40%, #FFF 40%, #FFF 60%, #C60C30 60%)',
+    'Schotland': 'linear-gradient(135deg, #005EB8 40%, #FFF 40%, #FFF 60%, #005EB8 60%)',
+    'Polen': 'linear-gradient(135deg, #FFF 50%, #DC143C 50%)',
+    'Servië': 'linear-gradient(135deg, #C6363C 33%, #0C4076 33%, #0C4076 66%, #FFF 66%)',
+    'Iran': 'linear-gradient(135deg, #239F40 33%, #FFF 33%, #FFF 66%, #DA0000 66%)',
+    'Saudi-Arabië': 'linear-gradient(135deg, #006C35 80%, #FFF 80%)',
+    'Wales': 'linear-gradient(135deg, #FFF 50%, #00AB39 50%)',
+    'Oekraïne': 'linear-gradient(135deg, #0057B7 50%, #FFD700 50%)',
+    'Peru': 'linear-gradient(135deg, #D91023 33%, #FFF 33%, #FFF 66%, #D91023 66%)',
+    'Panama': 'linear-gradient(135deg, #FFF 25%, #C2113A 25%, #C2113A 50%, #00225D 50%, #00225D 75%, #FFF 75%)',
+    'Egypte': 'linear-gradient(135deg, #CE1126 33%, #FFF 33%, #FFF 66%, #000 66%)',
+    'Tunesië': 'linear-gradient(135deg, #E70013 40%, #FFF 40%, #FFF 60%, #E70013 60%)',
+    'Nieuw-Zeeland': 'linear-gradient(135deg, #00247D 40%, #FFF 40%, #FFF 50%, #CC142B 50%)',
+    'Qatar': 'linear-gradient(135deg, #FFF 30%, #8A1538 30%)',
+    'Ierland': 'linear-gradient(135deg, #169B62 33%, #FFF 33%, #FFF 66%, #FF883E 66%)',
+    'Turkije': 'linear-gradient(135deg, #E30A17 80%, #FFF 80%)',
     'Zuid-Afrika': 'linear-gradient(135deg, #007A4D 25%, #FFB612 25%, #FFB612 50%, #000 50%, #000 75%, #DE3831 75%)',
     'Tsjechië': 'linear-gradient(135deg, #11457E 33%, #D7141A 33%, #D7141A 66%, #FFF 66%)',
-    'Bosnië': 'linear-gradient(135deg, #002395 40%, #FECB00 40%, #FECB00 60%, #FFFFFF 60%)'
+    'Roemenië': 'linear-gradient(135deg, #002B7F 33%, #FCD116 33%, #FCD116 66%, #CE1126 66%)',
+    'Hongarije': 'linear-gradient(135deg, #CE2939 33%, #FFF 33%, #FFF 66%, #477050 66%)',
+    'Noorwegen': 'linear-gradient(135deg, #006AA7 40%, #FECC00 40%, #FECC00 60%, #006AA7 60%)',
+    'IJsland': 'linear-gradient(135deg, #02529C 40%, #FFF 40%, #FFF 45%, #DC1E35 45%, #DC1E35 55%, #FFF 55%, #FFF 60%, #02529C 60%)',
+    'Slowakije': 'linear-gradient(135deg, #FFF 33%, #0B4EA2 33%, #0B4EA2 66%, #EE1C25 66%)',
+    'Irak': 'linear-gradient(135deg, #239F40 33%, #FFF 33%, #FFF 66%, #DA0000 66%)',
+    'Paraguay': 'linear-gradient(135deg, #D52B1E 33%, #FFF 33%, #FFF 66%, #0038A8 66%)',
+    'Venezuela': 'linear-gradient(135deg, #FCE300 50%, #0038A8 50%, #0038A8 75%, #CE1126 75%)',
+    'Mali': 'linear-gradient(135deg, #14B53A 33%, #FCD116 33%, #FCD116 66%, #CE1126 66%)',
+    'Algerije': 'linear-gradient(135deg, #006233 50%, #FFF 50%)',
+    'Zambia': 'linear-gradient(135deg, #198A00 33%, #FF0000 33%, #FF0000 66%, #000 66%)',
+    'Honduras': 'linear-gradient(135deg, #005293 40%, #FFF 40%, #FFF 60%, #D21034 60%)',
+    'El Salvador': 'linear-gradient(135deg, #001489 20%, #FFF 20%, #FFF 40%, #CE1126 40%, #CE1126 60%, #FFF 60%, #FFF 80%, #001489 80%)',
+    'Bosnië': 'linear-gradient(135deg, #002395 40%, #FECB00 40%, #FECB00 60%, #FFFFFF 60%)',
+    'Kaapverdië': 'linear-gradient(135deg, #003893 40%, #FFF 40%, #FFF 45%, #CE1126 45%, #CE1126 55%, #FFF 55%, #FFF 60%, #003893 60%)',
+    'Haïti': 'linear-gradient(135deg, #00209F 50%, #D21034 50%)',
+    'Curaçao': 'linear-gradient(135deg, #002B7F 65%, #F9E814 65%, #F9E814 80%, #002B7F 80%)',
+    'Jordanië': 'linear-gradient(135deg, #CE1126 25%, #000 25%, #000 50%, #FFF 50%, #FFF 75%, #007A3D 75%)',
+    'Congo': 'linear-gradient(135deg, #007FFF 35%, #F7D116 35%, #F7D116 42%, #CE1021 42%, #CE1021 58%, #F7D116 58%, #F7D116 65%, #007FFF 65%)',
+    'Oezbekistan': 'linear-gradient(135deg, #0099B5 30%, #CE1126 30%, #CE1126 35%, #FFF 35%, #FFF 65%, #CE1126 65%, #CE1126 70%, #1EB53A 70%)'
   };
 
   const defaultEmojis: any = {
@@ -60,7 +117,11 @@ const parseTeam = (teamString: string) => {
     'Servië': '🇷🇸', 'Iran': '🇮🇷', 'Saudi-Arabië': '🇸🇦', 'Wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'Oekraïne': '🇺🇦', 
     'Peru': '🇵🇪', 'Panama': '🇵🇦', 'Egypte': '🇪🇬', 'Tunesië': '🇹🇳', 'Nieuw-Zeeland': '🇳🇿', 
     'Qatar': '🇶🇦', 'Ierland': '🇮🇪', 'Turkije': '🇹🇷', 'Zuid-Afrika': '🇿🇦', 'Tsjechië': '🇨🇿', 
-    'Bosnië': '🇧🇦'
+    'Roemenië': '🇷🇴', 'Hongarije': '🇭🇺', 'Noorwegen': '🇳🇴', 'IJsland': '🇮🇸', 'Slowakije': '🇸🇰', 
+    'Irak': '🇮🇶', 'Paraguay': '🇵🇾', 'Venezuela': '🇻🇪', 'Mali': '🇲🇱', 'Algerije': '🇩🇿', 
+    'Zambia': '🇿🇲', 'Honduras': '🇭🇳', 'El Salvador': '🇸🇻', 'Bosnië': '🇧🇦',
+    'Kaapverdië': '🇨🇻', 'Haïti': '🇭🇹', 'Curaçao': '🇨🇼', 'Jordanië': '🇯🇴', 
+    'Congo': '🇨🇩', 'Oezbekistan': '🇺🇿'
   };
 
   let emoji = defaultEmojis[name] || '🏳️';
@@ -137,7 +198,7 @@ export default function MatchenTab({
               {/* MATCH BODY */}
               <div style={{ padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '5px' }}>
                 
-                {/* THUISPLOEG (Klikbaar, nu met mooie gradient bollen) */}
+                {/* THUISPLOEG (Klikbaar, met mooie gradient bollen) */}
                 <div 
                   onClick={() => setGeselecteerdTeam(match.thuisploeg)}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', transition: 'transform 0.2s' }}
@@ -167,7 +228,7 @@ export default function MatchenTab({
                   />
                 </div>
 
-                {/* UITPLOEG (Klikbaar, nu met mooie gradient bollen) */}
+                {/* UITPLOEG (Klikbaar, met mooie gradient bollen) */}
                 <div 
                   onClick={() => setGeselecteerdTeam(match.uitploeg)}
                   style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', transition: 'transform 0.2s' }}
@@ -236,31 +297,28 @@ export default function MatchenTab({
         })
       )}
 
-      {/* TEAM DOSSIER POP-UP - NU GEMACENTREERD EN ALTIJD ZICHTBAAR */}
-      {geselecteerdTeam && (
+      {/* TEAM DOSSIER POP-UP - OPGELOST MET PORTAL ZODAT HIJ ALTIJD BOVENOP STAAT */}
+      {geselecteerdTeam && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div 
           onClick={() => setGeselecteerdTeam(null)} 
           style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, // Neemt altijd 100% van het scherm in
+            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
             background: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(5px)', 
-            zIndex: 99999, // Extreem hoge z-index zodat hij BOVEN de blauwe navbar staat
-            display: 'flex', alignItems: 'center', justifyContent: 'center', // Nu perfect in het midden (center)
-            padding: '20px', // Beetje marge aan de zijkanten op gsm
-            animation: 'fadeIn 0.2s ease'
+            zIndex: 999999, // Dit garandeert dat hij écht boven alles staat
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '20px'
           }}
         >
           <div 
             onClick={(e) => e.stopPropagation()} 
             style={{
               background: '#FFF', width: '100%', maxWidth: '400px', maxHeight: '80vh',
-              borderRadius: '24px', // Volledig afgerond rondom
-              padding: '25px 20px', boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+              borderRadius: '24px', padding: '25px 20px', boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
               display: 'flex', flexDirection: 'column',
-              animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)', // Mooi pop-effect
+              animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
               overflowY: 'auto'
             }}
           >
-            {/* Header Pop-up */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {(() => {
@@ -283,7 +341,6 @@ export default function MatchenTab({
               <button onClick={() => setGeselecteerdTeam(null)} style={{ background: '#F1F3F5', border: 'none', width: '35px', height: '35px', borderRadius: '50%', fontSize: '1rem', fontWeight: 900, color: '#495057', cursor: 'pointer' }}>✕</button>
             </div>
 
-            {/* Matchen Historiek */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {gefilterdeMatchen
                 .filter((m: any) => m.thuisploeg === geselecteerdTeam || m.uitploeg === geselecteerdTeam)
@@ -303,7 +360,6 @@ export default function MatchenTab({
 
                   return (
                     <div key={m.id} style={{ background: '#F8F9FA', padding: '12px 15px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #E9ECEF' }}>
-                      
                       <div>
                         <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '2px' }}>
                           {new Date(m.datum).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' })} • {m.ronde}
@@ -327,18 +383,18 @@ export default function MatchenTab({
                           </div>
                         )}
                       </div>
-
                     </div>
                   );
                 })}
               
               <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 800 }}>
-                (Tip: Zorg dat je filter bovenaan op &quot;Alle&quot; staat om de volledige historiek te zien).
+                (Tip: Zorg dat je filter op &quot;Alle&quot; staat voor de volledige historiek).
               </div>
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>
