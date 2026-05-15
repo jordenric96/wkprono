@@ -22,47 +22,79 @@ const WK_GROEPEN: Record<string, string> = {
 const parseTeam = (teamString: string) => {
   if (!teamString) return { name: '', emoji: '🏳️', gradient: 'linear-gradient(135deg, #DEE2E6, #ADB5BD)' };
 
-  // Verwijder ongewenste emoji's of spaties uit de databasetekst
   let cleanString = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
   let searchKey = cleanString.toLowerCase();
 
-  // Mega-vertalingsmap (vangt alle taalfouten op)
+  // Mega-vertalingsmap ZONDER dubbele sleutels (Senegal, Peru etc. staan er nu maar 1x in)
   const vertalingen: Record<string, string> = {
-    'brazil': 'Brazilië', 'morocco': 'Marokko', 'switzerland': 'Zwitserland', 'bosnia and herzegovina': 'Bosnië',
-    'bosnia & herzegovina': 'Bosnië', 'bosnia': 'Bosnië', 'south korea': 'Zuid-Korea', 'south africa': 'Zuid-Afrika',
-    'czechia': 'Tsjechië', 'czech republic': 'Tsjechië', 'germany': 'Duitsland', 'spain': 'Spanje',
-    'france': 'Frankrijk', 'netherlands': 'Nederland', 'belgium': 'België', 'italy': 'Italië',
-    'argentina': 'Argentinië', 'england': 'Engeland', 'wales': 'Wales', 'scotland': 'Schotland',
-    'usa': 'Verenigde Staten', 'united states': 'Verenigde Staten', 'canada': 'Canada', 'mexico': 'Mexico',
-    'japan': 'Japan', 'croatia': 'Kroatië', 'uruguay': 'Uruguay', 'senegal': 'Senegal', 'ghana': 'Ghana',
-    'nigeria': 'Nigeria', 'ecuador': 'Ecuador', 'sweden': 'Zweden', 'denmark': 'Denemarken', 'poland': 'Polen',
-    'serbia': 'Servië', 'iran': 'Iran', 'ir iran': 'Iran', 'islamic republic of iran': 'Iran',
-    'saudi arabia': 'Saudi-Arabië', 'ukraine': 'Oekraïne', 'peru': 'Peru', 'panama': 'Panama',
-    'egypt': 'Egypte', 'tunisia': 'Tunesië', 'new zealand': 'Nieuw-Zeeland', 'qatar': 'Qatar',
-    'ireland': 'Ierland', 'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije',
-    'romania': 'Roemenië', 'hungary': 'Hongarije', 'norway': 'Noorwegen', 'iceland': 'IJsland',
-    'slovakia': 'Slowakije', 'iraq': 'Irak', 'paraguay': 'Paraguay', 'venezuela': 'Venezuela',
-    'mali': 'Mali', 'algeria': 'Algerije', 'zambia': 'Zambia', 'honduras': 'Honduras',
-    'el salvador': 'El Salvador', 'ivory coast': 'Ivoorkust', 'cote d\'ivoire': 'Ivoorkust',
-    'côte d\'ivoire': 'Ivoorkust', 'cote divoire': 'Ivoorkust', 'cote d ivoire': 'Ivoorkust',
-    'core divoir': 'Ivoorkust', 'cameroon': 'Kameroen', 'chile': 'Chili', 'colombia': 'Colombia',
-    'costa rica': 'Costa Rica', 'austria': 'Oostenrijk', 'australia': 'Australië', 'cabo verde': 'Kaapverdië',
-    'cape verde': 'Kaapverdië', 'haiti': 'Haïti', 'curacao': 'Curaçao', 'curaçao': 'Curaçao', 'jordan': 'Jordanië',
-    'congo dr': 'Congo', 'dr congo': 'Congo', 'uzbekistan': 'Oezbekistan',
-    
-    // Fallback: Als ze al Nederlands zijn in kleine letters, correct formatteren
-    'brazilië': 'Brazilië', 'marokko': 'Marokko', 'zwitserland': 'Zwitserland', 'bosnië': 'Bosnië',
-    'zuid-korea': 'Zuid-Korea', 'zuid-afrika': 'Zuid-Afrika', 'tsjechië': 'Tsjechië', 'duitsland': 'Duitsland',
-    'spanje': 'Spanje', 'frankrijk': 'Frankrijk', 'nederland': 'Nederland', 'belgië': 'België',
-    'italië': 'Italië', 'argentinië': 'Argentinië', 'engeland': 'Engeland', 'schotland': 'Schotland',
-    'verenigde staten': 'Verenigde Staten', 'kroatië': 'Kroatië', 'senegal': 'Senegal', 'denemarken': 'Denemarken',
-    'polen': 'Polen', 'servië': 'Servië', 'saudi-arabië': 'Saudi-Arabië', 'oekraïne': 'Oekraïne',
-    'egypte': 'Egypte', 'tunesië': 'Tunesië', 'nieuw-zeeland': 'Nieuw-Zeeland', 'ierland': 'Ierland',
-    'turkije': 'Turkije', 'roemenië': 'Roemenië', 'hongarije': 'Hongarije', 'noorwegen': 'Noorwegen',
-    'ijsland': 'IJsland', 'slowakije': 'Slowakije', 'irak': 'Irak', 'venezuela': 'Venezuela',
-    'algerije': 'Algerije', 'ivoorkust': 'Ivoorkust', 'kameroen': 'Kameroen', 'chili': 'Chili',
-    'oostenrijk': 'Oostenrijk', 'australië': 'Australië', 'kaapverdië': 'Kaapverdië', 'haïti': 'Haïti',
-    'jordanië': 'Jordanië', 'oezbekistan': 'Oezbekistan', 'congo': 'Congo'
+    'brazil': 'Brazilië', 'brazilië': 'Brazilië',
+    'morocco': 'Marokko', 'marokko': 'Marokko',
+    'switzerland': 'Zwitserland', 'zwitserland': 'Zwitserland',
+    'bosnia and herzegovina': 'Bosnië', 'bosnia & herzegovina': 'Bosnië', 'bosnia': 'Bosnië', 'bosnië': 'Bosnië',
+    'south korea': 'Zuid-Korea', 'zuid-korea': 'Zuid-Korea',
+    'south africa': 'Zuid-Afrika', 'zuid-afrika': 'Zuid-Afrika',
+    'czechia': 'Tsjechië', 'czech republic': 'Tsjechië', 'tsjechië': 'Tsjechië',
+    'germany': 'Duitsland', 'duitsland': 'Duitsland',
+    'spain': 'Spanje', 'spanje': 'Spanje',
+    'france': 'Frankrijk', 'frankrijk': 'Frankrijk',
+    'netherlands': 'Nederland', 'nederland': 'Nederland',
+    'belgium': 'België', 'belgië': 'België',
+    'italy': 'Italië', 'italië': 'Italië',
+    'argentina': 'Argentinië', 'argentinië': 'Argentinië',
+    'england': 'Engeland',
+    'wales': 'Wales',
+    'scotland': 'Schotland',
+    'usa': 'Verenigde Staten', 'united states': 'Verenigde Staten', 'verenigde staten': 'Verenigde Staten',
+    'canada': 'Canada',
+    'mexico': 'Mexico',
+    'japan': 'Japan',
+    'croatia': 'Kroatië', 'kroatië': 'Kroatië',
+    'uruguay': 'Uruguay',
+    'senegal': 'Senegal',
+    'ghana': 'Ghana',
+    'nigeria': 'Nigeria',
+    'ecuador': 'Ecuador',
+    'sweden': 'Zweden', 'zweden': 'Zweden',
+    'denmark': 'Denemarken', 'denemarken': 'Denemarken',
+    'poland': 'Polen', 'polen': 'Polen',
+    'serbia': 'Servië', 'servië': 'Servië',
+    'iran': 'Iran', 'ir iran': 'Iran', 'islamic republic of iran': 'Iran',
+    'saudi arabia': 'Saudi-Arabië', 'saudi-arabië': 'Saudi-Arabië',
+    'ukraine': 'Oekraïne', 'oekraïne': 'Oekraïne',
+    'peru': 'Peru',
+    'panama': 'Panama',
+    'egypt': 'Egypte', 'egypte': 'Egypte',
+    'tunisia': 'Tunesië', 'tunesië': 'Tunesië',
+    'new zealand': 'Nieuw-Zeeland', 'nieuw-zeeland': 'Nieuw-Zeeland',
+    'qatar': 'Qatar',
+    'ireland': 'Ierland', 'ierland': 'Ierland',
+    'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije', 'turkije': 'Turkije',
+    'romania': 'Roemenië', 'roemenië': 'Roemenië',
+    'hungary': 'Hongarije', 'hongarije': 'Hongarije',
+    'norway': 'Noorwegen', 'noorwegen': 'Noorwegen',
+    'iceland': 'IJsland', 'ijsland': 'IJsland',
+    'slovakia': 'Slowakije', 'slowakije': 'Slowakije',
+    'iraq': 'Irak', 'irak': 'Irak',
+    'paraguay': 'Paraguay',
+    'venezuela': 'Venezuela',
+    'mali': 'Mali',
+    'algeria': 'Algerije', 'algerije': 'Algerije',
+    'zambia': 'Zambia',
+    'honduras': 'Honduras',
+    'el salvador': 'El Salvador',
+    'ivory coast': 'Ivoorkust', 'cote d\'ivoire': 'Ivoorkust', 'côte d\'ivoire': 'Ivoorkust', 'cote divoire': 'Ivoorkust', 'cote d ivoire': 'Ivoorkust', 'core divoir': 'Ivoorkust', 'ivoorkust': 'Ivoorkust',
+    'cameroon': 'Kameroen', 'kameroen': 'Kameroen',
+    'chile': 'Chili', 'chili': 'Chili',
+    'colombia': 'Colombia',
+    'costa rica': 'Costa Rica',
+    'austria': 'Oostenrijk', 'oostenrijk': 'Oostenrijk',
+    'australia': 'Australië', 'australië': 'Australië',
+    'cabo verde': 'Kaapverdië', 'cape verde': 'Kaapverdië', 'kaapverdië': 'Kaapverdië',
+    'haiti': 'Haïti', 'haïti': 'Haïti',
+    'curacao': 'Curaçao', 'curaçao': 'Curaçao',
+    'jordan': 'Jordanië', 'jordanië': 'Jordanië',
+    'congo dr': 'Congo', 'dr congo': 'Congo', 'congo': 'Congo',
+    'uzbekistan': 'Oezbekistan', 'oezbekistan': 'Oezbekistan'
   };
 
   let nameNL = vertalingen[searchKey] || cleanString;
@@ -176,18 +208,13 @@ export default function MatchenTab({
 
   // --- GROEPSSTAND BEREKENEN ---
   const genereerGroepsStand = (rawTeamNaam: string) => {
-    // We vertalen de naam eerst naar onze perfecte database-vorm
     const targetNL = parseTeam(rawTeamNaam).name.toLowerCase();
     const groepsNaam = WK_GROEPEN[targetNL];
     if (!groepsNaam) return null;
 
-    // Zoek alle andere landen (hun lagere kast Nederlandse naam) die in deze groep zitten
     const teamsInGroepNL_lower = Object.keys(WK_GROEPEN).filter(t => WK_GROEPEN[t] === groepsNaam);
-    
-    // Basis klassement object aanmaken
     let stand = teamsInGroepNL_lower.map((t) => ({ team: t, ges: 0, w: 0, g: 0, v: 0, dv: 0, dt: 0, pt: 0 }));
 
-    // Haal de juiste matchen op (enkel matchen tussen deze ploegen)
     const groepMatchen = gefilterdeMatchen.filter((m: any) => {
       const thuisLower = parseTeam(m.thuisploeg).name.toLowerCase();
       const uitLower = parseTeam(m.uitploeg).name.toLowerCase();
@@ -213,7 +240,6 @@ export default function MatchenTab({
       }
     });
 
-    // Sorteren op: Punten > Doelsaldo > Doelpunten voor > Alfabetisch
     stand.sort((a, b) => {
       if (b.pt !== a.pt) return b.pt - a.pt;
       const dsA = a.dv - a.dt; const dsB = b.dv - b.dt;
@@ -452,7 +478,7 @@ export default function MatchenTab({
                       </thead>
                       <tbody>
                         {groepData.stand.map((s, idx) => {
-                          const sInfo = parseTeam(s.team); // Dit zorgt dat hij mooi met hoofdletters toont
+                          const sInfo = parseTeam(s.team);
                           const isHuidigTeam = s.team === geselecteerdeTeamNL;
                           return (
                             <tr key={s.team} className={isHuidigTeam ? 'highlight' : ''}>
