@@ -2,6 +2,22 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 
+// --- HARDE GROEPSINDELING (Zodat we Supabase niet nodig hebben hiervoor!) ---
+const WK_GROEPEN: Record<string, string> = {
+  'Mexico': 'Groep A', 'Zuid-Afrika': 'Groep A', 'Zuid-Korea': 'Groep A', 'Tsjechië': 'Groep A',
+  'Canada': 'Groep B', 'Qatar': 'Groep B', 'Zwitserland': 'Groep B', 'Bosnië': 'Groep B',
+  'Brazilië': 'Groep C', 'Marokko': 'Groep C', 'Haïti': 'Groep C', 'Schotland': 'Groep C',
+  'Verenigde Staten': 'Groep D', 'Paraguay': 'Groep D', 'Australië': 'Groep D', 'Turkije': 'Groep D',
+  'Duitsland': 'Groep E', 'Curaçao': 'Groep E', 'Ivoorkust': 'Groep E', 'Ecuador': 'Groep E',
+  'Nederland': 'Groep F', 'Japan': 'Groep F', 'Tunesië': 'Groep F', 'Zweden': 'Groep F',
+  'België': 'Groep G', 'Egypte': 'Groep G', 'Iran': 'Groep G', 'Nieuw-Zeeland': 'Groep G',
+  'Spanje': 'Groep H', 'Kaapverdië': 'Groep H', 'Saudi-Arabië': 'Groep H', 'Uruguay': 'Groep H',
+  'Frankrijk': 'Groep I', 'Senegal': 'Groep I', 'Noorwegen': 'Groep I', 'Irak': 'Groep I',
+  'Argentinië': 'Groep J', 'Algerije': 'Groep J', 'Oostenrijk': 'Groep J', 'Jordanië': 'Groep J',
+  'Portugal': 'Groep K', 'Oezbekistan': 'Groep K', 'Colombia': 'Groep K', 'Congo': 'Groep K',
+  'Engeland': 'Groep L', 'Kroatië': 'Groep L', 'Ghana': 'Groep L', 'Panama': 'Groep L'
+};
+
 // --- VOLLEDIGE VLAGGEN & KLEUREN GENERATOR ---
 const parseTeam = (teamString: string) => {
   if (!teamString) return { name: '', emoji: '🏳️', gradient: 'linear-gradient(135deg, #DEE2E6, #ADB5BD)' };
@@ -140,23 +156,21 @@ export default function MatchenTab({
 
   const rondes = ['Alle', 'Nog in te vullen', 'Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale'];
 
-  // --- GROEPSSTAND BEREKENEN ---
+  // --- GROEPSSTAND BEREKENEN (GEBRUIKT DE HARDE LIJST, GEEN DATABASE NODIG!) ---
   const genereerGroepsStand = (teamNaam: string) => {
-    // Zoek in alle matchen de groep van dit team
-    const matchMetTeam = gefilterdeMatchen.find((m: any) => m.thuisploeg === teamNaam || m.uitploeg === teamNaam);
-    if (!matchMetTeam || !matchMetTeam.groep) return null;
+    // 1. Zoek via onze interne lijst in welke groep dit team zit
+    const groepsNaam = WK_GROEPEN[teamNaam];
+    if (!groepsNaam) return null; // Land zit niet in de lijst
 
-    const groepsNaam = matchMetTeam.groep;
-    const alleGroepMatchen = gefilterdeMatchen.filter((m: any) => m.groep === groepsNaam);
-    
-    // Haal alle unieke teams op die in deze groep zitten
-    const teamsInGroep = Array.from(new Set(alleGroepMatchen.flatMap((m: any) => [m.thuisploeg, m.uitploeg])));
+    // 2. Zoek alle andere landen die ook in deze groep zitten
+    const teamsInGroep = Object.keys(WK_GROEPEN).filter(t => WK_GROEPEN[t] === groepsNaam);
     
     // Basis klassement object aanmaken
     let stand = teamsInGroep.map((team: any) => ({ team, ges: 0, w: 0, g: 0, v: 0, dv: 0, dt: 0, pt: 0 }));
 
-    // Verwerk enkel gespeelde matchen
-    const gespeeldeMatchen = alleGroepMatchen.filter((m: any) => m.thuis_score !== null && m.uit_score !== null);
+    // 3. Haal de matchen op uit de huidige dataset (enkel matchen tussen deze ploegen)
+    const groepMatchen = gefilterdeMatchen.filter((m: any) => teamsInGroep.includes(m.thuisploeg) && teamsInGroep.includes(m.uitploeg));
+    const gespeeldeMatchen = groepMatchen.filter((m: any) => m.thuis_score !== null && m.uit_score !== null);
     
     gespeeldeMatchen.forEach((m: any) => {
       const thuis = stand.find(s => s.team === m.thuisploeg);
@@ -172,7 +186,7 @@ export default function MatchenTab({
       }
     });
 
-    // Sorteren op: Punten > Doelsaldo > Doelpunten voor > Alfabetisch
+    // 4. Sorteren op: Punten > Doelsaldo > Doelpunten voor > Alfabetisch
     stand.sort((a, b) => {
       if (b.pt !== a.pt) return b.pt - a.pt;
       const dsA = a.dv - a.dt; const dsB = b.dv - b.dt;
@@ -234,12 +248,15 @@ export default function MatchenTab({
 
           const thuisInfo = parseTeam(match.thuisploeg);
           const uitInfo = parseTeam(match.uitploeg);
+          
+          // Haal de groepsnaam op als het een groepsfase match is
+          const matchGroep = match.ronde === 'Groepsfase' ? WK_GROEPEN[match.thuisploeg] : '';
 
           return (
             <div key={match.id} style={{ background: 'rgba(255, 255, 255, 0.95)', borderRadius: '16px', border: '2px solid #E9ECEF', boxShadow: '0 4px 15px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
               
               <div style={{ background: '#F8F9FA', padding: '8px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E9ECEF', fontSize: '0.7rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>
-                <span>{dateStr} • {timeStr} • {match.ronde} {match.groep ? `(${match.groep})` : ''}</span>
+                <span>{dateStr} • {timeStr} • {match.ronde} {matchGroep ? `(${matchGroep})` : ''}</span>
                 {saveStatus === 'saving' && <span style={{ color: 'var(--crayola)' }}>Opslaan... ⏳</span>}
                 {saveStatus === 'saved' && <span style={{ color: '#40C057' }}>Opgeslagen ✅</span>}
                 {isMatchGesloten && <span style={{ color: '#FA5252' }}>🔒 GESLOTEN</span>}
@@ -479,7 +496,7 @@ export default function MatchenTab({
                 })}
               
               <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 800 }}>
-                (Tip: Zorg dat je filter bovenaan op "Alle" staat voor de volledige historiek).
+                (Zet je filter op 'Alle' of 'Groepsfase' om alles te zien).
               </div>
             </div>
 
