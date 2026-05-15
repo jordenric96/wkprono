@@ -7,12 +7,9 @@ export default function MatchenTab({
   handleScore, filterRonde, setFilterRonde
 }: any) {
   
-  // State voor ons nieuwe pop-up venster
   const [geselecteerdTeam, setGeselecteerdTeam] = useState<string | null>(null);
-
   const rondes = ['Alle', 'Nog in te vullen', 'Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale'];
 
-  // Functie om land-emoji's te genereren (maakt het visueel mooier in de pop-up)
   const getFlag = (team: string) => {
     if (!team) return '🏳️';
     const flags: any = { 'België': '🇧🇪', 'Frankrijk': '🇫🇷', 'Nederland': '🇳🇱', 'Duitsland': '🇩🇪', 'Spanje': '🇪🇸', 'Engeland': '🏴󠁧󠁢󠁥󠁮󠁧󠁿', 'Brazilië': '🇧🇷', 'Argentinië': '🇦🇷', 'Italië': '🇮🇹', 'Portugal': '🇵🇹' };
@@ -56,7 +53,6 @@ export default function MatchenTab({
           const saveStatus = matchSaveStatus[match.id] || 'idle';
           const isExpanded = expandedMatchId === match.id;
           
-          // Formatteer Datum
           const matchDate = new Date(match.datum);
           const dateStr = matchDate.toLocaleDateString('nl-BE', { weekday: 'short', day: '2-digit', month: 'short' });
           const timeStr = matchDate.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
@@ -64,7 +60,7 @@ export default function MatchenTab({
           return (
             <div key={match.id} style={{ background: 'rgba(255, 255, 255, 0.95)', borderRadius: '16px', border: '2px solid #E9ECEF', boxShadow: '0 4px 15px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
               
-              {/* MATCH HEADER (Datum + Save Status) */}
+              {/* MATCH HEADER */}
               <div style={{ background: '#F8F9FA', padding: '8px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E9ECEF', fontSize: '0.7rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>
                 <span>{dateStr} • {timeStr} • {match.ronde}</span>
                 {saveStatus === 'saving' && <span style={{ color: 'var(--crayola)' }}>Opslaan... ⏳</span>}
@@ -72,10 +68,9 @@ export default function MatchenTab({
                 {isMatchGesloten && <span style={{ color: '#FA5252' }}>🔒 GESLOTEN</span>}
               </div>
 
-              {/* MATCH BODY (Ploegen + Inputs) */}
+              {/* MATCH BODY */}
               <div style={{ padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
                 
-                {/* THUISPLOEG (Klikbaar) */}
                 <div 
                   onClick={() => setGeselecteerdTeam(match.thuisploeg)}
                   style={{ flex: 1, textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', cursor: 'pointer', padding: '5px', borderRadius: '10px', transition: 'background 0.2s' }}
@@ -88,7 +83,6 @@ export default function MatchenTab({
                   <span style={{ fontWeight: 900, fontSize: '0.9rem', color: '#111827' }}>{match.thuisploeg}</span>
                 </div>
 
-                {/* SCORES INVULLEN */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <input 
                     type="tel" value={voorspelling.thuis} disabled={isMatchGesloten}
@@ -103,7 +97,6 @@ export default function MatchenTab({
                   />
                 </div>
 
-                {/* UITPLOEG (Klikbaar) */}
                 <div 
                   onClick={() => setGeselecteerdTeam(match.uitploeg)}
                   style={{ flex: 1, textAlign: 'left', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', cursor: 'pointer', padding: '5px', borderRadius: '10px', transition: 'background 0.2s' }}
@@ -117,18 +110,14 @@ export default function MatchenTab({
                 </div>
               </div>
 
-              {/* Uitslag & Spionage (Zodra match gestart is) */}
+              {/* Uitslag & Spionage */}
               {isMatchGesloten && (
                 <div style={{ borderTop: '1px dashed #E9ECEF' }}>
-                  
-                  {/* Echte Uitslag indien bekend */}
                   {match.thuis_score !== null && (
                     <div style={{ background: '#FFFDF5', padding: '8px', textAlign: 'center', fontSize: '0.8rem', fontWeight: 900, color: '#D4AF37' }}>
                       EINDSTAND: {match.thuis_score} - {match.uit_score}
                     </div>
                   )}
-
-                  {/* Klik om voorspellingen te zien */}
                   <div 
                     onClick={() => setExpandedId(isExpanded ? null : match.id)}
                     style={{ padding: '10px', textAlign: 'center', background: isExpanded ? '#FDF0FF' : 'transparent', color: 'var(--magenta)', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer', transition: '0.2s' }}
@@ -136,22 +125,20 @@ export default function MatchenTab({
                     {isExpanded ? '▲ SLUIT VOORSPELLINGEN' : '👁️ KLIK OM VOORSPELLINGEN TE ZIEN'}
                   </div>
 
-                  {/* Uitgeklapte lijst van alle spelers */}
                   {isExpanded && (
                     <div style={{ padding: '15px', background: '#F8F9FA', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {alleSpelers.map((s: any) => {
                         const v = alleMatchVoorspellingen.find((x: any) => x.match_id === match.id && x.speler_id === s.id);
                         const heeftIngevuld = v && v.thuis_score !== null && v.uit_score !== null;
                         
-                        // Check of punten verdiend (indien match gespeeld is)
                         let statusColor = '#495057';
                         let isExact = false;
                         if (match.thuis_score !== null && heeftIngevuld) {
                           const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
                           const pred = v.thuis_score > v.uit_score ? 1 : v.thuis_score < v.uit_score ? 2 : 0;
-                          if (v.thuis_score === match.thuis_score && v.uit_score === match.uit_score) { statusColor = '#40C057'; isExact = true; } // Groen
-                          else if (echt === pred) statusColor = '#228BE6'; // Blauw
-                          else statusColor = '#FA5252'; // Rood
+                          if (v.thuis_score === match.thuis_score && v.uit_score === match.uit_score) { statusColor = '#40C057'; isExact = true; } 
+                          else if (echt === pred) statusColor = '#228BE6'; 
+                          else statusColor = '#FA5252'; 
                         }
 
                         return (
@@ -176,12 +163,10 @@ export default function MatchenTab({
         })
       )}
 
-      {/* ========================================= */}
-      {/* 📊 TEAM DOSSIER POP-UP (HET NIEUWE DEEL)  */}
-      {/* ========================================= */}
+      {/* TEAM DOSSIER POP-UP */}
       {geselecteerdTeam && (
         <div 
-          onClick={() => setGeselecteerdTeam(null)} // Sluit bij klikken naast het venster
+          onClick={() => setGeselecteerdTeam(null)}
           style={{
             position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
             background: 'rgba(0, 0, 0, 0.5)', backdropFilter: 'blur(5px)', zIndex: 10000,
@@ -189,9 +174,8 @@ export default function MatchenTab({
             animation: 'fadeIn 0.3s ease'
           }}
         >
-          {/* Het witte paneel */}
           <div 
-            onClick={(e) => e.stopPropagation()} // Zorg dat klikken ín het venster hem niet sluit
+            onClick={(e) => e.stopPropagation()}
             style={{
               background: '#FFF', width: '100%', maxWidth: '500px', maxHeight: '80vh',
               borderTopLeftRadius: '24px', borderTopRightRadius: '24px',
@@ -200,7 +184,6 @@ export default function MatchenTab({
               animation: 'slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)', overflowY: 'auto'
             }}
           >
-            {/* Header van de Pop-up */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '50px', height: '50px', background: '#F8F9FA', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', border: '2px solid #E9ECEF' }}>
@@ -214,7 +197,6 @@ export default function MatchenTab({
               <button onClick={() => setGeselecteerdTeam(null)} style={{ background: '#F1F3F5', border: 'none', width: '35px', height: '35px', borderRadius: '50%', fontSize: '1rem', fontWeight: 900, color: '#495057', cursor: 'pointer' }}>✕</button>
             </div>
 
-            {/* Matchen lijst van dit specifieke team */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {gefilterdeMatchen
                 .filter((m: any) => m.thuisploeg === geselecteerdTeam || m.uitploeg === geselecteerdTeam)
@@ -223,19 +205,16 @@ export default function MatchenTab({
                   const isThuis = m.thuisploeg === geselecteerdTeam;
                   const tegenstander = isThuis ? m.uitploeg : m.thuisploeg;
                   
-                  // Bepaal kleur op basis van winst/verlies (indien gespeeld)
                   let uitslagKleur = '#111827';
                   let statusIcoon = '⏳';
                   if (isGespeeld) {
-                    if ((isThuis && m.thuis_score > m.uit_score) || (!isThuis && m.uit_score > m.thuis_score)) { uitslagKleur = '#40C057'; statusIcoon = '🟢'; } // Winst
-                    else if (m.thuis_score === m.uit_score) { uitslagKleur = '#228BE6'; statusIcoon = '➖'; } // Gelijk
-                    else { uitslagKleur = '#FA5252'; statusIcoon = '🔴'; } // Verlies
+                    if ((isThuis && m.thuis_score > m.uit_score) || (!isThuis && m.uit_score > m.thuis_score)) { uitslagKleur = '#40C057'; statusIcoon = '🟢'; }
+                    else if (m.thuis_score === m.uit_score) { uitslagKleur = '#228BE6'; statusIcoon = '➖'; }
+                    else { uitslagKleur = '#FA5252'; statusIcoon = '🔴'; }
                   }
 
                   return (
                     <div key={m.id} style={{ background: '#F8F9FA', padding: '12px 15px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #E9ECEF' }}>
-                      
-                      {/* Datum & Tegenstander */}
                       <div>
                         <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '2px' }}>
                           {new Date(m.datum).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' })} • {m.ronde}
@@ -244,8 +223,6 @@ export default function MatchenTab({
                           <span style={{ fontSize: '0.7rem', color: '#6C757D' }}>vs</span> {tegenstander} {getFlag(tegenstander)}
                         </div>
                       </div>
-
-                      {/* Uitslag */}
                       <div style={{ textAlign: 'right' }}>
                         {isGespeeld ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -260,14 +237,12 @@ export default function MatchenTab({
                           </div>
                         )}
                       </div>
-
                     </div>
                   );
                 })}
               
-              {/* Fallback indien ze een filter aan hebben staan (bv. Groepsfase) */}
               <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 800 }}>
-                (Tip: Zorg dat je filter bovenaan op "Alle" staat om de volledige historiek te zien).
+                (Tip: Zorg dat je filter bovenaan op &quot;Alle&quot; staat om de volledige historiek te zien).
               </div>
             </div>
 
