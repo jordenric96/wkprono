@@ -375,41 +375,26 @@ export default function MatchenTab({
                 </div>
               )}
 
-              {/* DEELNEMERS STATUS / PRONOSTIEKEN ONDERAAN (WRAP, GEEN HORIZONTALE SCROLL) */}
-              <div style={{ padding: '12px 15px', background: isMatchGesloten ? '#F8F9FA' : '#FFF', borderTop: '1px solid #E9ECEF', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {/* DEELNEMERS STATUS / PRONOSTIEKEN ONDERAAN (COMPACT, ZONDER TITELS) */}
+              <div style={{ padding: '10px 15px', background: isMatchGesloten ? '#F8F9FA' : '#FFF', borderTop: '1px solid #E9ECEF' }}>
                 
-                {/* VÓÓR DE MATCH (GROENE/RODE OVAALTJES) */}
+                {/* VÓÓR DE MATCH (Samen in 1 wolk, groen eerst dan rood) */}
                 {!isMatchGesloten ? (
-                  <>
-                    {ingevuldeSpelers.length > 0 && (
-                      <div>
-                        <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#2B8A3E', textTransform: 'uppercase', marginBottom: '6px' }}>✅ Ingevuld</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                          {ingevuldeSpelers.map((item: any) => (
-                            <div key={item.speler.id} style={{ background: '#40C057', color: '#FFF', padding: '4px 10px', borderRadius: '15px', fontSize: '0.65rem', fontWeight: 900, boxShadow: '0 2px 4px rgba(64, 192, 87, 0.2)' }}>
-                              {item.speler.naam.split(' ')[0]}
-                            </div>
-                          ))}
-                        </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                    {ingevuldeSpelers.map((item: any) => (
+                      <div key={item.speler.id} style={{ background: '#40C057', color: '#FFF', padding: '3px 8px', borderRadius: '12px', fontSize: '0.65rem', fontWeight: 900, boxShadow: '0 2px 4px rgba(64, 192, 87, 0.2)' }}>
+                        {item.speler.naam.split(' ')[0]}
                       </div>
-                    )}
-                    
-                    {nietIngevuldeSpelers.length > 0 && (
-                      <div style={{ marginTop: ingevuldeSpelers.length > 0 ? '5px' : '0' }}>
-                        <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#C92A2A', textTransform: 'uppercase', marginBottom: '6px' }}>⏳ Nog niet ingevuld</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                          {nietIngevuldeSpelers.map((s: any) => (
-                            <div key={s.id} style={{ background: '#FA5252', color: '#FFF', padding: '4px 10px', borderRadius: '15px', fontSize: '0.65rem', fontWeight: 900, boxShadow: '0 2px 4px rgba(250, 82, 82, 0.2)' }}>
-                              {s.naam.split(' ')[0]}
-                            </div>
-                          ))}
-                        </div>
+                    ))}
+                    {nietIngevuldeSpelers.map((s: any) => (
+                      <div key={s.id} style={{ background: '#FA5252', color: '#FFF', padding: '3px 8px', borderRadius: '12px', fontSize: '0.65rem', fontWeight: 900, boxShadow: '0 2px 4px rgba(250, 82, 82, 0.2)' }}>
+                        {s.naam.split(' ')[0]}
                       </div>
-                    )}
-                  </>
+                    ))}
+                  </div>
                 ) : (
-                  /* TIJDENS / NA DE MATCH (GEDETAILLEERDE SCORES DIE WRAPPEN) */
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  /* TIJDENS / NA DE MATCH (GEDETAILLEERDE SCORES) */
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                     {alleSpelers.map((s: any) => {
                       const v = alleMatchVoorspellingen.find((x: any) => x.match_id === match.id && x.speler_id === s.id);
                       const heeftIngevuld = v && v.thuis_score !== null && v.uit_score !== null;
@@ -435,12 +420,12 @@ export default function MatchenTab({
                       }
 
                       return (
-                        <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: pillBg, border: `1px solid ${pillColor}40`, padding: '4px 10px', borderRadius: '12px', flex: '1 1 auto', minWidth: '55px', maxWidth: '80px' }}>
+                        <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: pillBg, border: `1px solid ${pillColor}40`, padding: '4px 8px', borderRadius: '10px', flex: '1 1 auto', minWidth: '45px', maxWidth: '75px' }}>
                           <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
                             {spelerNaam}
                           </span>
-                          <span style={{ fontSize: '0.8rem', fontWeight: 900, color: pillColor, whiteSpace: 'nowrap', display: 'flex', gap: '4px', alignItems: 'center' }}>
-                            {scoreTekst} <span style={{fontSize: '0.65rem'}}>{icoontje}</span>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 900, color: pillColor, whiteSpace: 'nowrap', display: 'flex', gap: '2px', alignItems: 'center' }}>
+                            {scoreTekst} <span style={{fontSize: '0.6rem'}}>{icoontje}</span>
                           </span>
                         </div>
                       );
