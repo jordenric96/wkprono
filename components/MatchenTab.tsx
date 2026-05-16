@@ -1,82 +1,59 @@
 // src/components/MatchenTab.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
+
+// --- HARDE GROEPSINDELING ---
+const WK_GROEPEN: Record<string, string> = {
+  'mexico': 'Groep A', 'zuid-afrika': 'Groep A', 'zuid-korea': 'Groep A', 'tsjechië': 'Groep A',
+  'canada': 'Groep B', 'qatar': 'Groep B', 'zwitserland': 'Groep B', 'bosnië': 'Groep B',
+  'brazilië': 'Groep C', 'marokko': 'Groep C', 'haïti': 'Groep C', 'schotland': 'Groep C',
+  'verenigde staten': 'Groep D', 'paraguay': 'Groep D', 'australië': 'Groep D', 'turkije': 'Groep D',
+  'duitsland': 'Groep E', 'curaçao': 'Groep E', 'ivoorkust': 'Groep E', 'ecuador': 'Groep E',
+  'nederland': 'Groep F', 'japan': 'Groep F', 'tunesië': 'Groep F', 'zweden': 'Groep F',
+  'belgië': 'Groep G', 'egypte': 'Groep G', 'iran': 'Groep G', 'nieuw-zeeland': 'Groep G',
+  'spanje': 'Groep H', 'kaapverdië': 'Groep H', 'saudi-arabië': 'Groep H', 'uruguay': 'Groep H',
+  'frankrijk': 'Groep I', 'senegal': 'Groep I', 'noorwegen': 'Groep I', 'irak': 'Groep I',
+  'argentinië': 'Groep J', 'algerije': 'Groep J', 'oostenrijk': 'Groep J', 'jordanië': 'Groep J',
+  'portugal': 'Groep K', 'oezbekistan': 'Groep K', 'colombia': 'Groep K', 'congo': 'Groep K',
+  'engeland': 'Groep L', 'kroatië': 'Groep L', 'ghana': 'Groep L', 'panama': 'Groep L'
+};
 
 // --- SLIMME VLAGGEN & KLEUREN GENERATOR ---
 const parseTeam = (teamString: string) => {
   if (!teamString) return { name: '', emoji: '🏳️', gradient: 'linear-gradient(135deg, #DEE2E6, #ADB5BD)' };
-
   let cleanString = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
   let searchKey = cleanString.toLowerCase();
 
   const vertalingen: Record<string, string> = {
-    'brazil': 'Brazilië', 'brazilië': 'Brazilië',
-    'morocco': 'Marokko', 'marokko': 'Marokko',
-    'switzerland': 'Zwitserland', 'zwitserland': 'Zwitserland',
-    'bosnia and herzegovina': 'Bosnië', 'bosnia & herzegovina': 'Bosnië', 'bosnia': 'Bosnië', 'bosnië': 'Bosnië',
-    'south korea': 'Zuid-Korea', 'zuid-korea': 'Zuid-Korea',
-    'south africa': 'Zuid-Afrika', 'zuid-afrika': 'Zuid-Afrika',
-    'czechia': 'Tsjechië', 'czech republic': 'Tsjechië', 'tsjechië': 'Tsjechië',
-    'germany': 'Duitsland', 'duitsland': 'Duitsland',
-    'spain': 'Spanje', 'spanje': 'Spanje',
-    'france': 'Frankrijk', 'frankrijk': 'Frankrijk',
-    'netherlands': 'Nederland', 'nederland': 'Nederland',
-    'belgium': 'België', 'belgië': 'België',
-    'italy': 'Italië', 'italië': 'Italië',
-    'argentina': 'Argentinië', 'argentinië': 'Argentinië',
-    'england': 'Engeland',
-    'wales': 'Wales',
-    'scotland': 'Schotland',
+    'brazil': 'Brazilië', 'brazilië': 'Brazilië', 'morocco': 'Marokko', 'marokko': 'Marokko',
+    'switzerland': 'Zwitserland', 'zwitserland': 'Zwitserland', 'bosnia and herzegovina': 'Bosnië', 'bosnia & herzegovina': 'Bosnië', 'bosnia': 'Bosnië', 'bosnië': 'Bosnië',
+    'south korea': 'Zuid-Korea', 'zuid-korea': 'Zuid-Korea', 'south africa': 'Zuid-Afrika', 'zuid-afrika': 'Zuid-Afrika',
+    'czechia': 'Tsjechië', 'czech republic': 'Tsjechië', 'tsjechië': 'Tsjechië', 'germany': 'Duitsland', 'duitsland': 'Duitsland',
+    'spain': 'Spanje', 'spanje': 'Spanje', 'france': 'Frankrijk', 'frankrijk': 'Frankrijk',
+    'netherlands': 'Nederland', 'nederland': 'Nederland', 'belgium': 'België', 'belgië': 'België',
+    'italy': 'Italië', 'italië': 'Italië', 'argentina': 'Argentinië', 'argentinië': 'Argentinië',
+    'england': 'Engeland', 'wales': 'Wales', 'scotland': 'Schotland',
     'usa': 'Verenigde Staten', 'united states': 'Verenigde Staten', 'verenigde staten': 'Verenigde Staten',
-    'canada': 'Canada',
-    'mexico': 'Mexico',
-    'japan': 'Japan',
-    'croatia': 'Kroatië', 'kroatië': 'Kroatië',
-    'uruguay': 'Uruguay',
-    'senegal': 'Senegal',
-    'ghana': 'Ghana',
-    'nigeria': 'Nigeria',
-    'ecuador': 'Ecuador',
-    'sweden': 'Zweden', 'zweden': 'Zweden',
-    'denmark': 'Denemarken', 'denemarken': 'Denemarken',
-    'poland': 'Polen', 'polen': 'Polen',
-    'serbia': 'Servië', 'servië': 'Servië',
-    'iran': 'Iran', 'ir iran': 'Iran', 'islamic republic of iran': 'Iran',
-    'saudi arabia': 'Saudi-Arabië', 'saudi-arabië': 'Saudi-Arabië',
-    'ukraine': 'Oekraïne', 'oekraïne': 'Oekraïne',
-    'peru': 'Peru',
-    'panama': 'Panama',
-    'egypt': 'Egypte', 'egypte': 'Egypte',
-    'tunisia': 'Tunesië', 'tunesië': 'Tunesië',
-    'new zealand': 'Nieuw-Zeeland', 'nieuw-zeeland': 'Nieuw-Zeeland',
-    'qatar': 'Qatar',
-    'ireland': 'Ierland', 'ierland': 'Ierland',
+    'canada': 'Canada', 'mexico': 'Mexico', 'japan': 'Japan', 'croatia': 'Kroatië', 'kroatië': 'Kroatië',
+    'uruguay': 'Uruguay', 'senegal': 'Senegal', 'ghana': 'Ghana', 'nigeria': 'Nigeria', 'ecuador': 'Ecuador',
+    'sweden': 'Zweden', 'zweden': 'Zweden', 'denmark': 'Denemarken', 'denemarken': 'Denemarken',
+    'poland': 'Polen', 'polen': 'Polen', 'serbia': 'Servië', 'servië': 'Servië',
+    'iran': 'Iran', 'ir iran': 'Iran', 'islamic republic of iran': 'Iran', 'saudi arabia': 'Saudi-Arabië', 'saudi-arabië': 'Saudi-Arabië',
+    'ukraine': 'Oekraïne', 'oekraïne': 'Oekraïne', 'peru': 'Peru', 'panama': 'Panama', 'egypt': 'Egypte', 'egypte': 'Egypte',
+    'tunisia': 'Tunesië', 'tunesië': 'Tunesië', 'new zealand': 'Nieuw-Zeeland', 'nieuw-zeeland': 'Nieuw-Zeeland',
+    'qatar': 'Qatar', 'ireland': 'Ierland', 'ierland': 'Ierland',
     'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije', 'turkije': 'Turkije',
-    'romania': 'Roemenië', 'roemenië': 'Roemenië',
-    'hungary': 'Hongarije', 'hongarije': 'Hongarije',
-    'norway': 'Noorwegen', 'noorwegen': 'Noorwegen',
-    'iceland': 'IJsland', 'ijsland': 'IJsland',
-    'slovakia': 'Slowakije', 'slowakije': 'Slowakije',
-    'iraq': 'Irak', 'irak': 'Irak',
-    'paraguay': 'Paraguay',
-    'venezuela': 'Venezuela',
-    'mali': 'Mali',
-    'algeria': 'Algerije', 'algerije': 'Algerije',
-    'zambia': 'Zambia',
-    'honduras': 'Honduras',
-    'el salvador': 'El Salvador',
+    'romania': 'Roemenië', 'roemenië': 'Roemenië', 'hungary': 'Hongarije', 'hongarije': 'Hongarije',
+    'norway': 'Noorwegen', 'noorwegen': 'Noorwegen', 'iceland': 'IJsland', 'ijsland': 'IJsland',
+    'slovakia': 'Slowakije', 'slowakije': 'Slowakije', 'iraq': 'Irak', 'irak': 'Irak',
+    'paraguay': 'Paraguay', 'venezuela': 'Venezuela', 'mali': 'Mali', 'algeria': 'Algerije', 'algerije': 'Algerije',
+    'zambia': 'Zambia', 'honduras': 'Honduras', 'el salvador': 'El Salvador',
     'ivory coast': 'Ivoorkust', 'cote d\'ivoire': 'Ivoorkust', 'côte d\'ivoire': 'Ivoorkust', 'cote divoire': 'Ivoorkust', 'cote d ivoire': 'Ivoorkust', 'core divoir': 'Ivoorkust', 'ivoorkust': 'Ivoorkust',
-    'cameroon': 'Kameroen', 'kameroen': 'Kameroen',
-    'chile': 'Chili', 'chili': 'Chili',
-    'colombia': 'Colombia',
-    'costa rica': 'Costa Rica',
-    'austria': 'Oostenrijk', 'oostenrijk': 'Oostenrijk',
-    'australia': 'Australië', 'australië': 'Australië',
-    'cabo verde': 'Kaapverdië', 'cape verde': 'Kaapverdië', 'kaapverdië': 'Kaapverdië',
-    'haiti': 'Haïti', 'haïti': 'Haïti',
-    'curacao': 'Curaçao', 'curaçao': 'Curaçao',
-    'jordan': 'Jordanië', 'jordanië': 'Jordanië',
-    'congo dr': 'Congo', 'dr congo': 'Congo', 'congo': 'Congo',
+    'cameroon': 'Kameroen', 'kameroen': 'Kameroen', 'chile': 'Chili', 'chili': 'Chili',
+    'colombia': 'Colombia', 'costa rica': 'Costa Rica', 'austria': 'Oostenrijk', 'oostenrijk': 'Oostenrijk',
+    'australia': 'Australië', 'australië': 'Australië', 'cabo verde': 'Kaapverdië', 'cape verde': 'Kaapverdië', 'kaapverdië': 'Kaapverdië',
+    'haiti': 'Haïti', 'haïti': 'Haïti', 'curacao': 'Curaçao', 'curaçao': 'Curaçao',
+    'jordan': 'Jordanië', 'jordanië': 'Jordanië', 'congo dr': 'Congo', 'dr congo': 'Congo', 'congo': 'Congo',
     'uzbekistan': 'Oezbekistan', 'oezbekistan': 'Oezbekistan'
   };
 
@@ -189,15 +166,28 @@ export default function MatchenTab({
 
   const rondes = ['Alle', 'Nog in te vullen', 'Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale'];
 
-  // --- DYNAMISCH GROEPSSTAND BEREKENEN (GEGARANDEERD 4 TEAMS) ---
+  // --- AUTO-SCROLL NAAR LAATST GESPEELDE MATCH ---
+  useEffect(() => {
+    // Zoek de laatste match (door achterstevoren te zoeken) waarvan de datum verstreken is
+    const laatstGespeeldeMatch = [...gefilterdeMatchen].reverse().find(m => nu >= new Date(m.datum).getTime());
+    
+    if (laatstGespeeldeMatch) {
+      setTimeout(() => {
+        const element = document.getElementById(`match-${laatstGespeeldeMatch.id}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 500); // 500ms wachten zodat de matchen zeker geladen zijn
+    }
+  }, [filterRonde]); // Scrolt automatisch opnieuw als je van ronde verandert
+
+  // --- GROEPSSTAND BEREKENEN ---
   const genereerGroepsStand = (rawNaam: string) => {
-    // 1. Zoek alle groepsfase matchen van dit team in de DB
     const groepsMatchenVanDitTeam = gefilterdeMatchen.filter((m: any) => 
       m.ronde === 'Groepsfase' && (m.thuisploeg === rawNaam || m.uitploeg === rawNaam)
     );
     if (groepsMatchenVanDitTeam.length === 0) return null;
 
-    // 2. Haal de 4 teams uit de groep (Het team zelf + zijn 3 tegenstanders)
     const teamsInDeGroep = new Set<string>();
     teamsInDeGroep.add(rawNaam);
     groepsMatchenVanDitTeam.forEach((m: any) => {
@@ -206,17 +196,14 @@ export default function MatchenTab({
     });
     const groepsNamenArray = Array.from(teamsInDeGroep);
 
-    // 3. Haal nu ALLE matchen op tussen deze 4 specifieke teams
     const alleGroepsMatchen = gefilterdeMatchen.filter((m: any) => 
       m.ronde === 'Groepsfase' && 
       groepsNamenArray.includes(m.thuisploeg) && 
       groepsNamenArray.includes(m.uitploeg)
     );
 
-    // 4. Initialiseer de stand
     let stand = groepsNamenArray.map(t => ({ teamRaw: t, ges: 0, w: 0, g: 0, v: 0, dv: 0, dt: 0, pt: 0 }));
 
-    // 5. Punten berekenen
     alleGroepsMatchen.filter((m: any) => m.thuis_score !== null && m.uit_score !== null).forEach((m: any) => {
       const thuis = stand.find(s => s.teamRaw === m.thuisploeg);
       const uit = stand.find(s => s.teamRaw === m.uitploeg);
@@ -231,7 +218,6 @@ export default function MatchenTab({
       }
     });
 
-    // 6. Sorteren
     stand.sort((a, b) => {
       if (b.pt !== a.pt) return b.pt - a.pt;
       const dsA = a.dv - a.dt; const dsB = b.dv - b.dt;
@@ -240,7 +226,6 @@ export default function MatchenTab({
       return a.teamRaw.localeCompare(b.teamRaw);
     });
 
-    // Haal groepsnaam op als die toevallig in de DB zit
     const groepsNaamTonen = groepsMatchenVanDitTeam[0].groep || 'Groepsfase';
     return { groepsNaamTonen, stand };
   };
@@ -279,6 +264,11 @@ export default function MatchenTab({
         ))}
       </div>
 
+      {/* INSTRUCTIE TIP */}
+      <div style={{ background: '#E7F1FF', color: 'var(--crayola)', padding: '10px 15px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900, textAlign: 'center', boxShadow: '0 2px 10px rgba(55, 114, 255, 0.1)' }}>
+        💡 Tip: Tik op de vlaggetjes van een land voor ploegstatistieken en het live groepsklassement!
+      </div>
+
       {/* LIJST MET MATCHEN */}
       {!gefilterdeMatchen || gefilterdeMatchen.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '30px', color: '#ADB5BD', fontWeight: 900 }}>Geen matchen gevonden in deze ronde.</div>
@@ -287,25 +277,48 @@ export default function MatchenTab({
           const isMatchGesloten = nu >= new Date(match.datum).getTime();
           const voorspelling = matchVoorspellingen[match.id] || { thuis: '', uit: '' };
           const saveStatus = matchSaveStatus[match.id] || 'idle';
-          const isExpanded = expandedMatchId === match.id;
           
-          const matchDate = new Date(match.datum);
-          const dateStr = matchDate.toLocaleDateString('nl-BE', { weekday: 'short', day: '2-digit', month: 'short' });
-          const timeStr = matchDate.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
+          const matchDateObj = new Date(match.datum);
+          const dateStr = matchDateObj.toLocaleDateString('nl-BE', { weekday: 'short', day: '2-digit', month: 'short' });
+          const timeStr = matchDateObj.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
 
           const thuisInfo = parseTeam(match.thuisploeg);
           const uitInfo = parseTeam(match.uitploeg);
 
+          // --- DYNAMISCHE VOETBAL TIMELINE BEREKENING ---
+          // We nemen 1 mei 2026 als het 'startpunt' van onze app-aandacht (de 0% op de balk)
+          const TOERNOOI_AANDACHT_START = new Date('2026-05-01').getTime();
+          const matchTijd = matchDateObj.getTime();
+          
+          let progress = ((nu - TOERNOOI_AANDACHT_START) / (matchTijd - TOERNOOI_AANDACHT_START)) * 100;
+          if (progress > 100) progress = 100; // Bal ligt in het doel!
+          if (progress < 0) progress = 0; // Bal ligt op de middenstip
+
           return (
-            <div key={match.id} style={{ background: 'rgba(255, 255, 255, 0.95)', borderRadius: '16px', border: '2px solid #E9ECEF', boxShadow: '0 4px 15px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
+            <div id={`match-${match.id}`} key={match.id} style={{ background: 'rgba(255, 255, 255, 0.95)', borderRadius: '16px', border: isMatchGesloten ? '2px solid #E9ECEF' : '2px solid var(--crayola)', boxShadow: '0 4px 15px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
               
-              <div style={{ background: '#F8F9FA', padding: '8px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E9ECEF', fontSize: '0.7rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>
-                <span>{dateStr} • {timeStr} • {match.ronde} {match.groep ? `(${match.groep})` : ''}</span>
-                {saveStatus === 'saving' && <span style={{ color: 'var(--crayola)' }}>Opslaan... ⏳</span>}
-                {saveStatus === 'saved' && <span style={{ color: '#40C057' }}>Opgeslagen ✅</span>}
-                {isMatchGesloten && <span style={{ color: '#FA5252' }}>🔒 GESLOTEN</span>}
+              {/* MATCH HEADER & TIMELINE */}
+              <div style={{ background: isMatchGesloten ? '#F8F9FA' : '#FFFDF5', padding: '10px 15px', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid #E9ECEF' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>
+                  <span>{dateStr} • {timeStr} • {match.ronde} {match.groep ? `(${match.groep})` : ''}</span>
+                  {saveStatus === 'saving' && <span style={{ color: 'var(--crayola)' }}>Opslaan... ⏳</span>}
+                  {saveStatus === 'saved' && <span style={{ color: '#40C057' }}>Opgeslagen ✅</span>}
+                  {isMatchGesloten && <span style={{ color: '#FA5252' }}>🔒 BEZIG / GESPEELD</span>}
+                </div>
+
+                {/* De Voetbal Balk */}
+                <div style={{ width: '100%', height: '4px', background: '#E9ECEF', borderRadius: '2px', position: 'relative', marginTop: '4px' }}>
+                  <div style={{ position: 'absolute', left: `calc(${progress}% - 8px)`, top: '-8px', fontSize: '14px', transition: 'left 1s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 2 }}>
+                    ⚽
+                  </div>
+                  <div style={{ position: 'absolute', right: '-4px', top: '-6px', fontSize: '12px', opacity: isMatchGesloten ? 0.4 : 1 }}>
+                    🥅
+                  </div>
+                  <div style={{ width: `${progress}%`, height: '100%', background: isMatchGesloten ? '#40C057' : 'var(--crayola)', borderRadius: '2px', transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)' }} />
+                </div>
               </div>
 
+              {/* MATCH BODY */}
               <div style={{ padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '5px' }}>
                 
                 <div 
@@ -351,59 +364,66 @@ export default function MatchenTab({
                 </div>
               </div>
 
-              {isMatchGesloten && (
-                <div style={{ borderTop: '1px dashed #E9ECEF' }}>
-                  {match.thuis_score !== null && (
-                    <div style={{ background: '#FFFDF5', padding: '8px', textAlign: 'center', fontSize: '0.8rem', fontWeight: 900, color: '#D4AF37' }}>
-                      EINDSTAND: {match.thuis_score} - {match.uit_score}
-                    </div>
-                  )}
-                  <div 
-                    onClick={() => setExpandedMatchId(isExpanded ? null : match.id)}
-                    style={{ padding: '10px', textAlign: 'center', background: isExpanded ? '#FDF0FF' : 'transparent', color: 'var(--magenta)', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer', transition: '0.2s' }}
-                  >
-                    {isExpanded ? '▲ SLUIT VOORSPELLINGEN' : '👁️ KLIK OM VOORSPELLINGEN TE ZIEN'}
-                  </div>
-
-                  {isExpanded && (
-                    <div style={{ padding: '15px', background: '#F8F9FA', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {alleSpelers.map((s: any) => {
-                        const v = alleMatchVoorspellingen.find((x: any) => x.match_id === match.id && x.speler_id === s.id);
-                        const heeftIngevuld = v && v.thuis_score !== null && v.uit_score !== null;
-                        
-                        let statusColor = '#495057';
-                        let isExact = false;
-                        if (match.thuis_score !== null && heeftIngevuld) {
-                          const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
-                          const pred = v.thuis_score > v.uit_score ? 1 : v.thuis_score < v.uit_score ? 2 : 0;
-                          if (v.thuis_score === match.thuis_score && v.uit_score === match.uit_score) { statusColor = '#40C057'; isExact = true; } 
-                          else if (echt === pred) statusColor = '#228BE6'; 
-                          else statusColor = '#FA5252'; 
-                        }
-
-                        return (
-                          <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#FFF', borderRadius: '8px', border: '1px solid #E9ECEF' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ fontSize: '1rem' }}>👤</span>
-                              <span style={{ fontWeight: 900, fontSize: '0.85rem', color: '#111827' }}>{s.naam}</span>
-                            </div>
-                            <div style={{ fontWeight: 900, fontSize: '1.1rem', color: statusColor, display: 'flex', alignItems: 'center', gap: '5px' }}>
-                              {heeftIngevuld ? `${v.thuis_score} - ${v.uit_score}` : <span style={{ fontSize: '0.7rem', color: '#ADB5BD' }}>Niets ingevuld</span>}
-                              {isExact && <span style={{ fontSize: '0.8rem' }}>🎯</span>}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+              {/* EVENTUELE EINDSTAND */}
+              {isMatchGesloten && match.thuis_score !== null && (
+                <div style={{ background: '#FFFDF5', borderTop: '1px dashed #E9ECEF', padding: '8px', textAlign: 'center', fontSize: '0.8rem', fontWeight: 900, color: '#D4AF37' }}>
+                  EINDSTAND: {match.thuis_score} - {match.uit_score}
                 </div>
               )}
+
+              {/* DEELNEMERS STATUS / PRONOSTIEKEN ONDERAAN */}
+              <div className="hide-scrollbar" style={{ display: 'flex', overflowX: 'auto', gap: '8px', padding: '12px 15px', background: isMatchGesloten ? '#F8F9FA' : '#FFF', borderTop: '1px solid #E9ECEF' }}>
+                {alleSpelers.map((s: any) => {
+                  const v = alleMatchVoorspellingen.find((x: any) => x.match_id === match.id && x.speler_id === s.id);
+                  const heeftIngevuld = v && v.thuis_score !== null && v.uit_score !== null;
+                  const spelerNaam = s.naam.split(' ')[0]; // Alleen de voornaam
+                  
+                  if (!isMatchGesloten) {
+                    // NOG NIET GESTART: Toon alleen wie het al ingevuld heeft
+                    return (
+                      <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: heeftIngevuld ? 'var(--crayola)' : '#F1F3F5', color: heeftIngevuld ? '#FFF' : '#ADB5BD', padding: '4px 10px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 900, whiteSpace: 'nowrap' }}>
+                        {spelerNaam} {heeftIngevuld ? '✅' : '⏳'}
+                      </div>
+                    );
+                  } else {
+                    // MATCH IS GESTART: Toon hun exacte pronostiek!
+                    let pillBg = '#F1F3F5';
+                    let pillColor = '#495057';
+                    let scoreTekst = heeftIngevuld ? `${v.thuis_score}-${v.uit_score}` : 'Geen';
+                    let icoontje = heeftIngevuld ? '🤔' : '❌';
+                    
+                    if (match.thuis_score !== null && heeftIngevuld) {
+                      const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
+                      const pred = v.thuis_score > v.uit_score ? 1 : v.thuis_score < v.uit_score ? 2 : 0;
+                      if (v.thuis_score === match.thuis_score && v.uit_score === match.uit_score) { 
+                        pillBg = '#E8F5E9'; pillColor = '#2E7D32'; icoontje = '🎯'; // Exact
+                      } else if (echt === pred) { 
+                        pillBg = '#E3F2FD'; pillColor = '#1565C0'; icoontje = '🟢'; // Winnaar Juist
+                      } else { 
+                        pillBg = '#FFEBEE'; pillColor = '#C62828'; icoontje = '🔴'; // Fout
+                      }
+                    } else if (match.thuis_score === null && heeftIngevuld) {
+                       pillBg = '#FFF'; pillColor = 'var(--crayola)'; // In afwachting van uitslag
+                    }
+
+                    return (
+                      <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: pillBg, border: `1px solid ${pillColor}40`, padding: '4px 12px', borderRadius: '12px', minWidth: '65px' }}>
+                        <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '2px' }}>{spelerNaam}</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 900, color: pillColor, whiteSpace: 'nowrap', display: 'flex', gap: '4px', alignItems: 'center' }}>
+                          {scoreTekst} <span style={{fontSize: '0.7rem'}}>{icoontje}</span>
+                        </span>
+                      </div>
+                    );
+                  }
+                })}
+              </div>
+
             </div>
           );
         })
       )}
 
-      {/* TEAM DOSSIER POP-UP - COMPACTER & SLIMMER */}
+      {/* TEAM DOSSIER POP-UP */}
       {geselecteerdTeamRaw && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div 
           onClick={() => setGeselecteerdTeamRaw(null)} 
@@ -422,7 +442,6 @@ export default function MatchenTab({
               overflowY: 'auto'
             }}
           >
-            {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {(() => {
@@ -445,7 +464,6 @@ export default function MatchenTab({
               <button onClick={() => setGeselecteerdTeamRaw(null)} style={{ background: '#F1F3F5', border: 'none', width: '32px', height: '32px', borderRadius: '50%', fontSize: '0.9rem', fontWeight: 900, color: '#495057', cursor: 'pointer' }}>✕</button>
             </div>
 
-            {/* LIVE KLASSEMENT (Strak & Compact) */}
             {(() => {
               const groepData = genereerGroepsStand(geselecteerdTeamRaw);
               if (groepData) {
@@ -487,7 +505,6 @@ export default function MatchenTab({
               return null;
             })()}
 
-            {/* MATCHEN HISTORIEK (Compacter) */}
             <div style={{ fontSize: '0.75rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '6px' }}>
               ⚽ Matchen overzicht
             </div>
