@@ -35,7 +35,9 @@ export default function Home() {
 
   const [infoOpen, setInfoOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState('');
-  const isAdmin = actieveSpeler?.naam?.toLowerCase() === 'jorden ricour'.toLowerCase();
+  const adminNamen = ['jorden ricour', 'wesley moonens', 'yarni ricour'];
+const isAdmin = actieveSpeler?.naam && adminNamen.some((admin: string) => actieveSpeler.naam.toLowerCase().includes(admin));
+  
 
   const [matchen, setMatchen] = useState<any[]>([]);
   const [matchVoorspellingen, setMatchVoorspellingen] = useState<Record<number, {thuis: string, uit: string}>>({});
