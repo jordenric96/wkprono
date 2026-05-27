@@ -526,7 +526,7 @@ const isAdmin = actieveSpeler?.naam && adminNamen.some((admin: string) => actiev
         {actieveSpeler ? (
           <div>
             {actieveTab === 'matchen' && <MatchenTab gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} />}
-            {actieveTab === 'groepen' && <GroepenTab alleMatchen={matchen} />}
+          
             {actieveTab === 'prijs' && <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />}
             {actieveTab === 'bonus' && <BonusTab winnaar={winnaar} setWinnaar={setWinnaar} hf={hf} setHf={setHf} meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} eindstation={eindstation} setEindstation={setEindstation} totaalGoals={totaalGoals} setTotaalGoals={setTotaalGoals} totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} />}
             {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} />}
