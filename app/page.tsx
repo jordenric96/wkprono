@@ -10,8 +10,7 @@ import AntwoordenTab from '../components/AntwoordenTab';
 import RankingTab from '../components/RankingTab';
 import TellersTab from '../components/TellersTab';
 import ChatTab from '../components/ChatTab';
-import PrijsTab from '../components/PrijsTab';
-import GroepenTab from '../components/GroepenTab'; // <-- Correcte import!
+import PrijsTab from '../components/PrijsTab';// <-- Correcte import!
 
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
 
@@ -567,7 +566,7 @@ const isAdmin = actieveSpeler?.naam && adminNamen.some((admin: string) => actiev
           {[
             {id:'ranking', i:'🏆', n:'Rank'},
             {id:'matchen', i:'⚽', n:'Match'},
-            {id:'groepen', i:'🌍', n:'Groep'},
+  
             {id:'bonus', i:'💎', n:'Bonus'},
             {id:'kleedkamer', i:'💬', n:'Chat'},
             {id:'antwoorden', i:'👁️', n:'Antw'},
