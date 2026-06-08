@@ -149,12 +149,10 @@ const parseTeam = (teamString: string) => {
   return { name: nameNL, emoji, gradient };
 };
 
-export default function TellersTab({ matchen }: { matchen: any[] }) {
-  // --- BEREKENINGEN ---
+export default function TellersTab({ matchen, alleToernooiV }: { matchen: any[], alleToernooiV: any[] }) {
+  // --- BEREKENINGEN GLOBALE STATS ---
   const stats = useMemo(() => {
     let totaleGoals = 0, totaleGeel = 0, totaleRood = 0;
-    
-    // We starten met alle 48 landen op 0
     const goalsVoor: Record<string, number> = {};
     const goalsTegen: Record<string, number> = {};
     
@@ -173,7 +171,6 @@ export default function TellersTab({ matchen }: { matchen: any[] }) {
         const thuisNL = parseTeam(m.thuisploeg).name;
         const uitNL = parseTeam(m.uitploeg).name;
 
-        // Omdat we via parseTeam zoeken, pakken we foute databasenamen eruit
         if (goalsVoor[thuisNL] !== undefined) goalsVoor[thuisNL] += m.thuis_score;
         if (goalsVoor[uitNL] !== undefined) goalsVoor[uitNL] += m.uit_score;
         if (goalsTegen[thuisNL] !== undefined) goalsTegen[thuisNL] += m.uit_score;
@@ -181,7 +178,6 @@ export default function TellersTab({ matchen }: { matchen: any[] }) {
       }
     });
 
-    // Bereken wie bovenaan staat (Ex-aequo toegestaan!)
     const maxGoals = Math.max(...Object.values(goalsVoor));
     const minTegen = Math.min(...Object.values(goalsTegen));
 
@@ -191,15 +187,53 @@ export default function TellersTab({ matchen }: { matchen: any[] }) {
     return { totaleGoals, totaleGeel, totaleRood, topScorers, maxGoals, besteDefensies, minTegen };
   }, [matchen]);
 
+  // --- HULPFUNCTIES VOOR TOP 3 EN JUISTE GOKKEN ---
+  
+  // Wie zit er het dichtst bij een getal (Goals/Geel/Rood)
+  const getClosest = (veld: string, actueleWaarde: number) => {
+    if (!alleToernooiV || alleToernooiV.length === 0) return [];
+    
+    const metVerschil = alleToernooiV.map((v: any) => {
+      const gok = v[veld] || 0;
+      return {
+        naam: v.spelers?.naam?.split(' ')[0] || 'Onbekend',
+        gok: gok,
+        verschil: Math.abs(gok - actueleWaarde)
+      };
+    });
+
+    // Sorteer op verschil (laagste eerst) en pak de top 3
+    metVerschil.sort((a, b) => a.verschil - b.verschil);
+    return metVerschil.slice(0, 3);
+  };
+
+  // Wie heeft het momenteel aan het rechte eind voor Beste Aanval / Verdediging
+  const getCorrectPicks = (veld: string, leidendeLanden: string[]) => {
+    if (!alleToernooiV || alleToernooiV.length === 0) return [];
+    const leidendRaw = leidendeLanden.map(l => parseTeam(l).name.toLowerCase());
+    
+    return alleToernooiV.filter((v: any) => {
+      if (!v[veld]) return false;
+      const gokRaw = parseTeam(v[veld]).name.toLowerCase();
+      return leidendRaw.includes(gokRaw);
+    }).map((v: any) => v.spelers?.naam?.split(' ')[0] || 'Onbekend');
+  };
+
+  const topGoals = getClosest('totaal_goals', stats.totaleGoals);
+  const topGeel = getClosest('totaal_gele_kaarten', stats.totaleGeel);
+  const topRood = getClosest('totaal_rode_kaarten', stats.totaleRood);
+  
+  const correctAttack = getCorrectPicks('topschutter', stats.topScorers);
+  const correctDefense = getCorrectPicks('beste_keeper', stats.besteDefensies);
+
   // --- DYNAMISCHE GROOTTE BEREKENEN ---
-  // Hoeveel bollen we hebben bepaalt hoe groot ze zijn (Van 48 naar 1)
   const calculateSize = (amount: number) => {
-    if (amount >= 30) return { bubble: 26, emoji: 12 }; // In het begin piepklein
+    if (amount >= 30) return { bubble: 26, emoji: 12 }; 
     if (amount >= 15) return { bubble: 35, emoji: 18 };
     if (amount >= 8)  return { bubble: 45, emoji: 24 };
     if (amount >= 4)  return { bubble: 60, emoji: 30 };
     if (amount > 1)   return { bubble: 75, emoji: 40 };
-    return { bubble: 110, emoji: 55 }; // Eén ultieme winnaar: Gigantisch!
+    return { bubble: 110, emoji: 55 }; 
   };
 
   const attackSize = calculateSize(stats.topScorers.length);
@@ -208,92 +242,130 @@ export default function TellersTab({ matchen }: { matchen: any[] }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
-      {/* 1. GLOBALE STATS */}
-      <div style={{ display: 'flex', gap: '10px' }}>
-        <div style={{ flex: 1, background: '#FFFDF5', borderRadius: '20px', padding: '15px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: '2px solid #E9ECEF' }}>
-          <div style={{ fontSize: '2rem' }}>⚽</div>
-          <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: '#111827', lineHeight: 1 }}>{stats.totaleGoals}</div>
-          <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>Goals Toernooi</div>
+      {/* 1. GLOBALE STATS MET LIVE TOP 3 */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(105px, 1fr))', gap: '10px' }}>
+        
+        {/* Goals */}
+        <div style={{ background: '#FFFDF5', borderRadius: '20px', padding: '12px 8px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: '2px solid #E9ECEF', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: '1.5rem' }}>⚽</div>
+            <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: '#111827', lineHeight: 1 }}>{stats.totaleGoals}</div>
+            <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>Totaal Goals</div>
+          </div>
+          <div style={{ marginTop: '10px', fontSize: '0.6rem', textAlign: 'left', background: 'rgba(0,0,0,0.03)', padding: '6px', borderRadius: '8px' }}>
+            <div style={{ fontWeight: 900, color: 'var(--crayola)', marginBottom: '4px', textTransform: 'uppercase' }}>Top 3 Gok:</div>
+            {topGoals.map((t, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#495057', fontWeight: 800 }}>
+                <span>{i+1}. {t.naam}</span>
+                <span>{t.gok}</span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div style={{ flex: 1, background: '#FFFDF5', borderRadius: '20px', padding: '15px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: '2px solid #E9ECEF' }}>
-          <div style={{ fontSize: '2rem' }}>🟨</div>
-          <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: '#111827', lineHeight: 1 }}>{stats.totaleGeel}</div>
-          <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>Gele Kaarten</div>
+
+        {/* Geel */}
+        <div style={{ background: '#FFFDF5', borderRadius: '20px', padding: '12px 8px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: '2px solid #E9ECEF', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: '1.5rem' }}>🟨</div>
+            <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: '#111827', lineHeight: 1 }}>{stats.totaleGeel}</div>
+            <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>Totaal Geel</div>
+          </div>
+          <div style={{ marginTop: '10px', fontSize: '0.6rem', textAlign: 'left', background: 'rgba(0,0,0,0.03)', padding: '6px', borderRadius: '8px' }}>
+            <div style={{ fontWeight: 900, color: 'var(--crayola)', marginBottom: '4px', textTransform: 'uppercase' }}>Top 3 Gok:</div>
+            {topGeel.map((t, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#495057', fontWeight: 800 }}>
+                <span>{i+1}. {t.naam}</span>
+                <span>{t.gok}</span>
+              </div>
+            ))}
+          </div>
         </div>
-        <div style={{ flex: 1, background: '#FFFDF5', borderRadius: '20px', padding: '15px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: '2px solid #E9ECEF' }}>
-          <div style={{ fontSize: '2rem' }}>🟥</div>
-          <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: '#111827', lineHeight: 1 }}>{stats.totaleRood}</div>
-          <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>Rode Kaarten</div>
+
+        {/* Rood */}
+        <div style={{ background: '#FFFDF5', borderRadius: '20px', padding: '12px 8px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', border: '2px solid #E9ECEF', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: '1.5rem' }}>🟥</div>
+            <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: '#111827', lineHeight: 1 }}>{stats.totaleRood}</div>
+            <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>Totaal Rood</div>
+          </div>
+          <div style={{ marginTop: '10px', fontSize: '0.6rem', textAlign: 'left', background: 'rgba(0,0,0,0.03)', padding: '6px', borderRadius: '8px' }}>
+            <div style={{ fontWeight: 900, color: 'var(--crayola)', marginBottom: '4px', textTransform: 'uppercase' }}>Top 3 Gok:</div>
+            {topRood.map((t, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#495057', fontWeight: 800 }}>
+                <span>{i+1}. {t.naam}</span>
+                <span>{t.gok}</span>
+              </div>
+            ))}
+          </div>
         </div>
+
       </div>
 
-      {/* 2. RACE VOOR BESTE AANVAL */}
+      {/* 2. RACE VOOR BESTE AANVAL MET WIE HET JUIST HEEFT */}
       <div style={{ background: 'rgba(255, 255, 255, 0.9)', borderRadius: '20px', padding: '20px', border: '1px solid #E9ECEF', boxShadow: '0 8px 20px rgba(0,0,0,0.03)' }}>
         <h3 style={{ margin: '0 0 5px 0', fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: 'var(--crayola)' }}>Beste Aanval 🔥</h3>
         <p style={{ margin: '0 0 15px 0', fontSize: '0.8rem', fontWeight: 800, color: '#6C757D' }}>
           Landen met de meeste goals voor: <strong style={{ color: '#111827' }}>{stats.maxGoals}</strong>
         </p>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginBottom: '15px' }}>
           {stats.topScorers.map(land => {
             const team = parseTeam(land);
             return (
               <div 
-                key={land} 
-                title={team.name}
-                style={{
-                  width: `${attackSize.bubble}px`, height: `${attackSize.bubble}px`, 
-                  borderRadius: '50%', background: team.gradient, 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.1)', border: '2px solid #FFF',
-                  transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-                }}
+                key={land} title={team.name}
+                style={{ width: `${attackSize.bubble}px`, height: `${attackSize.bubble}px`, borderRadius: '50%', background: team.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', border: '2px solid #FFF', transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}
               >
-                <div style={{ 
-                  width: '80%', height: '80%', borderRadius: '50%', background: '#fff', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                  fontSize: `${attackSize.emoji}px` 
-                }}>
-                  {team.emoji}
-                </div>
+                <div style={{ width: '80%', height: '80%', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `${attackSize.emoji}px` }}>{team.emoji}</div>
               </div>
             );
           })}
         </div>
+
+        {/* Live Spelers die het momenteel goed hebben gokt */}
+        <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px dashed #DEE2E6' }}>
+          <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', textAlign: 'center', marginBottom: '8px' }}>👤 Spelers op winst:</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
+            {correctAttack.length > 0 ? correctAttack.map((naam, i) => (
+              <div key={i} style={{ background: 'var(--crayola)', color: '#FFF', padding: '3px 10px', borderRadius: '15px', fontSize: '0.65rem', fontWeight: 900, boxShadow: '0 2px 5px rgba(55,114,255,0.3)' }}>{naam}</div>
+            )) : (
+              <div style={{ fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 800 }}>Niemand heeft dit momenteel juist...</div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* 3. RACE VOOR BESTE VERDEDIGING */}
+      {/* 3. RACE VOOR BESTE VERDEDIGING MET WIE HET JUIST HEEFT */}
       <div style={{ background: 'rgba(255, 255, 255, 0.9)', borderRadius: '20px', padding: '20px', border: '1px solid #E9ECEF', boxShadow: '0 8px 20px rgba(0,0,0,0.03)' }}>
         <h3 style={{ margin: '0 0 5px 0', fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: '#40C057' }}>De Muur 🧱</h3>
         <p style={{ margin: '0 0 15px 0', fontSize: '0.8rem', fontWeight: 800, color: '#6C757D' }}>
           Landen met de minste tegengoals: <strong style={{ color: '#111827' }}>{stats.minTegen}</strong>
         </p>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginBottom: '15px' }}>
           {stats.besteDefensies.map(land => {
             const team = parseTeam(land);
             return (
               <div 
-                key={land} 
-                title={team.name}
-                style={{
-                  width: `${defenseSize.bubble}px`, height: `${defenseSize.bubble}px`, 
-                  borderRadius: '50%', background: team.gradient, 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                  boxShadow: '0 4px 10px rgba(0,0,0,0.1)', border: '2px solid #FFF',
-                  transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
-                }}
+                key={land} title={team.name}
+                style={{ width: `${defenseSize.bubble}px`, height: `${defenseSize.bubble}px`, borderRadius: '50%', background: team.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', border: '2px solid #FFF', transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}
               >
-                <div style={{ 
-                  width: '80%', height: '80%', borderRadius: '50%', background: '#fff', 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                  fontSize: `${defenseSize.emoji}px` 
-                }}>
-                  {team.emoji}
-                </div>
+                <div style={{ width: '80%', height: '80%', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: `${defenseSize.emoji}px` }}>{team.emoji}</div>
               </div>
             );
           })}
+        </div>
+
+        {/* Live Spelers die het momenteel goed hebben gokt */}
+        <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px dashed #DEE2E6' }}>
+          <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', textAlign: 'center', marginBottom: '8px' }}>👤 Spelers op winst:</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
+            {correctDefense.length > 0 ? correctDefense.map((naam, i) => (
+              <div key={i} style={{ background: '#40C057', color: '#FFF', padding: '3px 10px', borderRadius: '15px', fontSize: '0.65rem', fontWeight: 900, boxShadow: '0 2px 5px rgba(64,192,87,0.3)' }}>{naam}</div>
+            )) : (
+              <div style={{ fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 800 }}>Niemand heeft dit momenteel juist...</div>
+            )}
+          </div>
         </div>
       </div>
 
