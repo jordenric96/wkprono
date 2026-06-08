@@ -1,6 +1,9 @@
 // src/components/TellersTab.tsx
 import React, { useMemo } from 'react';
 
+// De deadline voor het slotje (Donderdag 11 juni 2026 om 21:00)
+const DEADLINE = new Date('2026-06-11T21:00:00+02:00').getTime();
+
 // De lijst van ALLE 48 landen, zodat we in het begin iedereen op 0 kunnen zetten
 const ALLE_LANDEN = [
   'Mexico', 'Zuid-Afrika', 'Zuid-Korea', 'Tsjechië', 'Canada', 'Qatar', 'Zwitserland', 'Bosnië',
@@ -149,7 +152,11 @@ const parseTeam = (teamString: string) => {
   return { name: nameNL, emoji, gradient };
 };
 
-export default function TellersTab({ matchen, alleToernooiV }: { matchen: any[], alleToernooiV: any[] }) {
+export default function TellersTab({ matchen, alleToernooiV, isAdmin }: { matchen: any[], alleToernooiV: any[], isAdmin: boolean }) {
+  const nu = new Date().getTime();
+  const toernooiGestart = nu >= DEADLINE;
+  const toonTussenstand = isAdmin || toernooiGestart;
+
   // --- BEREKENINGEN GLOBALE STATS ---
   const stats = useMemo(() => {
     let totaleGoals = 0, totaleGeel = 0, totaleRood = 0;
@@ -252,15 +259,21 @@ export default function TellersTab({ matchen, alleToernooiV }: { matchen: any[],
             <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: '#111827', lineHeight: 1 }}>{stats.totaleGoals}</div>
             <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>Totaal Goals</div>
           </div>
-          <div style={{ marginTop: '10px', fontSize: '0.6rem', textAlign: 'left', background: 'rgba(0,0,0,0.03)', padding: '6px', borderRadius: '8px' }}>
-            <div style={{ fontWeight: 900, color: 'var(--crayola)', marginBottom: '4px', textTransform: 'uppercase' }}>Top 3 Gok:</div>
-            {topGoals.map((t, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#495057', fontWeight: 800 }}>
-                <span>{i+1}. {t.naam}</span>
-                <span>{t.gok}</span>
-              </div>
-            ))}
-          </div>
+          {toonTussenstand ? (
+            <div style={{ marginTop: '10px', fontSize: '0.6rem', textAlign: 'left', background: 'rgba(0,0,0,0.03)', padding: '6px', borderRadius: '8px' }}>
+              <div style={{ fontWeight: 900, color: 'var(--crayola)', marginBottom: '4px', textTransform: 'uppercase' }}>Top 3 Gok:</div>
+              {topGoals.map((t, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#495057', fontWeight: 800 }}>
+                  <span>{i+1}. {t.naam}</span>
+                  <span>{t.gok}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ marginTop: '10px', fontSize: '0.6rem', textAlign: 'center', background: 'rgba(0,0,0,0.03)', padding: '6px', borderRadius: '8px', color: '#ADB5BD', fontWeight: 900 }}>
+              🔒 Verborgen
+            </div>
+          )}
         </div>
 
         {/* Geel */}
@@ -270,15 +283,21 @@ export default function TellersTab({ matchen, alleToernooiV }: { matchen: any[],
             <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: '#111827', lineHeight: 1 }}>{stats.totaleGeel}</div>
             <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>Totaal Geel</div>
           </div>
-          <div style={{ marginTop: '10px', fontSize: '0.6rem', textAlign: 'left', background: 'rgba(0,0,0,0.03)', padding: '6px', borderRadius: '8px' }}>
-            <div style={{ fontWeight: 900, color: 'var(--crayola)', marginBottom: '4px', textTransform: 'uppercase' }}>Top 3 Gok:</div>
-            {topGeel.map((t, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#495057', fontWeight: 800 }}>
-                <span>{i+1}. {t.naam}</span>
-                <span>{t.gok}</span>
-              </div>
-            ))}
-          </div>
+          {toonTussenstand ? (
+            <div style={{ marginTop: '10px', fontSize: '0.6rem', textAlign: 'left', background: 'rgba(0,0,0,0.03)', padding: '6px', borderRadius: '8px' }}>
+              <div style={{ fontWeight: 900, color: 'var(--crayola)', marginBottom: '4px', textTransform: 'uppercase' }}>Top 3 Gok:</div>
+              {topGeel.map((t, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#495057', fontWeight: 800 }}>
+                  <span>{i+1}. {t.naam}</span>
+                  <span>{t.gok}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ marginTop: '10px', fontSize: '0.6rem', textAlign: 'center', background: 'rgba(0,0,0,0.03)', padding: '6px', borderRadius: '8px', color: '#ADB5BD', fontWeight: 900 }}>
+              🔒 Verborgen
+            </div>
+          )}
         </div>
 
         {/* Rood */}
@@ -288,15 +307,21 @@ export default function TellersTab({ matchen, alleToernooiV }: { matchen: any[],
             <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: '#111827', lineHeight: 1 }}>{stats.totaleRood}</div>
             <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>Totaal Rood</div>
           </div>
-          <div style={{ marginTop: '10px', fontSize: '0.6rem', textAlign: 'left', background: 'rgba(0,0,0,0.03)', padding: '6px', borderRadius: '8px' }}>
-            <div style={{ fontWeight: 900, color: 'var(--crayola)', marginBottom: '4px', textTransform: 'uppercase' }}>Top 3 Gok:</div>
-            {topRood.map((t, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#495057', fontWeight: 800 }}>
-                <span>{i+1}. {t.naam}</span>
-                <span>{t.gok}</span>
-              </div>
-            ))}
-          </div>
+          {toonTussenstand ? (
+            <div style={{ marginTop: '10px', fontSize: '0.6rem', textAlign: 'left', background: 'rgba(0,0,0,0.03)', padding: '6px', borderRadius: '8px' }}>
+              <div style={{ fontWeight: 900, color: 'var(--crayola)', marginBottom: '4px', textTransform: 'uppercase' }}>Top 3 Gok:</div>
+              {topRood.map((t, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#495057', fontWeight: 800 }}>
+                  <span>{i+1}. {t.naam}</span>
+                  <span>{t.gok}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ marginTop: '10px', fontSize: '0.6rem', textAlign: 'center', background: 'rgba(0,0,0,0.03)', padding: '6px', borderRadius: '8px', color: '#ADB5BD', fontWeight: 900 }}>
+              🔒 Verborgen
+            </div>
+          )}
         </div>
 
       </div>
@@ -323,16 +348,22 @@ export default function TellersTab({ matchen, alleToernooiV }: { matchen: any[],
         </div>
 
         {/* Live Spelers die het momenteel goed hebben gokt */}
-        <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px dashed #DEE2E6' }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', textAlign: 'center', marginBottom: '8px' }}>👤 Spelers op winst:</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
-            {correctAttack.length > 0 ? correctAttack.map((naam, i) => (
-              <div key={i} style={{ background: 'var(--crayola)', color: '#FFF', padding: '3px 10px', borderRadius: '15px', fontSize: '0.65rem', fontWeight: 900, boxShadow: '0 2px 5px rgba(55,114,255,0.3)' }}>{naam}</div>
-            )) : (
-              <div style={{ fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 800 }}>Niemand heeft dit momenteel juist...</div>
-            )}
+        {toonTussenstand ? (
+          <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px dashed #DEE2E6' }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', textAlign: 'center', marginBottom: '8px' }}>👤 Spelers op winst:</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
+              {correctAttack.length > 0 ? correctAttack.map((naam, i) => (
+                <div key={i} style={{ background: 'var(--crayola)', color: '#FFF', padding: '3px 10px', borderRadius: '15px', fontSize: '0.65rem', fontWeight: 900, boxShadow: '0 2px 5px rgba(55,114,255,0.3)' }}>{naam}</div>
+              )) : (
+                <div style={{ fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 800 }}>Niemand heeft dit momenteel juist...</div>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px dashed #DEE2E6', textAlign: 'center', color: '#6C757D', fontSize: '0.7rem', fontWeight: 900 }}>
+            🔒 Spelers op winst zijn verborgen tot de start van het WK.
+          </div>
+        )}
       </div>
 
       {/* 3. RACE VOOR BESTE VERDEDIGING MET WIE HET JUIST HEEFT */}
@@ -357,16 +388,22 @@ export default function TellersTab({ matchen, alleToernooiV }: { matchen: any[],
         </div>
 
         {/* Live Spelers die het momenteel goed hebben gokt */}
-        <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px dashed #DEE2E6' }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', textAlign: 'center', marginBottom: '8px' }}>👤 Spelers op winst:</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
-            {correctDefense.length > 0 ? correctDefense.map((naam, i) => (
-              <div key={i} style={{ background: '#40C057', color: '#FFF', padding: '3px 10px', borderRadius: '15px', fontSize: '0.65rem', fontWeight: 900, boxShadow: '0 2px 5px rgba(64,192,87,0.3)' }}>{naam}</div>
-            )) : (
-              <div style={{ fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 800 }}>Niemand heeft dit momenteel juist...</div>
-            )}
+        {toonTussenstand ? (
+          <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px dashed #DEE2E6' }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', textAlign: 'center', marginBottom: '8px' }}>👤 Spelers op winst:</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
+              {correctDefense.length > 0 ? correctDefense.map((naam, i) => (
+                <div key={i} style={{ background: '#40C057', color: '#FFF', padding: '3px 10px', borderRadius: '15px', fontSize: '0.65rem', fontWeight: 900, boxShadow: '0 2px 5px rgba(64,192,87,0.3)' }}>{naam}</div>
+              )) : (
+                <div style={{ fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 800 }}>Niemand heeft dit momenteel juist...</div>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px dashed #DEE2E6', textAlign: 'center', color: '#6C757D', fontSize: '0.7rem', fontWeight: 900 }}>
+            🔒 Spelers op winst zijn verborgen tot de start van het WK.
+          </div>
+        )}
       </div>
 
     </div>
