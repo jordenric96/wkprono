@@ -155,7 +155,7 @@ const parseTeam = (teamString: string) => {
 export default function TellersTab({ matchen, alleToernooiV, isAdmin }: { matchen: any[], alleToernooiV: any[], isAdmin: boolean }) {
   const nu = new Date().getTime();
   const toernooiGestart = nu >= DEADLINE;
-  const toonTussenstand = isAdmin || toernooiGestart;
+  const toonTussenstand = toernooiGestart; // <-- GEEN uitzondering meer voor Admins!
 
   // --- BEREKENINGEN GLOBALE STATS ---
   const stats = useMemo(() => {
@@ -326,7 +326,14 @@ export default function TellersTab({ matchen, alleToernooiV, isAdmin }: { matche
 
       </div>
 
-      {/* 2. RACE VOOR BESTE AANVAL MET WIE HET JUIST HEEFT */}
+      {/* VERBORGEN WAARSCHUWING VOOR SPELERS */}
+      {!toonTussenstand && (
+        <div style={{ background: '#F8F9FA', borderRadius: '16px', padding: '15px', textAlign: 'center', border: '2px dashed #DEE2E6', color: '#6C757D', fontWeight: 900, fontSize: '0.8rem' }}>
+          🔒 Let op: Zodra het toernooi start (donderdag 21:00), verschijnen hier de live tussenstanden per deelnemer!
+        </div>
+      )}
+
+      {/* 2. RACE VOOR BESTE AANVAL */}
       <div style={{ background: 'rgba(255, 255, 255, 0.9)', borderRadius: '20px', padding: '20px', border: '1px solid #E9ECEF', boxShadow: '0 8px 20px rgba(0,0,0,0.03)' }}>
         <h3 style={{ margin: '0 0 5px 0', fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: 'var(--crayola)' }}>Beste Aanval 🔥</h3>
         <p style={{ margin: '0 0 15px 0', fontSize: '0.8rem', fontWeight: 800, color: '#6C757D' }}>
@@ -347,7 +354,7 @@ export default function TellersTab({ matchen, alleToernooiV, isAdmin }: { matche
           })}
         </div>
 
-        {/* Live Spelers die het momenteel goed hebben gokt */}
+        {/* Live Spelers (Enkel zichtbaar na start WK) */}
         {toonTussenstand ? (
           <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px dashed #DEE2E6' }}>
             <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', textAlign: 'center', marginBottom: '8px' }}>👤 Spelers op winst:</div>
@@ -366,7 +373,7 @@ export default function TellersTab({ matchen, alleToernooiV, isAdmin }: { matche
         )}
       </div>
 
-      {/* 3. RACE VOOR BESTE VERDEDIGING MET WIE HET JUIST HEEFT */}
+      {/* 3. RACE VOOR BESTE VERDEDIGING */}
       <div style={{ background: 'rgba(255, 255, 255, 0.9)', borderRadius: '20px', padding: '20px', border: '1px solid #E9ECEF', boxShadow: '0 8px 20px rgba(0,0,0,0.03)' }}>
         <h3 style={{ margin: '0 0 5px 0', fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: '#40C057' }}>De Muur 🧱</h3>
         <p style={{ margin: '0 0 15px 0', fontSize: '0.8rem', fontWeight: 800, color: '#6C757D' }}>
@@ -387,7 +394,7 @@ export default function TellersTab({ matchen, alleToernooiV, isAdmin }: { matche
           })}
         </div>
 
-        {/* Live Spelers die het momenteel goed hebben gokt */}
+        {/* Live Spelers (Enkel zichtbaar na start WK) */}
         {toonTussenstand ? (
           <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px dashed #DEE2E6' }}>
             <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', textAlign: 'center', marginBottom: '8px' }}>👤 Spelers op winst:</div>
