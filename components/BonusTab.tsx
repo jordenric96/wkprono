@@ -132,6 +132,23 @@ const parseTeam = (teamString: string) => {
 // --- COMPONENT: LANDEN CAROUSEL ---
 const CountryCarousel = ({ value, onChange, options, disabled }: any) => {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const hasScrolledInitial = useRef(false);
+
+  // Zorgt voor automatisch scrollen naar jouw gekozen land
+  useEffect(() => {
+    if (value && scrollRef.current && !hasScrolledInitial.current) {
+      // De waarde veilig ophalen om quote-problemen te vermijden
+      const escapedValue = value.replace(/"/g, '\\"');
+      const selectedEl = scrollRef.current.querySelector(`[data-country="${escapedValue}"]`);
+      
+      if (selectedEl) {
+        setTimeout(() => {
+          selectedEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+          hasScrolledInitial.current = true;
+        }, 200); // 200ms wachten voor een vloeiend visueel effect
+      }
+    }
+  }, [value]);
 
   return (
     <div style={{ position: 'relative', margin: '0 -15px' }}>
@@ -185,6 +202,24 @@ const CountryCarousel = ({ value, onChange, options, disabled }: any) => {
 
 // --- COMPONENT: RONDEN CAROUSEL ---
 const RoundCarousel = ({ value, onChange, disabled }: any) => {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const hasScrolledInitial = useRef(false);
+
+  // Zorgt voor automatisch scrollen naar jouw gekozen ronde
+  useEffect(() => {
+    if (value && scrollRef.current && !hasScrolledInitial.current) {
+      const escapedValue = value.replace(/"/g, '\\"');
+      const selectedEl = scrollRef.current.querySelector(`[data-round="${escapedValue}"]`);
+      
+      if (selectedEl) {
+        setTimeout(() => {
+          selectedEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+          hasScrolledInitial.current = true;
+        }, 200);
+      }
+    }
+  }, [value]);
+
   const rondes = [
     { id: 'Groepsfase', label: 'GF' },
     { id: 'Ronde van 32', label: '1/16' },
@@ -199,10 +234,12 @@ const RoundCarousel = ({ value, onChange, disabled }: any) => {
   return (
     <div style={{ position: 'relative', margin: '0 -15px' }}>
       <div 
+        ref={scrollRef}
         className="hide-scrollbar"
         style={{
           display: 'flex', overflowX: 'auto', gap: '12px', padding: '15px',
-          pointerEvents: disabled ? 'none' : 'auto', opacity: disabled ? 0.6 : 1, WebkitOverflowScrolling: 'touch'
+          scrollSnapType: 'x mandatory', pointerEvents: disabled ? 'none' : 'auto', 
+          opacity: disabled ? 0.6 : 1, WebkitOverflowScrolling: 'touch'
         }}
       >
         {rondes.map(r => {
@@ -212,9 +249,9 @@ const RoundCarousel = ({ value, onChange, disabled }: any) => {
 
           return (
             <div 
-              key={r.id} onClick={() => !disabled && onChange(r.id)}
+              key={r.id} data-round={r.id} onClick={() => !disabled && onChange(r.id)}
               style={{
-                flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', width: '65px',
+                flexShrink: 0, scrollSnapAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', width: '65px',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 opacity: isSelected ? 1 : (noSelection ? 0.9 : 0.4),
                 transform: isSelected ? 'scale(1.15)' : 'scale(0.95)',
