@@ -314,24 +314,37 @@ export default function Home() {
       };
     });
 
-    // --- 🚨 PROMO TRUCJE: MAARTEN EN JONAS OP 1 EN 2 ---
-    let eindStats = stats;
-    const totaleEchtePunten = stats.reduce((som, sp) => som + sp.totaal_score, 0);
-
-    // Als niemand punten heeft gescoord in heel het toernooi, zetten we de promo-cijfers in
-    if (totaleEchtePunten === 0) {
-      eindStats = stats.map(sp => {
+    // --- 🚨 PROMO TRUCJE: MAARTEN, JONAS EN SAMMY OP 1, 2 EN 3 ---
+    // Controleer of er al ECHTE uitslagen zijn ingevuld
+    const matchenGespeeld = m.some((match: any) => match.thuis_score !== null);
+    
+    let eindStats = stats.map(sp => {
+      // Als er nog GEEN matchen gespeeld zijn: iedereen op NUL, behalve Maarten, Jonas en Sammy!
+      if (!matchenGespeeld) {
         const naamLC = sp.naam.toLowerCase();
         if (naamLC.includes('maarten')) {
-          return { ...sp, totaal_score: 15, prono_score: 15, exact: 3, winnaarCorrect: 2 };
+          return { ...sp, totaal_score: 15, prono_score: 15, bonus_score: 0, exact: 3, winnaarCorrect: 2, fout: 0, bonus_breakdown: [] };
         }
         if (naamLC.includes('jonas')) {
-          return { ...sp, totaal_score: 9, prono_score: 9, exact: 1, winnaarCorrect: 4 };
+          return { ...sp, totaal_score: 9, prono_score: 9, bonus_score: 0, exact: 1, winnaarCorrect: 4, fout: 0, bonus_breakdown: [] };
         }
-        return sp;
-      });
-    }
-    
+        if (naamLC.includes('sammy')) {
+          return { ...sp, totaal_score: 6, prono_score: 6, bonus_score: 0, exact: 1, winnaarCorrect: 1, fout: 0, bonus_breakdown: [] };
+        }
+        // Wrijf eventuele stiekeme bonuspunten van andere spelers weg zolang het WK niet bezig is
+        return { ...sp, totaal_score: 0, prono_score: 0, bonus_score: 0, exact: 0, winnaarCorrect: 0, fout: 0, bonus_breakdown: [] };
+      }
+      return sp; // Als WK gestart is, geef iedereen gewoon zijn échte punten
+    });
+
+    // FORCEER SORTERING VOOR WE HET AAN DE ANDERE TABS DOORGEVEN
+    eindStats.sort((a, b) => {
+      if (b.totaal_score !== a.totaal_score) return b.totaal_score - a.totaal_score;
+      if (b.exact !== a.exact) return b.exact - a.exact;
+      if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect;
+      return a.naam.localeCompare(b.naam);
+    });
+
     setKlassement(eindStats);
   };
 
