@@ -219,9 +219,6 @@ export default function Home() {
     }
   };
 
-  const haal遊AnwoordenOp = async () => {
-    // Kleine typo fix in functienaam hieronder bij aanroep
-  };
   const haalAlleAntwoordenOp = async () => {
     const { data } = await supabase.from('toernooi_voorspellingen').select('*, spelers(naam)');
     if (data) setAlleToernooiV(data);
@@ -567,7 +564,7 @@ export default function Home() {
               </div>
 
               <p style={{ fontSize: '0.75rem', color: '#ADB5BD', fontWeight: 800 }}>
-                Zodra we je betaling have received, wordt je account handmatig goedgekeurd en verdwijnt dit slotje.
+                Zodra we je betaling hebben ontvangen, wordt je account handmatig goedgekeurd en verdwijnt dit slotje.
               </p>
               
               <button 
