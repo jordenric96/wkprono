@@ -315,30 +315,34 @@ export default function Home() {
     });
 
     // --- 🚨 PROMO TRUCJE: MAARTEN, JONAS EN SAMMY OP 1, 2 EN 3 ---
-    // Controleer of er al ECHTE uitslagen zijn ingevuld
     const matchenGespeeld = m.some((match: any) => match.thuis_score !== null);
     
+    // Stap 1: Zorg dat echt IEDEREEN op 0 staat zolang het WK niet bezig is.
     let eindStats = stats.map(sp => {
-      // Als er nog GEEN matchen gespeeld zijn: iedereen op NUL, behalve Maarten, Jonas en Sammy!
       if (!matchenGespeeld) {
-        const naamLC = sp.naam.toLowerCase();
-        if (naamLC.includes('maarten')) {
-          return { ...sp, totaal_score: 15, prono_score: 15, bonus_score: 0, exact: 3, winnaarCorrect: 2, fout: 0, bonus_breakdown: [] };
-        }
-        if (naamLC.includes('jonas')) {
-          return { ...sp, totaal_score: 9, prono_score: 9, bonus_score: 0, exact: 1, winnaarCorrect: 4, fout: 0, bonus_breakdown: [] };
-        }
-        if (naamLC.includes('sammy')) {
-          return { ...sp, totaal_score: 6, prono_score: 6, bonus_score: 0, exact: 1, winnaarCorrect: 1, fout: 0, bonus_breakdown: [] };
-        }
-        // Wrijf eventuele stiekeme bonuspunten van andere spelers weg zolang het WK niet bezig is
         return { ...sp, totaal_score: 0, prono_score: 0, bonus_score: 0, exact: 0, winnaarCorrect: 0, fout: 0, bonus_breakdown: [] };
       }
-      return sp; // Als WK gestart is, geef iedereen gewoon zijn échte punten
+      return sp;
     });
 
-    // FORCEER SORTERING VOOR WE HET AAN DE ANDERE TABS DOORGEVEN
+    // Stap 2: Forceer een magische sortering zolang iedereen 0 punten heeft
     eindStats.sort((a, b) => {
+      if (!matchenGespeeld) {
+        // Geheime "weighing" voor het klassement
+        const getPromoWeight = (naam: string) => {
+          const n = naam.toLowerCase();
+          if (n.includes('maarten')) return 3;
+          if (n.includes('jonas')) return 2;
+          if (n.includes('sammy')) return 1;
+          return 0; // De rest bungelt onderaan
+        };
+        const weightA = getPromoWeight(a.naam);
+        const weightB = getPromoWeight(b.naam);
+        
+        if (weightA !== weightB) return weightB - weightA; 
+      }
+
+      // De normale, eerlijke sortering (zodra het toernooi start neemt deze het weer over)
       if (b.totaal_score !== a.totaal_score) return b.totaal_score - a.totaal_score;
       if (b.exact !== a.exact) return b.exact - a.exact;
       if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect;
