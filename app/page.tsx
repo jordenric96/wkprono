@@ -32,15 +32,12 @@ export default function Home() {
   const actieveSpelerRef = useRef(actieveSpeler);
   const alleSpelersRef = useRef(alleSpelers);
 
-  const [infoOpen, setInfoOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState('');
   
   // --- ROLLEN VERDELING ---
-  // Iedereen hier mag op de zwarte Sync-knop duwen
   const adminNamen = ['jorden ricour', 'wesley moonens', 'yarni ricour'];
   const isAdmin = actieveSpeler?.naam && adminNamen.some((admin: string) => actieveSpeler.naam.toLowerCase().includes(admin));
   
-  // ALLEEN Jorden mag voorbij het slotje zonder te betalen (noodzakelijk om anderen af te vinken!)
   const isJorden = actieveSpeler?.naam?.toLowerCase().includes('jorden ricour');
   
   const [matchen, setMatchen] = useState<any[]>([]);
@@ -120,7 +117,6 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Alleen data ophalen als ze betaald hebben of Jorden zijn
     if (actieveSpeler && (actieveSpeler.betaald || isJorden)) {
       if (actieveTab === 'matchen') haalMatchenOp();
       if (actieveTab === 'bonus') haalToernooiVoorspellingOp();
@@ -317,12 +313,31 @@ export default function Home() {
         exact: ex, winnaarCorrect: wc, fout: f, bonus_breakdown: breakdown 
       };
     });
+
+    // --- 🚨 PROMO TRUCJE: MAARTEN EN JONAS OP 1 EN 2 ---
+    let eindStats = stats;
+    const totaleEchtePunten = stats.reduce((som, sp) => som + sp.totaal_score, 0);
+
+    // Als niemand punten heeft gescoord in heel het toernooi, zetten we de promo-cijfers in
+    if (totaleEchtePunten === 0) {
+      eindStats = stats.map(sp => {
+        const naamLC = sp.naam.toLowerCase();
+        if (naamLC.includes('maarten')) {
+          // Maarten krijgt fake 15 punten en 3 exacte uitslagen
+          return { ...sp, totaal_score: 15, prono_score: 15, exact: 3, winnaarCorrect: 2 };
+        }
+        if (naamLC.includes('jonas')) {
+          // Jonas krijgt fake 9 punten en 1 exacte uitslag
+          return { ...sp, totaal_score: 9, prono_score: 9, exact: 1, winnaarCorrect: 4 };
+        }
+        return sp;
+      });
+    }
     
-    setKlassement(stats);
+    setKlassement(eindStats);
   };
 
   const toggleBetaald = async (spelerId: number, huidigeStatus: boolean) => {
-    // Alleen de Master Admin (Jorden) kan dit
     if (!isJorden) return;
     const { error } = await supabase.from('spelers').update({ betaald: !huidigeStatus }).eq('id', spelerId);
     if (!error) haalKlassementOp();
@@ -418,11 +433,9 @@ export default function Home() {
         .nav-text { font-size: 0.65rem; font-weight: 900; margin-left: 4px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px; z-index: 2; }
         .unread-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; background: var(--rose); border-radius: 50%; box-shadow: 0 0 8px var(--rose); animation: pulse-red 2s infinite; z-index: 3; }
         
-        .speler-badge { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: rgba(255, 255, 255, 0.8); padding: 6px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: 900; color: var(--crayola); text-transform: uppercase; letter-spacing: 0.5px; border: 2px solid #FFF; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        .speler-badge { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: rgba(255, 255, 255, 0.8); padding: 6px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: 900; color: var(--crayola); text-transform: uppercase; letter-spacing: 0.5px; border: 2px solid #FFF; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
         .avatar-icon { font-size: 1.1rem; margin-top: -2px; }
         
-        .info-toggle-btn { width: 100%; background: rgba(255,255,255,0.9); border: 2px solid var(--crayola); color: var(--crayola); padding: 12px; border-radius: 12px; font-weight: 900; font-size: 0.8rem; cursor: pointer; text-transform: uppercase; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; }
-        .info-content { background: rgba(255,255,255,0.9); padding: 15px; border-radius: 12px; font-size: 0.8rem; font-weight: 700; margin-bottom: 20px; border-left: 4px solid var(--magenta); line-height: 1.5; }
         .admin-btn { background: #111827; color: #fff; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 900; cursor: pointer; font-size: 0.8rem; margin: 0 auto 15px; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         
         .login-title { font-family: 'Bebas Neue', sans-serif; color: var(--crayola); text-align: center; font-size: 2.5rem; margin: 0 0 20px 0; letter-spacing: 1px; }
@@ -431,8 +444,6 @@ export default function Home() {
         .full-input:focus { border-color: var(--crayola); box-shadow: 0 0 0 4px rgba(55, 114, 255, 0.1); }
         .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--magenta); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(240, 56, 255, 0.3); transition: 0.2s; margin-top: 5px; display: block; }
         .btn-primary:active { transform: scale(0.98); }
-        
-        .rule-item { display: flex; justify-content: space-between; border-bottom: 1px dashed #EEE; padding: 4px 0; font-weight: 800; }
         
         @keyframes background-fade { 0%, 100% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } }
         @keyframes blob-movement-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(50px, 80px) scale(1.1); } }
@@ -480,29 +491,36 @@ export default function Home() {
           </div>
         )}
 
-        <button className="info-toggle-btn" onClick={() => setInfoOpen(!infoOpen)}>
-          <span>📋 Spelregels & Betalen</span>
-          <span>{infoOpen ? '▲' : '▼'}</span>
-        </button>
-
-        {infoOpen && (
-          <div className="info-content">
-            <h3 style={{fontFamily:'Bebas Neue', fontSize:'1.5rem', color:'var(--crayola)', marginBottom:10}}>💰 DEELNAME & PRIJZEN</h3>
-            <p>Deelname kost <strong>€10</strong>. Betalen via overschrijving naar <strong>BE85 0018 2075 8506</strong> met vermelding van <strong>naam + WK2026</strong>. De volledige pot wordt verdeeld onder de winnaars!</p>
-            
-            <h3 style={{fontFamily:'Bebas Neue', fontSize:'1.5rem', color:'var(--magenta)', marginTop:20, marginBottom:10}}>⚽ PUNTEN MATCHEN</h3>
-            <div className="rule-item"><span>Exacte uitslag juist</span><span>3 PT</span></div>
-            <div className="rule-item"><span>Juiste winnaar / Gelijkspel</span><span>1 PT</span></div>
-            <div className="rule-item"><span>Foute pronostiek</span><span>0 PT</span></div>
-
-            <h3 style={{fontFamily:'Bebas Neue', fontSize:'1.5rem', color:'#40C057', marginTop:20, marginBottom:10}}>💎 PUNTEN BONUS</h3>
-            <div className="rule-item"><span>Wereldkampioen juist</span><span>5 PT</span></div>
-            <div className="rule-item"><span>Juiste Halve Finalist</span><span>3 PT (elk)</span></div>
-            <div className="rule-item"><span>Ronde Belgen juist</span><span>3 PT</span></div>
-            <div className="rule-item"><span>Beste Aanval/Defensie</span><span>3 PT</span></div>
-            <div className="rule-item"><span>Dichtste bij Goals/Kaarten</span><span>5 PT</span></div>
+        {/* VASTE REGLEMENT SECTIE */}
+        <div style={{ background: 'rgba(255, 255, 255, 0.9)', padding: '20px', borderRadius: '16px', border: '2px solid #E9ECEF', marginBottom: '20px', width: '100%', fontSize: '0.8rem', color: '#495057', lineHeight: '1.5', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
+          <h3 style={{fontFamily:'Bebas Neue', fontSize:'1.5rem', color:'var(--crayola)', margin:'0 0 10px 0'}}>📜 REGLEMENT & PUNTEN</h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+            <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
+              <strong style={{color: 'var(--magenta)'}}>⚽ MATCHEN</strong><br/>
+              • Exacte score: <strong>3 pt</strong><br/>
+              • Juiste winnaar/gelijk: <strong>1 pt</strong><br/>
+              • Fout: <strong>0 pt</strong>
+            </div>
+            <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
+              <strong style={{color: '#40C057'}}>💎 BONUSVRAGEN</strong><br/>
+              • Goals/Kaarten/WK: <strong>5 pt</strong><br/>
+              • Halve Fin/België: <strong>3 pt</strong><br/>
+              • Aanval/Defensie: <strong>3 pt</strong>
+            </div>
           </div>
-        )}
+          
+          <div style={{ background: '#FFFDF5', padding: '10px', borderRadius: '12px', border: '1px solid #FFE066', marginBottom: '10px' }}>
+            <strong style={{color: '#D4AF37'}}>⚖️ GELIJKE STAND (EX-AEQUO)</strong><br/>
+            • <strong>Algemeen Klassement:</strong> Wie de meeste <em>'Exacte Uitslagen'</em> heeft, wint. Nog steeds gelijk? Dan telt het aantal <em>'Juiste Winnaars'</em>.<br/>
+            • <strong>Bonusvragen:</strong> Gedeelde eerste plaats bij een schiftingsvraag of beste topschutter/verdediging? Alle spelers die dit land/getal gekozen hebben krijgen de volle punten.
+          </div>
+
+          <div style={{ background: '#F1F3F5', padding: '10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900, textAlign: 'center' }}>
+            💰 DEELNAME: €10 NAAR BE85 0018 2075 8506<br/>
+            <span style={{color: 'var(--magenta)'}}>Mededeling: Naam + WK2026</span>
+          </div>
+        </div>
 
         {isAdmin && (
           <button onClick={syncMetSpreadsheet} className="admin-btn">🔄 {syncStatus || 'SYNC MET GOOGLE SHEETS'}</button>
@@ -567,7 +585,8 @@ export default function Home() {
               {actieveTab === 'bonus' && <BonusTab winnaar={winnaar} setWinnaar={setWinnaar} hf={hf} setHf={setHf} meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} eindstation={eindstation} setEindstation={setEindstation} totaalGoals={totaalGoals} setTotaalGoals={setTotaalGoals} totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} />}
               {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} />}
               {actieveTab === 'ranking' && <RankingTab klassement={klassement} actieveSpeler={actieveSpeler} toggleBetaald={toggleBetaald} />}
-{actieveTab === 'tellers' && <TellersTab matchen={matchen} alleToernooiV={alleToernooiV} />}              {actieveTab === 'kleedkamer' && <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} chatEindeRef={chatEindeRef} nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} />}
+              {actieveTab === 'tellers' && <TellersTab matchen={matchen} alleToernooiV={alleToernooiV} isAdmin={isAdmin} alleSpelers={alleSpelers} actieveSpeler={actieveSpeler} />}
+              {actieveTab === 'kleedkamer' && <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} chatEindeRef={chatEindeRef} nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} />}
               
               <div style={{textAlign:'center', marginTop:30, paddingBottom: 20}}>
                 <button style={{background:'none', border:'none', color:'#111827', fontWeight:900, cursor:'pointer', opacity: 0.6}} onClick={() => {localStorage.removeItem('wk_speler_id'); window.location.reload();}}>UITLOGGEN</button>
