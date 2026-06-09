@@ -27,6 +27,7 @@ export default function Home() {
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
   
   const [toast, setToast] = useState<{naam: string, bericht: string} | null>(null);
+  const [infoOpen, setInfoOpen] = useState(false); // Terug toegevoegd voor het menuutje!
 
   const actieveTabRef = useRef(actieveTab);
   const actieveSpelerRef = useRef(actieveSpeler);
@@ -37,7 +38,6 @@ export default function Home() {
   // --- ROLLEN VERDELING ---
   const adminNamen = ['jorden ricour', 'wesley moonens', 'yarni ricour'];
   const isAdmin = actieveSpeler?.naam && adminNamen.some((admin: string) => actieveSpeler.naam.toLowerCase().includes(admin));
-  
   const isJorden = actieveSpeler?.naam?.toLowerCase().includes('jorden ricour');
   
   const [matchen, setMatchen] = useState<any[]>([]);
@@ -314,21 +314,21 @@ export default function Home() {
       };
     });
 
-    // --- 🚨 PROMO TRUCJE: MAARTEN, JONAS EN SAMMY OP 1, 2 EN 3 ---
+    // --- 🚨 PROMO TRUCJE: MAARTEN, JONAS EN SAMMY OP 1, 2 EN 3 ZONDER ECHTE PUNTEN ---
     const matchenGespeeld = m.some((match: any) => match.thuis_score !== null);
     
-    // Stap 1: Zorg dat echt IEDEREEN op 0 staat zolang het WK niet bezig is.
     let eindStats = stats.map(sp => {
+      // Als er nog GEEN matchen gespeeld zijn: reset alle visuele punten naar 0
       if (!matchenGespeeld) {
         return { ...sp, totaal_score: 0, prono_score: 0, bonus_score: 0, exact: 0, winnaarCorrect: 0, fout: 0, bonus_breakdown: [] };
       }
-      return sp;
+      return sp; 
     });
 
-    // Stap 2: Forceer een magische sortering zolang iedereen 0 punten heeft
+    // FORCEER SORTERING
     eindStats.sort((a, b) => {
       if (!matchenGespeeld) {
-        // Geheime "weighing" voor het klassement
+        // Geheime "weighing" voor het klassement: puur voor de volgorde!
         const getPromoWeight = (naam: string) => {
           const n = naam.toLowerCase();
           if (n.includes('maarten')) return 3;
@@ -506,36 +506,49 @@ export default function Home() {
           </div>
         )}
 
-        {/* VASTE REGLEMENT SECTIE */}
-        <div style={{ background: 'rgba(255, 255, 255, 0.9)', padding: '20px', borderRadius: '16px', border: '2px solid #E9ECEF', marginBottom: '20px', width: '100%', fontSize: '0.8rem', color: '#495057', lineHeight: '1.5', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}>
-          <h3 style={{fontFamily:'Bebas Neue', fontSize:'1.5rem', color:'var(--crayola)', margin:'0 0 10px 0'}}>📜 REGLEMENT & PUNTEN</h3>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-            <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
-              <strong style={{color: 'var(--magenta)'}}>⚽ MATCHEN</strong><br/>
-              • Exacte score: <strong>3 pt</strong><br/>
-              • Juiste winnaar/gelijk: <strong>1 pt</strong><br/>
-              • Fout: <strong>0 pt</strong>
-            </div>
-            <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
-              <strong style={{color: '#40C057'}}>💎 BONUSVRAGEN</strong><br/>
-              • Goals/Kaarten/WK: <strong>5 pt</strong><br/>
-              • Halve Fin/België: <strong>3 pt</strong><br/>
-              • Aanval/Defensie: <strong>3 pt</strong>
-            </div>
-          </div>
-          
-          <div style={{ background: '#FFFDF5', padding: '10px', borderRadius: '12px', border: '1px solid #FFE066', marginBottom: '10px' }}>
-            <strong style={{color: '#D4AF37'}}>⚖️ GELIJKE STAND (EX-AEQUO)</strong><br/>
-            • <strong>Algemeen Klassement:</strong> Wie de meeste <em>'Exacte Uitslagen'</em> heeft, wint. Nog steeds gelijk? Dan telt het aantal <em>'Juiste Winnaars'</em>.<br/>
-            • <strong>Bonusvragen:</strong> Gedeelde eerste plaats bij een schiftingsvraag of beste topschutter/verdediging? Alle spelers die dit land/getal gekozen hebben krijgen de volle punten.
-          </div>
+        {/* UITKLAPBAAR REGLEMENT (ENKEL BIJ RANKING) */}
+        {actieveSpeler && actieveTab === 'ranking' && (
+          <div style={{ width: '100%', marginBottom: '15px' }}>
+            <button 
+              onClick={() => setInfoOpen(!infoOpen)}
+              style={{ width: '100%', background: 'rgba(255,255,255,0.9)', border: '2px solid var(--crayola)', color: 'var(--crayola)', padding: '12px', borderRadius: '12px', fontWeight: 900, fontSize: '0.8rem', cursor: 'pointer', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: '0.2s', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}
+            >
+              <span>📜 REGLEMENT & PUNTEN</span>
+              <span>{infoOpen ? '▲' : '▼'}</span>
+            </button>
 
-          <div style={{ background: '#F1F3F5', padding: '10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900, textAlign: 'center' }}>
-            💰 DEELNAME: €10 NAAR BE85 0018 2075 8506<br/>
-            <span style={{color: 'var(--magenta)'}}>Mededeling: Naam + WK2026</span>
+            {infoOpen && (
+              <div style={{ background: 'rgba(255, 255, 255, 0.95)', padding: '20px', borderRadius: '12px', borderLeft: '4px solid var(--magenta)', marginTop: '10px', fontSize: '0.8rem', color: '#495057', lineHeight: '1.5', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                  <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
+                    <strong style={{color: 'var(--magenta)'}}>⚽ MATCHEN</strong><br/>
+                    • Exacte score: <strong>3 pt</strong><br/>
+                    • Juiste winnaar/gelijk: <strong>1 pt</strong><br/>
+                    • Fout: <strong>0 pt</strong>
+                  </div>
+                  <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
+                    <strong style={{color: '#40C057'}}>💎 BONUSVRAGEN</strong><br/>
+                    • Goals/Kaarten/WK: <strong>5 pt</strong><br/>
+                    • Halve Fin/België: <strong>3 pt</strong><br/>
+                    • Aanval/Defensie: <strong>3 pt</strong>
+                  </div>
+                </div>
+                
+                <div style={{ background: '#FFFDF5', padding: '10px', borderRadius: '12px', border: '1px solid #FFE066', marginBottom: '10px' }}>
+                  <strong style={{color: '#D4AF37'}}>⚖️ GELIJKE STAND (EX-AEQUO)</strong><br/>
+                  • <strong>Klassement:</strong> Wie de meeste <em>'Exacte Uitslagen'</em> heeft, wint. Nog gelijk? Dan telt <em>'Juiste Winnaars'</em>.<br/>
+                  • <strong>Bonusvragen:</strong> Gedeelde eerste plaats bij topschutter/verdediging/cijfers? Iedereen met dit antwoord krijgt de volle punten.
+                </div>
+
+                <div style={{ background: '#F1F3F5', padding: '10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900, textAlign: 'center' }}>
+                  💰 DEELNAME: €10 NAAR BE85 0018 2075 8506<br/>
+                  <span style={{color: 'var(--magenta)'}}>Mededeling: Naam + WK2026</span>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
         {isAdmin && (
           <button onClick={syncMetSpreadsheet} className="admin-btn">🔄 {syncStatus || 'SYNC MET GOOGLE SHEETS'}</button>
