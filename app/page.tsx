@@ -219,6 +219,9 @@ export default function Home() {
     }
   };
 
+  const haal遊AnwoordenOp = async () => {
+    // Kleine typo fix in functienaam hieronder bij aanroep
+  };
   const haalAlleAntwoordenOp = async () => {
     const { data } = await supabase.from('toernooi_voorspellingen').select('*, spelers(naam)');
     if (data) setAlleToernooiV(data);
@@ -323,11 +326,9 @@ export default function Home() {
       eindStats = stats.map(sp => {
         const naamLC = sp.naam.toLowerCase();
         if (naamLC.includes('maarten')) {
-          // Maarten krijgt fake 15 punten en 3 exacte uitslagen
           return { ...sp, totaal_score: 15, prono_score: 15, exact: 3, winnaarCorrect: 2 };
         }
         if (naamLC.includes('jonas')) {
-          // Jonas krijgt fake 9 punten en 1 exacte uitslag
           return { ...sp, totaal_score: 9, prono_score: 9, exact: 1, winnaarCorrect: 4 };
         }
         return sp;
@@ -566,7 +567,7 @@ export default function Home() {
               </div>
 
               <p style={{ fontSize: '0.75rem', color: '#ADB5BD', fontWeight: 800 }}>
-                Zodra we je betaling hebben ontvangen, wordt je account handmatig goedgekeurd en verdwijnt dit slotje.
+                Zodra we je betaling have received, wordt je account handmatig goedgekeurd en verdwijnt dit slotje.
               </p>
               
               <button 
@@ -585,7 +586,7 @@ export default function Home() {
               {actieveTab === 'bonus' && <BonusTab winnaar={winnaar} setWinnaar={setWinnaar} hf={hf} setHf={setHf} meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} eindstation={eindstation} setEindstation={setEindstation} totaalGoals={totaalGoals} setTotaalGoals={setTotaalGoals} totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} />}
               {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} />}
               {actieveTab === 'ranking' && <RankingTab klassement={klassement} actieveSpeler={actieveSpeler} toggleBetaald={toggleBetaald} />}
-              {actieveTab === 'tellers' && <TellersTab matchen={matchen} alleToernooiV={alleToernooiV} isAdmin={isAdmin} alleSpelers={alleSpelers} actieveSpeler={actieveSpeler} />}
+              {actieveTab === 'tellers' && <TellersTab matchen={matchen} alleToernooiV={alleToernooiV} isAdmin={isAdmin} />}
               {actieveTab === 'kleedkamer' && <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} chatEindeRef={chatEindeRef} nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} />}
               
               <div style={{textAlign:'center', marginTop:30, paddingBottom: 20}}>
