@@ -1,185 +1,102 @@
 // src/components/ChatTab.tsx
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 
-export default function ChatTab({ chatBerichten, actieveSpeler, chatEindeRef, nieuwBericht, setNieuwBericht, verstuurChat }: any) {
-  
-  // Zorg dat de chat altijd soepel naar het nieuwste bericht (onderaan) scrollt
+// Hulpmiddel om seconden om te zetten naar uren en minuten
+const formatTime = (seconds: number) => {
+  if (!seconds) return '0m';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h}u ${m}m`;
+  return `${m}m`;
+};
+
+export default function ChatTab({ chatBerichten, actieveSpeler, chatEindeRef, nieuwBericht, setNieuwBericht, verstuurChat, alleSpelers }: any) {
+  const [statsOpen, setStatsOpen] = useState(false);
+
+  // Auto-scroll chat naar onderen bij een nieuw bericht
   useEffect(() => {
     if (chatEindeRef.current) {
       chatEindeRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [chatBerichten, chatEindeRef]);
-
-  // Haal een mooi klokje uit de database tijdstempel (bijv. "14:30")
-  const formatTijd = (isoString: string) => {
-    if (!isoString) return '';
-    const d = new Date(isoString);
-    return d.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
-  };
+  }, [chatBerichten]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '65vh', maxHeight: '550px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', height: '65vh' }}>
       
-      <style>{`
-        /* De grote chat box */
-        .chat-wrapper {
-          flex: 1;
-          background: rgba(255, 255, 255, 0.6);
-          backdrop-filter: blur(10px);
-          border-radius: 16px;
-          padding: 15px;
-          overflow-y: auto;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          border: 2px solid rgba(255,255,255,0.8);
-          box-shadow: inset 0 4px 10px rgba(0,0,0,0.05);
-          margin-bottom: 12px;
-          scrollbar-width: none; /* Verberg scrollbar in Firefox */
-        }
-        .chat-wrapper::-webkit-scrollbar { display: none; } /* Verberg scrollbar in Chrome/Safari */
+      {/* KLEEDKAMER STATISTIEKEN (Inklapbaar) */}
+      <div style={{ width: '100%' }}>
+        <button 
+          onClick={() => setStatsOpen(!statsOpen)}
+          style={{ width: '100%', background: 'rgba(255,255,255,0.9)', border: '2px solid var(--crayola)', color: 'var(--crayola)', padding: '10px', borderRadius: '12px', fontWeight: 900, fontSize: '0.8rem', cursor: 'pointer', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}
+        >
+          <span>⏱️ Activiteit & Schermtijd</span>
+          <span>{statsOpen ? '▲' : '▼'}</span>
+        </button>
 
-        /* Structuur van een bericht */
-        .chat-bericht-box {
-          max-width: 85%;
-          display: flex;
-          flex-direction: column;
-        }
-        .chat-bericht-eigen {
-          align-self: flex-end;
-          align-items: flex-end;
-        }
-        .chat-bericht-ander {
-          align-self: flex-start;
-          align-items: flex-start;
-        }
-
-        /* Het tekstballonnetje */
-        .chat-bubble {
-          padding: 10px 14px;
-          font-size: 0.9rem;
-          font-weight: 700;
-          line-height: 1.4;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-          word-break: break-word;
-        }
-
-        /* Jouw eigen berichten (Blauw/Aqua gradient met 'staartje' rechts) */
-        .bubble-eigen {
-          background: linear-gradient(135deg, var(--crayola), var(--aqua));
-          color: white;
-          border-radius: 18px 18px 4px 18px;
-        }
-
-        /* Berichten van anderen (Wit met 'staartje' links) */
-        .bubble-ander {
-          background: #FFF;
-          color: #111827;
-          border-radius: 18px 18px 18px 4px;
-          border: 1px solid #E9ECEF;
-        }
-
-        /* Naam & Tijdstip labeltje */
-        .chat-meta {
-          font-size: 0.6rem;
-          font-weight: 900;
-          color: #ADB5BD;
-          margin-bottom: 4px;
-          display: flex;
-          gap: 6px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        /* Het strakke invoerveld onderaan */
-        .chat-form {
-          display: flex;
-          gap: 8px;
-          background: #FFF;
-          padding: 6px;
-          border-radius: 30px;
-          border: 2px solid #E9ECEF;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        }
-        .chat-input {
-          flex: 1;
-          border: none;
-          background: transparent;
-          padding: 10px 15px;
-          font-size: 0.9rem;
-          font-weight: 800;
-          outline: none;
-          color: #111827;
-        }
-        .chat-input::placeholder { color: #ADB5BD; font-weight: 700; }
-        
-        .chat-btn {
-          background: var(--magenta);
-          color: white;
-          border: none;
-          width: 45px;
-          height: 45px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          box-shadow: 0 4px 10px rgba(240, 56, 255, 0.3);
-          transition: transform 0.2s;
-        }
-        .chat-btn:active { transform: scale(0.9); }
-      `}</style>
-
-      {/* CHAT BERICHTEN AREA */}
-      <div className="chat-wrapper">
-        {chatBerichten.length === 0 ? (
-          <div style={{ textAlign: 'center', margin: 'auto', color: '#ADB5BD', fontWeight: 800, fontSize: '0.9rem' }}>
-            De kleedkamer is nog leeg... 🤫
+        {statsOpen && (
+          <div style={{ background: '#FFF', padding: '15px', borderRadius: '12px', borderLeft: '4px solid var(--crayola)', marginTop: '10px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', overflowX: 'auto' }}>
+            <table style={{ width: '100%', fontSize: '0.75rem', textAlign: 'left', borderCollapse: 'collapse', color: '#495057' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #E9ECEF', color: '#ADB5BD' }}>
+                  <th style={{ padding: '8px 4px' }}>Speler</th>
+                  <th style={{ padding: '8px 4px', textAlign: 'center' }}>Logins</th>
+                  <th style={{ padding: '8px 4px', textAlign: 'right' }}>Tijd</th>
+                  <th style={{ padding: '8px 4px', textAlign: 'right' }}>Laatst Online</th>
+                </tr>
+              </thead>
+              <tbody>
+                {alleSpelers?.sort((a: any, b: any) => (b.aantal_logins || 0) - (a.aantal_logins || 0)).map((s: any) => {
+                  const datum = s.laatste_login ? new Date(s.laatste_login).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Nooit';
+                  return (
+                    <tr key={s.id} style={{ borderBottom: '1px solid #F8F9FA' }}>
+                      <td style={{ padding: '10px 4px', fontWeight: 900, color: '#111827' }}>{s.naam.split(' ')[0]}</td>
+                      <td style={{ padding: '10px 4px', textAlign: 'center', fontWeight: 800, color: 'var(--magenta)' }}>{s.aantal_logins || 0}</td>
+                      <td style={{ padding: '10px 4px', textAlign: 'right', fontWeight: 900, color: '#40C057' }}>{formatTime(s.tijd_gespendeerd || 0)}</td>
+                      <td style={{ padding: '10px 4px', textAlign: 'right', fontSize: '0.65rem', color: '#6C757D' }}>{datum}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
+        )}
+      </div>
+
+      {/* CHAT BERICHTEN */}
+      <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(255,255,255,0.7)', borderRadius: '16px', padding: '15px', border: '1px solid #E9ECEF', display: 'flex', flexDirection: 'column', gap: '10px' }} className="hide-scrollbar">
+        {chatBerichten.length === 0 ? (
+          <div style={{ textAlign: 'center', color: '#ADB5BD', fontWeight: 800, marginTop: '20px', fontSize: '0.8rem' }}>Nog geen berichten... Wees de eerste!</div>
         ) : (
           chatBerichten.map((b: any) => {
             const isMij = b.speler_id === actieveSpeler.id;
             return (
-              <div key={b.id} className={`chat-bericht-box ${isMij ? 'chat-bericht-eigen' : 'chat-bericht-ander'}`}>
-                
-                {/* Naam en Tijd label */}
-                <div className="chat-meta">
-                  {isMij ? (
-                    <><span>{formatTijd(b.created_at)}</span><span>•</span><span style={{color: 'var(--crayola)'}}>Jij</span></>
-                  ) : (
-                    <><span style={{color: '#6C757D'}}>{b.spelers?.naam.split(' ')[0]}</span><span>•</span><span>{formatTijd(b.created_at)}</span></>
-                  )}
-                </div>
-
-                {/* De daadwerkelijke bubbel */}
-                <div className={`chat-bubble ${isMij ? 'bubble-eigen' : 'bubble-ander'}`}>
+              <div key={b.id} style={{ alignSelf: isMij ? 'flex-end' : 'flex-start', maxWidth: '80%' }}>
+                {!isMij && <div style={{ fontSize: '0.6rem', color: '#6C757D', fontWeight: 900, marginBottom: '2px', marginLeft: '5px' }}>{b.spelers?.naam?.split(' ')[0]}</div>}
+                <div style={{ 
+                  background: isMij ? 'var(--crayola)' : '#FFF', 
+                  color: isMij ? '#FFF' : '#111827', 
+                  padding: '10px 14px', 
+                  borderRadius: isMij ? '16px 16px 0 16px' : '16px 16px 16px 0',
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                  fontSize: '0.85rem', fontWeight: 700, wordBreak: 'break-word'
+                }}>
                   {b.bericht}
                 </div>
-
               </div>
             );
           })
         )}
-        
-        {/* Onzichtbaar anker om naartoe te scrollen */}
         <div ref={chatEindeRef} />
       </div>
 
-      {/* INPUT FORMULIER */}
-      <form className="chat-form" onSubmit={verstuurChat}>
+      {/* INPUT FORM */}
+      <form onSubmit={verstuurChat} style={{ display: 'flex', gap: '8px' }}>
         <input 
-          className="chat-input" 
-          value={nieuwBericht} 
-          onChange={e => setNieuwBericht(e.target.value)} 
-          placeholder="Bericht..." 
-          autoComplete="off"
+          type="text" value={nieuwBericht} onChange={(e) => setNieuwBericht(e.target.value)} placeholder="Zeg iets in de kleedkamer..."
+          style={{ flex: 1, padding: '15px', borderRadius: '16px', border: '2px solid #E9ECEF', outline: 'none', fontSize: '0.9rem', fontWeight: 700 }}
         />
-        <button className="chat-btn" type="submit" disabled={!nieuwBericht.trim()}>
-          {/* Mooi papieren vliegtuig SVG icoontje */}
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginLeft: '-2px', marginTop: '2px'}}>
-            <line x1="22" y1="2" x2="11" y2="13"></line>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-          </svg>
+        <button type="submit" style={{ background: 'var(--magenta)', color: '#FFF', border: 'none', padding: '0 20px', borderRadius: '16px', fontWeight: 900, cursor: 'pointer', boxShadow: '0 4px 10px rgba(240, 56, 255, 0.3)' }}>
+          ▶
         </button>
       </form>
 
