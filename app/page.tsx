@@ -27,7 +27,7 @@ export default function Home() {
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
   
   const [toast, setToast] = useState<{naam: string, bericht: string} | null>(null);
-  const [infoOpen, setInfoOpen] = useState(false); 
+  const [infoOpen, setInfoOpen] = useState(false);
 
   const actieveTabRef = useRef(actieveTab);
   const actieveSpelerRef = useRef(actieveSpeler);
@@ -35,6 +35,7 @@ export default function Home() {
 
   const [syncStatus, setSyncStatus] = useState('');
   
+  // --- ROLLEN VERDELING ---
   const adminNamen = ['jorden ricour', 'wesley moonens', 'yarni ricour'];
   const isAdmin = actieveSpeler?.naam && adminNamen.some((admin: string) => actieveSpeler.naam.toLowerCase().includes(admin));
   const isJorden = actieveSpeler?.naam?.toLowerCase().includes('jorden ricour');
@@ -114,32 +115,6 @@ export default function Home() {
 
     return () => { clearInterval(klokInterval); supabase.removeChannel(chatSub); };
   }, []);
-
-  // --- BIG BROTHER TRACKER ---
-  useEffect(() => {
-    if (!actieveSpeler) return;
-
-    // 1. Bij openen app: tel 1 login op + update tijdstip
-    const registreerLogin = async () => {
-      await supabase.from('spelers').update({
-        aantal_logins: (actieveSpeler.aantal_logins || 0) + 1,
-        laatste_login: new Date().toISOString()
-      }).eq('id', actieveSpeler.id);
-    };
-    registreerLogin();
-
-    // 2. Iedere minuut (60 seconden) dat de app open staat, tel 60 sec bij
-    const interval = setInterval(async () => {
-      const { data } = await supabase.from('spelers').select('tijd_gespendeerd').eq('id', actieveSpeler.id).single();
-      if (data) {
-        await supabase.from('spelers').update({
-          tijd_gespendeerd: (data.tijd_gespendeerd || 0) + 60
-        }).eq('id', actieveSpeler.id);
-      }
-    }, 60000);
-
-    return () => clearInterval(interval);
-  }, [actieveSpeler?.id]); 
 
   useEffect(() => {
     if (actieveSpeler && (actieveSpeler.betaald || isJorden)) {
@@ -339,17 +314,21 @@ export default function Home() {
       };
     });
 
+    // --- 🚨 PROMO TRUCJE: MAARTEN, JONAS EN SAMMY OP 1, 2 EN 3 ZONDER ECHTE PUNTEN ---
     const matchenGespeeld = m.some((match: any) => match.thuis_score !== null);
     
     let eindStats = stats.map(sp => {
+      // Als er nog GEEN matchen gespeeld zijn: reset alle punten naar 0
       if (!matchenGespeeld) {
         return { ...sp, totaal_score: 0, prono_score: 0, bonus_score: 0, exact: 0, winnaarCorrect: 0, fout: 0, bonus_breakdown: [] };
       }
       return sp; 
     });
 
+    // FORCEER SORTERING VOOR HET PODIUM
     eindStats.sort((a, b) => {
       if (!matchenGespeeld) {
+        // Geheime "weighing" voor het klassement: puur voor de volgorde!
         const getPromoWeight = (naam: string) => {
           const n = naam.toLowerCase();
           if (n.includes('maarten')) return 3;
@@ -359,8 +338,11 @@ export default function Home() {
         };
         const weightA = getPromoWeight(a.naam);
         const weightB = getPromoWeight(b.naam);
+        
         if (weightA !== weightB) return weightB - weightA; 
       }
+
+      // Echte sortering als WK bezig is
       if (b.totaal_score !== a.totaal_score) return b.totaal_score - a.totaal_score;
       if (b.exact !== a.exact) return b.exact - a.exact;
       if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect;
@@ -631,8 +613,8 @@ export default function Home() {
               {actieveTab === 'bonus' && <BonusTab winnaar={winnaar} setWinnaar={setWinnaar} hf={hf} setHf={setHf} meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} eindstation={eindstation} setEindstation={setEindstation} totaalGoals={totaalGoals} setTotaalGoals={setTotaalGoals} totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} />}
               {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} />}
               {actieveTab === 'ranking' && <RankingTab klassement={klassement} actieveSpeler={actieveSpeler} toggleBetaald={toggleBetaald} />}
-              {actieveTab === 'tellers' && <TellersTab matchen={matchen} alleToernooiV={alleToernooiV} isAdmin={isAdmin} alleSpelers={alleSpelers} actieveSpeler={actieveSpeler} />}
-              {actieveTab === 'kleedkamer' && <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} chatEindeRef={chatEindeRef} nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} alleSpelers={alleSpelers} />}
+              {actieveTab === 'tellers' && <TellersTab matchen={matchen} alleToernooiV={alleToernooiV} isAdmin={isAdmin} />}
+              {actieveTab === 'kleedkamer' && <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} chatEindeRef={chatEindeRef} nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} />}
               
               <div style={{textAlign:'center', marginTop:30, paddingBottom: 20}}>
                 <button style={{background:'none', border:'none', color:'#111827', fontWeight:900, cursor:'pointer', opacity: 0.6}} onClick={() => {localStorage.removeItem('wk_speler_id'); window.location.reload();}}>UITLOGGEN</button>
