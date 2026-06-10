@@ -39,7 +39,6 @@ export default function Home() {
   
   const adminNamen = ['jorden ricour', 'wesley moonens', 'yarni ricour'];
   const isAdmin = actieveSpeler?.naam && adminNamen.some((admin: string) => actieveSpeler.naam.toLowerCase().includes(admin));
-  const isJorden = actieveSpeler?.naam?.toLowerCase().includes('jorden ricour');
   
   const [matchen, setMatchen] = useState<any[]>([]);
   const [matchVoorspellingen, setMatchVoorspellingen] = useState<Record<number, {thuis: string, uit: string}>>({});
@@ -119,7 +118,6 @@ export default function Home() {
     return () => { clearInterval(klokInterval); supabase.removeChannel(chatSub); };
   }, []);
 
-  // --- BIG BROTHER TRACKER ---
   useEffect(() => {
     if (!actieveSpeler) return;
 
@@ -144,14 +142,14 @@ export default function Home() {
   }, [actieveSpeler?.id]); 
 
   useEffect(() => {
-    if (actieveSpeler && (actieveSpeler.betaald || isJorden)) {
+    if (actieveSpeler) {
       if (actieveTab === 'matchen') haalMatchenOp();
       if (actieveTab === 'bonus') haalToernooiVoorspellingOp();
       if (actieveTab === 'ranking' || actieveTab === 'prijs') haalKlassementOp();
       if (actieveTab === 'kleedkamer') haalChatOp();
       if (actieveTab === 'antwoorden') haalAlleAntwoordenOp();
     }
-  }, [actieveSpeler, actieveTab, isJorden]);
+  }, [actieveSpeler, actieveTab]);
 
   const haalSpelersOp = async (id?: string | null) => {
     const { data } = await supabase.from('spelers').select('*').order('created_at', { ascending: true });
@@ -372,12 +370,6 @@ export default function Home() {
     setKlassement(eindStats);
   };
 
-  const toggleBetaald = async (spelerId: number, huidigeStatus: boolean) => {
-    if (!isJorden) return;
-    const { error } = await supabase.from('spelers').update({ betaald: !huidigeStatus }).eq('id', spelerId);
-    if (!error) haalKlassementOp();
-  };
-
   const verstuurChat = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nieuwBericht.trim()) return;
@@ -406,7 +398,8 @@ export default function Home() {
     if (alleSpelers.some(s => s.naam.toLowerCase() === naam.toLowerCase())) { setStatus('Deze naam bestaat al! Kies onderaan voor inloggen. 🚩'); return; }
 
     setStatus('Aanmaken... ⏳');
-    const { data, error } = await supabase.from('spelers').insert([{ naam: naam, code: code, betaald: false }]).select().single();
+    // Iedereen is vanaf nu automatisch betaald
+    const { data, error } = await supabase.from('spelers').insert([{ naam: naam, code: code, betaald: true }]).select().single();
 
     if (error) { setStatus('Oeps, fout bij aanmaken! 🚩'); }
     else if (data) { setAlleSpelers(prev => [...prev, data]); setActieveSpeler(data); localStorage.setItem('wk_speler_id', data.id.toString()); setStatus(''); }
@@ -448,15 +441,13 @@ export default function Home() {
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@600;800;900&display=swap');
         
         :root { 
-          /* WK 2026 OFFICIAL NEON COLORS VOOR DE VOORGROND */
-          --wk-blue: #2B00FF;    /* Deep vibrant blue */
-          --wk-red: #E30022;     /* Bright Red */
-          --wk-orange: #FF6B00;  /* Bright Orange */
-          --wk-lime: #CCFF00;    /* Neon Green */
-          --wk-aqua: #00E5FF;    /* Bright Cyan */
-          --wk-purple: #7A00E6;  /* Deep Purple */
+          --wk-blue: #2B00FF;    
+          --wk-red: #E30022;     
+          --wk-orange: #FF6B00;  
+          --wk-lime: #CCFF00;    
+          --wk-aqua: #00E5FF;    
+          --wk-purple: #7A00E6;  
           
-          /* Gekoppeld aan oude classes zodat andere tabs niet breken */
           --crayola: var(--wk-blue); 
           --magenta: var(--wk-purple); 
           --rose: var(--wk-orange); 
@@ -466,18 +457,16 @@ export default function Home() {
         
         *, *::before, *::after { box-sizing: border-box; }
 
-        /* DE ACHTERGROND: Kalm, donker, geen flitsende animaties meer */
         html, body { 
           margin: 0; padding: 0; width: 100%; min-height: 100%; 
           font-family: 'Nunito', sans-serif; 
-          color: #FFF; /* Witte tekst voor Dark Mode */
-          background: #090514; /* Heel diep donker paars/zwart canvas */
+          color: #FFF; 
+          background: #090514; 
           overflow-x: hidden; 
         }
         
         .main-container { padding: 25px 15px 120px 15px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; width: 100%; }
         
-        /* DE MAIN CARD: Grotendeels transparant om de neon te laten poppen */
         .glass-card { 
           background: transparent; 
           padding: 10px 0; 
@@ -492,8 +481,7 @@ export default function Home() {
           margin: 0 0 25px 0; letter-spacing: 2px;
         }
 
-        /* BOTTOM NAVIGATIE IN DARK NEON MODE */
-        .bottom-nav { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(20, 15, 30, 0.9); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); padding: 6px; border-radius: 30px; display: flex; gap: 4px; z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.5); width: 95%; max-width: 420px; justify-content: space-between; align-items: center; }
+        .bottom-nav { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(20, 15, 30, 0.95); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); padding: 6px; border-radius: 30px; display: flex; gap: 4px; z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.8); width: 95%; max-width: 420px; justify-content: space-between; align-items: center; }
         .nav-item { display: flex; align-items: center; justify-content: center; height: 42px; border-radius: 21px; cursor: pointer; transition: all 0.3s ease; color: #6C757D; position: relative; overflow: hidden; flex: 1; }
         .nav-item.active { background: var(--wk-lime); color: #111827; padding: 0 16px; box-shadow: 0 0 15px rgba(204, 255, 0, 0.4); flex: 0 0 auto; }
         .nav-icon { font-size: 1.1rem; z-index: 2; }
@@ -505,14 +493,12 @@ export default function Home() {
         
         .admin-btn { background: var(--wk-red); color: #fff; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 900; cursor: pointer; font-size: 0.8rem; margin: 0 auto 20px; display: block; box-shadow: 0 4px 15px rgba(227, 0, 34, 0.4); }
         
-        /* LOGIN SCHERM AANGEPAST AAN NEON THEMA */
         .login-title { font-family: 'Bebas Neue', sans-serif; color: var(--wk-lime); text-align: center; font-size: 3rem; margin: 0 0 20px 0; letter-spacing: 2px; text-shadow: 0 0 10px rgba(204,255,0,0.3); }
         .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #333; background: #1A1423; color: #FFF; font-weight: 800; font-size: 1rem; margin-bottom: 15px; outline: none; transition: 0.2s; }
         .full-input::placeholder { text-align: center; color: #6C757D; font-weight: 700; }
         .full-input:focus { border-color: var(--wk-aqua); box-shadow: 0 0 15px rgba(0, 229, 255, 0.2); }
         .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--wk-blue); color: #FFF; border: none; font-weight: 900; font-size: 1.2rem; cursor: pointer; box-shadow: 0 4px 20px rgba(43, 0, 255, 0.5); transition: 0.2s; margin-top: 5px; display: block; text-transform: uppercase; letter-spacing: 1px; }
         .btn-primary:active { transform: scale(0.98); }
-        
       `}</style>
 
       {/* 📱 INSTALLATIE POP-UP IN DARK MODE */}
@@ -541,14 +527,13 @@ export default function Home() {
 
               <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px', borderLeft: '4px solid var(--wk-lime)' }}>
                 <strong style={{ fontSize: '0.85rem', color: '#FFF' }}>🤖 Android (Chrome):</strong>
-                <div style={{ fontSize: '0.75rem', color: '#868E96', marginTop: '4px' }}>Tik rechtsboven op de <strong>drie puntjes</strong> en kies <strong>'Toevoegen aan startscherm'</strong>.</div>
+                <div style={{ fontSize: '0.75rem', color: '#868E96', marginTop: '4px' }}>Tik rechtsboven op de <strong>drie puntjes</strong> en kies <strong>'Toevoegen aan startscherm'</strong> of <strong>'App installeren'</strong>.</div>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* TOAST POP-UP MELDING */}
       {toast && (
         <div 
           onClick={() => { setActieveTab('kleedkamer'); setToast(null); }}
@@ -573,7 +558,6 @@ export default function Home() {
       <div className="glass-card">
         <h1 className="title">WK 2026</h1>
 
-        {/* STRAKKE AVATAR BADGE */}
         {actieveSpeler && (
           <div style={{ textAlign: 'center' }}>
             <div className="speler-badge">
@@ -583,7 +567,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* UITKLAPBAAR REGLEMENT IN NEON DARK THEME */}
         {actieveSpeler && actieveTab === 'ranking' && (
           <div style={{ width: '100%', marginBottom: '20px' }}>
             <button 
@@ -653,45 +636,21 @@ export default function Home() {
           </div>
         )}
 
-        {/* LOGICA: IS INGELOGD? */}
         {actieveSpeler ? (
-          (!actieveSpeler.betaald && !isJorden) ? (
-            <div style={{ textAlign: 'center', padding: '20px 0', background: '#1A1423', borderRadius: '24px', border: '2px solid var(--wk-red)' }}>
-              <div style={{ fontSize: '4rem', marginBottom: '10px' }}>🔒</div>
-              <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '3rem', color: 'var(--wk-red)', lineHeight: 1, margin: '0 0 10px 0' }}>APP VERGRENDELD</h2>
-              <p style={{ fontWeight: 800, color: '#ADB5BD', fontSize: '0.9rem', marginBottom: '20px', padding: '0 15px' }}>
-                Je account is nog niet geactiveerd. Breng je deelname (<strong>€10</strong>) in orde voor toegang tot de pronostiek.
-              </p>
-              
-              <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '16px', padding: '20px', margin: '0 15px 20px 15px' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--wk-aqua)', textTransform: 'uppercase' }}>Overschrijven naar:</div>
-                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#FFF', margin: '8px 0' }}>BE85 0018 2075 8506</div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#ADB5BD' }}>Mededeling: <strong style={{ color: 'var(--wk-lime)' }}>{actieveSpeler.naam} + WK2026</strong></div>
-              </div>
-
-              <button 
-                style={{ background: '#333', border: 'none', color: '#FFF', fontWeight: 900, cursor: 'pointer', padding: '12px 25px', borderRadius: '12px', fontSize: '0.8rem' }} 
-                onClick={() => { localStorage.removeItem('wk_speler_id'); window.location.reload(); }}
-              >
-                UITLOGGEN
-              </button>
-            </div>
-          ) : (
-            <div>
-              {actieveTab === 'matchen' && <MatchenTab gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} />}
+          <div style={{ width: '100%' }}>
+            {actieveTab === 'matchen' && <MatchenTab gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} />}
+          
+            {actieveTab === 'prijs' && <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />}
+            {actieveTab === 'bonus' && <BonusTab winnaar={winnaar} setWinnaar={setWinnaar} hf={hf} setHf={setHf} meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} eindstation={eindstation} setEindstation={setEindstation} totaalGoals={totaalGoals} setTotaalGoals={setTotaalGoals} totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} />}
+            {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} />}
+            {actieveTab === 'ranking' && <RankingTab klassement={klassement} actieveSpeler={actieveSpeler} />}
+            {actieveTab === 'tellers' && <TellersTab matchen={matchen} alleToernooiV={alleToernooiV} isAdmin={isAdmin} />}
+            {actieveTab === 'kleedkamer' && <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} chatEindeRef={chatEindeRef} nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} />}
             
-              {actieveTab === 'prijs' && <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />}
-              {actieveTab === 'bonus' && <BonusTab winnaar={winnaar} setWinnaar={setWinnaar} hf={hf} setHf={setHf} meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} eindstation={eindstation} setEindstation={setEindstation} totaalGoals={totaalGoals} setTotaalGoals={setTotaalGoals} totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} />}
-              {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} />}
-              {actieveTab === 'ranking' && <RankingTab klassement={klassement} actieveSpeler={actieveSpeler} toggleBetaald={toggleBetaald} />}
-              {actieveTab === 'tellers' && <TellersTab matchen={matchen} alleToernooiV={alleToernooiV} isAdmin={isAdmin} />}
-              {actieveTab === 'kleedkamer' && <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} chatEindeRef={chatEindeRef} nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} />}
-              
-              <div style={{textAlign:'center', marginTop:40, paddingBottom: 20}}>
-                <button style={{background:'rgba(255,255,255,0.1)', border:'none', color:'#ADB5BD', fontWeight:900, cursor:'pointer', padding: '10px 20px', borderRadius: '12px'}} onClick={() => {localStorage.removeItem('wk_speler_id'); window.location.reload();}}>UITLOGGEN</button>
-              </div>
+            <div style={{textAlign:'center', marginTop:40, paddingBottom: 20}}>
+              <button style={{background:'rgba(255,255,255,0.1)', border:'none', color:'#ADB5BD', fontWeight:900, cursor:'pointer', padding: '10px 20px', borderRadius: '12px'}} onClick={() => {localStorage.removeItem('wk_speler_id'); window.location.reload();}}>UITLOGGEN</button>
             </div>
-          )
+          </div>
         ) : (
           <div style={{width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
             <form onSubmit={isRegistreren ? handleRegistreer : handleLogin} style={{width: '100%'}}>
@@ -715,8 +674,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* ONDERSTE NAVIGATIEBALK (VERBERGEN ALS APP OP SLOT ZIT) */}
-      {actieveSpeler && (actieveSpeler.betaald || isJorden) && (
+      {actieveSpeler && (
         <div className="bottom-nav">
           {[
             {id:'ranking', i:'🏆', n:'Rank'},
