@@ -405,12 +405,43 @@ export default function Home() {
     if (alleSpelers.some(s => s.naam.toLowerCase() === naam.toLowerCase())) { setStatus('Deze naam bestaat al! Kies onderaan voor inloggen. 🚩'); return; }
 
     setStatus('Aanmaken... ⏳');
-    // Nieuwe spelers worden nu standaard op betaald: false gezet (vergrendeld)
     const { data, error } = await supabase.from('spelers').insert([{ naam: naam, code: code, betaald: false }]).select().single();
 
     if (error) { setStatus('Oeps, fout bij aanmaken! 🚩'); }
     else if (data) { setAlleSpelers(prev => [...prev, data]); setActieveSpeler(data); localStorage.setItem('wk_speler_id', data.id.toString()); setStatus(''); }
   };
+
+  // --- DIT IS HET STUKJE DAT ONTBRAB EN DE ERROR GAF ---
+  const tellersData = useMemo(() => {
+    let totaleGoals = 0, totaleGeleKaarten = 0, totaleRodeKaarten = 0;
+    const teamGoalsVoor: Record<string, number> = {};
+    const teamGoalsTegen: Record<string, number> = {};
+
+    matchen.forEach(m => {
+      if (m.thuis_score !== null && m.uit_score !== null) {
+        totaleGoals += (m.thuis_score + m.uit_score);
+        totaleGeleKaarten += (m.gele_kaarten || 0);
+        totaleRodeKaarten += (m.rode_kaarten || 0);
+        teamGoalsVoor[m.thuisploeg] = (teamGoalsVoor[m.thuisploeg] || 0) + m.thuis_score;
+        teamGoalsVoor[m.uitploeg] = (teamGoalsVoor[m.uitploeg] || 0) + m.uit_score;
+        teamGoalsTegen[m.thuisploeg] = (teamGoalsTegen[m.thuisploeg] || 0) + m.uit_score;
+        teamGoalsTegen[m.uitploeg] = (teamGoalsTegen[m.uitploeg] || 0) + m.thuis_score;
+      }
+    });
+
+    const meestScorendTeam = Object.entries(teamGoalsVoor).sort((a, b) => b[1] - a[1])[0] || ['Nog geen data', 0];
+    const minstTegenTeam = Object.entries(teamGoalsTegen).sort((a, b) => a[1] - b[1])[0] || ['Nog geen data', 0];
+
+    return { totaleGoals, totaleGeleKaarten, totaleRodeKaarten, meestScorendTeam, minstTegenTeam };
+  }, [matchen]);
+
+  const gefilterdeMatchen = useMemo(() => {
+    let basis = matchen;
+    if (filterRonde === 'Nog in te vullen') return basis.filter(m => (!matchVoorspellingen[m.id] || matchVoorspellingen[m.id].thuis === '') && (nu < new Date(m.datum).getTime()));
+    if (filterRonde !== 'Alle') basis = basis.filter(m => m.ronde === filterRonde);
+    return basis;
+  }, [matchen, filterRonde, matchVoorspellingen, nu]);
+  // --------------------------------------------------
 
   return (
     <main className="main-container">
