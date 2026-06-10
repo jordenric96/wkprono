@@ -10,7 +10,7 @@ const cardThemes = [
   { bg: '#E30022', color: '#FFF' }     // Rood
 ];
 
-export default function RankingTab({ klassement, actieveSpeler }: any) {
+export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, isJorden }: any) {
   const [modus, setModus] = useState('matchen'); 
   const [expandedBonusId, setExpandedBonusId] = useState<number | null>(null);
 
@@ -76,7 +76,7 @@ export default function RankingTab({ klassement, actieveSpeler }: any) {
               background: theme.bg, 
               color: theme.color, 
               borderRadius: '14px', 
-              padding: '10px 14px', // Flink compacter gemaakt voor overzichtelijkheid
+              padding: '10px 14px',
               border: isMij ? '2px solid #FFF' : '1px solid transparent',
               boxShadow: isMij ? '0 0 15px rgba(255,255,255,0.4)' : '0 4px 10px rgba(0,0,0,0.3)',
               cursor: modus === 'bonus' ? 'pointer' : 'default',
@@ -100,15 +100,35 @@ export default function RankingTab({ klassement, actieveSpeler }: any) {
                 )}
               </div>
 
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', lineHeight: 0.9 }}>
-                  {modus === 'matchen' ? speler.totaal_score : speler.bonus_score}
+              {/* ADMIN CONTROLS EN SCORES */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                
+                {/* GEHEIME KNOP VOOR JORDEN OM BETALINGEN GOED TE KEUREN */}
+                {isJorden && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleBetaald(speler.id, speler.betaald); }}
+                    style={{
+                      background: speler.betaald ? 'transparent' : '#E30022',
+                      border: speler.betaald ? '1px solid rgba(255,255,255,0.3)' : 'none',
+                      color: '#FFF',
+                      padding: '4px 8px', borderRadius: '6px', fontSize: '0.55rem', fontWeight: 900, cursor: 'pointer',
+                      boxShadow: speler.betaald ? 'none' : '0 2px 5px rgba(0,0,0,0.3)'
+                    }}
+                  >
+                    {speler.betaald ? '✅ OK' : '💰 BETALEN'}
+                  </button>
+                )}
+
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', lineHeight: 0.9 }}>
+                    {modus === 'matchen' ? speler.totaal_score : speler.bonus_score}
+                  </div>
+                  <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', opacity: 0.8, marginTop: '2px' }}>Punten</div>
                 </div>
-                <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', opacity: 0.8, marginTop: '2px' }}>Punten</div>
               </div>
             </div>
 
-            {/* UITKLAPBARE BONUS DETAILS (Alleen in Bonus modus) */}
+            {/* UITKLAPBARE BONUS DETAILS */}
             {modus === 'bonus' && isExpanded && (
               <div style={{ 
                 marginTop: '10px', paddingTop: '10px', 
