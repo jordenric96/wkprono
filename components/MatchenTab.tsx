@@ -41,7 +41,7 @@ const parseTeam = (teamString: string) => {
     'tunisia': 'Tunesië', 'tunesië': 'Tunesië', 'new zealand': 'Nieuw-Zeeland', 'nieuw-zeeland': 'Nieuw-Zeeland',
     'qatar': 'Qatar', 'ireland': 'Ierland', 'ierland': 'Ierland',
     'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije', 'turkije': 'Turkije',
-    'romania': 'Roemenië', 'roemenië': 'Roemenië', 'hungary': 'Hongarije', 'hongarije': 'Hongarije',
+    'romania': 'Roemenië', 'roemenië': 'Roemenië', 'hongarije': 'Hongarije', 'hongarije': 'Hongarije',
     'norway': 'Noorwegen', 'noorwegen': 'Noorwegen', 'iceland': 'IJsland', 'ijsland': 'IJsland',
     'slovakia': 'Slowakije', 'slowakije': 'Slowakije', 'iraq': 'Irak', 'irak': 'Irak',
     'paraguay': 'Paraguay', 'venezuela': 'Venezuela', 'mali': 'Mali', 'algeria': 'Algerije', 'algerije': 'Algerije',
@@ -154,10 +154,11 @@ const parseTeam = (teamString: string) => {
   return { name: nameNL, emoji, gradient };
 };
 
-// De WK kleuren voor de afwisselende kaarten (Neon Dark Theme)
+// De WK kleuren voor de afwisselende kaarten (Inclusief Lime Groen!)
 const cardThemes = [
   { bg: 'var(--wk-blue)', color: '#FFF' },
   { bg: 'var(--wk-purple)', color: '#FFF' },
+  { bg: 'var(--wk-lime)', color: '#111827' },
   { bg: 'var(--wk-aqua)', color: '#111827' },
   { bg: 'var(--wk-red)', color: '#FFF' }
 ];
@@ -247,13 +248,13 @@ export default function MatchenTab({
         .stand-table tr.highlight td { background: rgba(55, 114, 255, 0.08); font-weight: 900; color: var(--crayola); }
       `}</style>
 
-      {/* FILTER KNOPPEN */}
+      {/* FILTER KNOPPEN (Foutje is hier uit!) */}
       <div className="hide-scrollbar" style={{ display: 'flex', overflowX: 'auto', gap: '8px', paddingBottom: '5px' }}>
         {rondes.map(r => (
           <button 
             key={r} onClick={() => setFilterRonde(r)}
             style={{
-              padding: '8px 16px', borderRadius: '20px', border: 'none', whiteSpace: 'nowrap',
+              padding: '8px 16px', borderRadius: '20px', whiteSpace: 'nowrap',
               fontWeight: 900, fontSize: '0.75rem', textTransform: 'uppercase', cursor: 'pointer', transition: '0.2s',
               background: filterRonde === r ? 'var(--wk-lime)' : '#1A1423',
               color: filterRonde === r ? '#111827' : '#ADB5BD',
@@ -285,7 +286,7 @@ export default function MatchenTab({
           const thuisInfo = parseTeam(match.thuisploeg);
           const uitInfo = parseTeam(match.uitploeg);
 
-          const theme = cardThemes[index % cardThemes.length];
+          const theme = cardThemes[index % cardThemes.length]; // Nu ook mét Limoengroen
 
           const TOERNOOI_AANDACHT_START = new Date('2026-05-01').getTime();
           const matchTijd = matchDateObj.getTime();
@@ -293,7 +294,7 @@ export default function MatchenTab({
           if (progress > 100) progress = 100; 
           if (progress < 0) progress = 0; 
 
-          // --- LOGICA WIE INGEVULD HEEFT (Geen "betaald" check meer) ---
+          // --- LOGICA WIE INGEVULD HEEFT ---
           const nietIngevuldeSpelers = alleSpelers.filter((s: any) => {
             const v = alleMatchVoorspellingen.find((x: any) => x.match_id === match.id && x.speler_id === s.id);
             return !v || v.thuis_score === null || v.uit_score === null || v.thuis_score === '' || v.uit_score === '';
@@ -306,23 +307,23 @@ export default function MatchenTab({
             }}>
               
               {/* MATCH HEADER & TIMELINE */}
-              <div style={{ background: 'rgba(0,0,0,0.15)', padding: '10px 15px', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ background: 'rgba(0,0,0,0.15)', padding: '10px 15px', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid rgba(0,0,0,0.15)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', fontWeight: 900, opacity: 0.8, textTransform: 'uppercase' }}>
                   <span>{dateStr} • {timeStr} • {match.ronde} {match.groep ? `(${match.groep})` : ''}</span>
-                  {saveStatus === 'saving' && <span style={{ color: '#FFF' }}>Opslaan... ⏳</span>}
-                  {saveStatus === 'saved' && <span style={{ color: 'var(--wk-lime)' }}>Opgeslagen ✅</span>}
-                  {isMatchGesloten && <span style={{ color: 'var(--wk-red)' }}>🔒 BEZIG / GESPEELD</span>}
+                  {saveStatus === 'saving' && <span style={{ color: theme.color }}>Opslaan... ⏳</span>}
+                  {saveStatus === 'saved' && <span style={{ color: theme.color }}>Opgeslagen ✅</span>}
+                  {isMatchGesloten && <span style={{ color: theme.color }}>🔒 BEZIG / GESPEELD</span>}
                 </div>
 
                 <div style={{ width: '100%', height: '4px', background: 'rgba(0,0,0,0.2)', borderRadius: '2px', position: 'relative', marginTop: '4px' }}>
                   <div style={{ position: 'absolute', left: `calc(${progress}% - 8px)`, top: '-8px', fontSize: '14px', transition: 'left 1s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 2 }}>
                     ⚽
                   </div>
-                  <div style={{ width: `${progress}%`, height: '100%', background: isMatchGesloten ? 'var(--wk-lime)' : '#FFF', borderRadius: '2px', transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)' }} />
+                  <div style={{ width: `${progress}%`, height: '100%', background: isMatchGesloten ? theme.color : 'rgba(255,255,255,0.5)', borderRadius: '2px', transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)' }} />
                 </div>
               </div>
 
-              {/* MATCH BODY */}
+              {/* MATCH BODY (Witte kaders om de score zijn weg, nu subtiel doorschijnend) */}
               <div style={{ padding: '20px 15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '5px' }}>
                 
                 <div 
@@ -343,13 +344,13 @@ export default function MatchenTab({
                   <input 
                     type="tel" value={voorspelling.thuis} disabled={isMatchGesloten}
                     onChange={(e) => handleScore(match.id, 'thuis', e.target.value)}
-                    style={{ width: '50px', height: '50px', textAlign: 'center', fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Bebas Neue', borderRadius: '12px', border: 'none', background: 'rgba(255,255,255,0.95)', color: '#111827', outline: 'none', boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.2)' }}
+                    style={{ width: '45px', height: '45px', textAlign: 'center', fontSize: '1.4rem', fontWeight: 900, fontFamily: 'Bebas Neue', borderRadius: '12px', border: '2px solid rgba(0,0,0,0.2)', background: 'rgba(0,0,0,0.15)', color: theme.color, outline: 'none' }}
                   />
                   <span style={{ fontWeight: 900, opacity: 0.8 }}>-</span>
                   <input 
                     type="tel" value={voorspelling.uit} disabled={isMatchGesloten}
                     onChange={(e) => handleScore(match.id, 'uit', e.target.value)}
-                    style={{ width: '50px', height: '50px', textAlign: 'center', fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Bebas Neue', borderRadius: '12px', border: 'none', background: 'rgba(255,255,255,0.95)', color: '#111827', outline: 'none', boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.2)' }}
+                    style={{ width: '45px', height: '45px', textAlign: 'center', fontSize: '1.4rem', fontWeight: 900, fontFamily: 'Bebas Neue', borderRadius: '12px', border: '2px solid rgba(0,0,0,0.2)', background: 'rgba(0,0,0,0.15)', color: theme.color, outline: 'none' }}
                   />
                 </div>
 
@@ -370,7 +371,7 @@ export default function MatchenTab({
 
               {/* EVENTUELE EINDSTAND */}
               {isMatchGesloten && match.thuis_score !== null && (
-                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 900, color: 'var(--wk-lime)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 900, color: theme.color, textTransform: 'uppercase', letterSpacing: '1px' }}>
                   EINDSTAND: {match.thuis_score} - {match.uit_score}
                 </div>
               )}
@@ -382,12 +383,12 @@ export default function MatchenTab({
                     <div style={{ fontSize: '0.7rem', fontWeight: 900, opacity: 0.8, textTransform: 'uppercase', marginBottom: '8px' }}>Nog in te vullen:</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                       {nietIngevuldeSpelers.length === 0 ? (
-                        <div style={{ width: '100%', background: 'var(--wk-lime)', color: '#111827', padding: '6px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 900, textAlign: 'center' }}>
+                        <div style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: theme.color, padding: '6px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 900, textAlign: 'center' }}>
                           🎉 Iedereen heeft ingevuld!
                         </div>
                       ) : (
                         nietIngevuldeSpelers.map((s: any) => (
-                          <span key={s.id} style={{ background: 'var(--wk-red)', color: '#FFF', padding: '4px 12px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 900, border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 2px 5px rgba(0,0,0,0.3)' }}>
+                          <span key={s.id} style={{ background: 'rgba(0,0,0,0.3)', color: theme.color, padding: '4px 12px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 900, border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 2px 5px rgba(0,0,0,0.2)' }}>
                             {s.naam.split(' ')[0]}
                           </span>
                         ))
@@ -402,7 +403,7 @@ export default function MatchenTab({
                       const heeftIngevuld = v && v.thuis_score !== null && v.uit_score !== null;
                       const spelerNaam = s.naam.split(' ')[0];
 
-                      let pillBg = 'rgba(255,255,255,0.1)';
+                      let pillBg = 'rgba(0,0,0,0.2)';
                       let pillColor = theme.color;
                       let scoreTekst = heeftIngevuld ? `${v.thuis_score}-${v.uit_score}` : 'Geen';
                       let icoontje = heeftIngevuld ? '🤔' : '❌';
@@ -439,7 +440,7 @@ export default function MatchenTab({
         })
       )}
 
-      {/* TEAM DOSSIER POP-UP (Aangepast aan Dark Mode) */}
+      {/* TEAM DOSSIER POP-UP */}
       {geselecteerdTeamRaw && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div 
           onClick={() => setGeselecteerdTeamRaw(null)} 
