@@ -15,23 +15,27 @@ export default function PrijsTab({ klassement }: { klassement: any[] }) {
     return [...klassement].sort((a, b) => b.exact - a.exact)[0];
   }, [klassement]);
 
-  // --- DYNAMISCHE PRIJZENPOT BEREKENING ---
-  const aantalDeelnemers = klassement.length;
+  // --- DYNAMISCHE PRIJZENPOT BEREKENING (WATERDICHT) ---
+  
+  // 1. TEL ENKEL DE SPELERS DIE ECHT BETAALD HEBBEN!
+  const aantalDeelnemers = klassement.filter(s => s.betaald === true).length;
   const totalePot = aantalDeelnemers * 10;
   
   // Vaste prijzen voor de nevenklassementen
   const prijsBonusKoning = 20;
   const prijsScherpschutter = 20;
   
-  // Wat overblijft is voor het algemeen klassement
+  // 2. Wat overblijft is voor het algemeen klassement
   const algemenePot = Math.max(0, totalePot - prijsBonusKoning - prijsScherpschutter);
 
-  // Percentages toepassen op de overgebleven pot (en afronden op hele euro's)
-  const prijs1 = Math.round(algemenePot * 0.45);
-  const prijs2 = Math.round(algemenePot * 0.25);
-  const prijs3 = Math.round(algemenePot * 0.15);
-  const prijs4 = Math.round(algemenePot * 0.10);
+  // 3. Percentages toepassen en afrondingsfouten voorkomen
+  // We berekenen 2 t/m 5 en geven de absolute rest aan de 1e plaats. 
+  // Zo betaal je nooit een euro te veel uit eigen zak door afrondingen.
   const prijs5 = Math.round(algemenePot * 0.05);
+  const prijs4 = Math.round(algemenePot * 0.10);
+  const prijs3 = Math.round(algemenePot * 0.15);
+  const prijs2 = Math.round(algemenePot * 0.25);
+  const prijs1 = algemenePot - prijs2 - prijs3 - prijs4 - prijs5;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -41,7 +45,7 @@ export default function PrijsTab({ klassement }: { klassement: any[] }) {
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: '#111827', margin: 0, lineHeight: 1 }}>PRIJZENPOT</h2>
           <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--crayola)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-            Totale inleg: €{totalePot}
+            Totale inleg: €{totalePot} ({aantalDeelnemers}x betaald)
           </div>
         </div>
 
@@ -55,7 +59,7 @@ export default function PrijsTab({ klassement }: { klassement: any[] }) {
                 {top5[0]?.naam ? top5[0].naam.split(' ')[0] : '...'}
               </div>
             </div>
-            <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>€{prijs1}</div>
+            <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>€{prijs1 > 0 ? prijs1 : 0}</div>
           </div>
 
           {/* 2E PLAATS */}
@@ -67,7 +71,7 @@ export default function PrijsTab({ klassement }: { klassement: any[] }) {
                 {top5[1]?.naam ? top5[1].naam.split(' ')[0] : '...'}
               </div>
             </div>
-            <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', color: '#495057' }}>€{prijs2}</div>
+            <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', color: '#495057' }}>€{prijs2 > 0 ? prijs2 : 0}</div>
           </div>
 
           {/* 3E PLAATS */}
@@ -79,7 +83,7 @@ export default function PrijsTab({ klassement }: { klassement: any[] }) {
                 {top5[2]?.naam ? top5[2].naam.split(' ')[0] : '...'}
               </div>
             </div>
-            <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>€{prijs3}</div>
+            <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>€{prijs3 > 0 ? prijs3 : 0}</div>
           </div>
 
           {/* 4E & 5E PLAATS */}
@@ -87,12 +91,12 @@ export default function PrijsTab({ klassement }: { klassement: any[] }) {
             <div style={{ background: '#F8F9FA', borderRadius: '12px', padding: '12px', border: '1px solid #E9ECEF', textAlign: 'center' }}>
               <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>4e Plaats (10%)</div>
               <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#495057', margin: '4px 0' }}>{top5[3]?.naam ? top5[3].naam.split(' ')[0] : '...'}</div>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem', color: 'var(--crayola)' }}>€{prijs4}</div>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem', color: 'var(--crayola)' }}>€{prijs4 > 0 ? prijs4 : 0}</div>
             </div>
             <div style={{ background: '#F8F9FA', borderRadius: '12px', padding: '12px', border: '1px solid #E9ECEF', textAlign: 'center' }}>
               <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>5e Plaats (5%)</div>
               <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#495057', margin: '4px 0' }}>{top5[4]?.naam ? top5[4].naam.split(' ')[0] : '...'}</div>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem', color: '#40C057' }}>€{prijs5}</div>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem', color: '#40C057' }}>€{prijs5 > 0 ? prijs5 : 0}</div>
             </div>
           </div>
         </div>
@@ -117,7 +121,7 @@ export default function PrijsTab({ klassement }: { klassement: any[] }) {
                   <div style={{ fontSize: '0.7rem', color: '#6C757D', fontWeight: 800 }}>{bonusKoning.bonus_score} bonuspunten</div>
                 )}
               </div>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', color: 'var(--magenta)' }}>€{prijsBonusKoning}</div>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', color: 'var(--magenta)' }}>€{totalePot >= 40 ? prijsBonusKoning : 0}</div>
             </div>
           </div>
 
@@ -134,7 +138,7 @@ export default function PrijsTab({ klassement }: { klassement: any[] }) {
                   <div style={{ fontSize: '0.7rem', color: '#6C757D', fontWeight: 800 }}>{scherpschutter.exact} exacte matchen</div>
                 )}
               </div>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', color: '#40C057' }}>€{prijsScherpschutter}</div>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', color: '#40C057' }}>€{totalePot >= 40 ? prijsScherpschutter : 0}</div>
             </div>
           </div>
 
