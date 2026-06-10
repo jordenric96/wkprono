@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 
-// --- HARDE GROEPSINDELING ---
 const WK_GROEPEN: Record<string, string> = {
   'mexico': 'Groep A', 'zuid-afrika': 'Groep A', 'zuid-korea': 'Groep A', 'tsjechië': 'Groep A',
   'canada': 'Groep B', 'qatar': 'Groep B', 'zwitserland': 'Groep B', 'bosnië': 'Groep B',
@@ -18,7 +17,6 @@ const WK_GROEPEN: Record<string, string> = {
   'engeland': 'Groep L', 'kroatië': 'Groep L', 'ghana': 'Groep L', 'panama': 'Groep L'
 };
 
-// --- SLIMME VLAGGEN & KLEUREN GENERATOR ---
 const parseTeam = (teamString: string) => {
   if (!teamString) return { name: '', emoji: '🏳️', gradient: 'linear-gradient(135deg, #DEE2E6, #ADB5BD)' };
   let cleanString = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
@@ -156,6 +154,14 @@ const parseTeam = (teamString: string) => {
   return { name: nameNL, emoji, gradient };
 };
 
+// De WK kleuren voor de afwisselende kaarten (Neon Dark Theme)
+const cardThemes = [
+  { bg: 'var(--wk-blue)', color: '#FFF' },
+  { bg: 'var(--wk-purple)', color: '#FFF' },
+  { bg: 'var(--wk-aqua)', color: '#111827' },
+  { bg: 'var(--wk-red)', color: '#FFF' }
+];
+
 export default function MatchenTab({
   gefilterdeMatchen, nu, matchVoorspellingen, matchSaveStatus,
   alleMatchVoorspellingen, alleSpelers, expandedMatchId, setExpandedMatchId,
@@ -166,7 +172,6 @@ export default function MatchenTab({
 
   const rondes = ['Alle', 'Nog in te vullen', 'Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale'];
 
-  // --- AUTO-SCROLL NAAR LAATST GESPEELDE MATCH ---
   useEffect(() => {
     const laatstGespeeldeMatch = [...gefilterdeMatchen].reverse().find(m => nu >= new Date(m.datum).getTime());
     if (laatstGespeeldeMatch) {
@@ -179,7 +184,6 @@ export default function MatchenTab({
     }
   }, [filterRonde]);
 
-  // --- GROEPSSTAND BEREKENEN ---
   const genereerGroepsStand = (rawNaam: string) => {
     const groepsMatchenVanDitTeam = gefilterdeMatchen.filter((m: any) => 
       m.ronde === 'Groepsfase' && (m.thuisploeg === rawNaam || m.uitploeg === rawNaam)
@@ -234,7 +238,6 @@ export default function MatchenTab({
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
         .stand-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
         .stand-table th { text-align: center; padding: 4px 2px; color: #ADB5BD; font-weight: 900; border-bottom: 2px solid #E9ECEF; }
@@ -252,9 +255,10 @@ export default function MatchenTab({
             style={{
               padding: '8px 16px', borderRadius: '20px', border: 'none', whiteSpace: 'nowrap',
               fontWeight: 900, fontSize: '0.75rem', textTransform: 'uppercase', cursor: 'pointer', transition: '0.2s',
-              background: filterRonde === r ? 'var(--crayola)' : 'rgba(255,255,255,0.7)',
-              color: filterRonde === r ? '#FFF' : '#6C757D',
-              boxShadow: filterRonde === r ? '0 4px 10px rgba(55, 114, 255, 0.3)' : 'none'
+              background: filterRonde === r ? 'var(--wk-lime)' : '#1A1423',
+              color: filterRonde === r ? '#111827' : '#ADB5BD',
+              border: filterRonde === r ? '1px solid transparent' : '1px solid #333',
+              boxShadow: filterRonde === r ? '0 4px 10px rgba(204, 255, 0, 0.3)' : 'none'
             }}
           >
             {r}
@@ -262,16 +266,14 @@ export default function MatchenTab({
         ))}
       </div>
 
-      {/* INSTRUCTIE TIP */}
-      <div style={{ background: '#E7F1FF', color: 'var(--crayola)', padding: '10px 15px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900, textAlign: 'center', boxShadow: '0 2px 10px rgba(55, 114, 255, 0.1)' }}>
-        💡 Tip: Tik op de vlaggetjes van een land voor ploegstatistieken en het live groepsklassement!
+      <div style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--wk-aqua)', padding: '10px 15px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900, textAlign: 'center', border: '1px solid rgba(0, 229, 255, 0.3)' }}>
+        💡 Tip: Tik op de vlaggetjes van een land voor de actuele groepsstand!
       </div>
 
-      {/* LIJST MET MATCHEN */}
-      {!gefilterdeMatchen || gefilterdeMatchen.length === 0 ? (
+      {gefilterdeMatchen.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '30px', color: '#ADB5BD', fontWeight: 900 }}>Geen matchen gevonden in deze ronde.</div>
       ) : (
-        gefilterdeMatchen.map((match: any) => {
+        gefilterdeMatchen.map((match: any, index: number) => {
           const isMatchGesloten = nu >= new Date(match.datum).getTime();
           const voorspelling = matchVoorspellingen[match.id] || { thuis: '', uit: '' };
           const saveStatus = matchSaveStatus[match.id] || 'idle';
@@ -283,47 +285,45 @@ export default function MatchenTab({
           const thuisInfo = parseTeam(match.thuisploeg);
           const uitInfo = parseTeam(match.uitploeg);
 
+          const theme = cardThemes[index % cardThemes.length];
+
           const TOERNOOI_AANDACHT_START = new Date('2026-05-01').getTime();
           const matchTijd = matchDateObj.getTime();
           let progress = ((nu - TOERNOOI_AANDACHT_START) / (matchTijd - TOERNOOI_AANDACHT_START)) * 100;
           if (progress > 100) progress = 100; 
           if (progress < 0) progress = 0; 
 
-          // --- LOGICA WIE INGEVULD HEEFT ---
-          const ingevuldeSpelers: any[] = [];
-          const nietIngevuldeSpelers: any[] = [];
-
-          alleSpelers.forEach((s: any) => {
+          // --- LOGICA WIE INGEVULD HEEFT (Geen "betaald" check meer) ---
+          const nietIngevuldeSpelers = alleSpelers.filter((s: any) => {
             const v = alleMatchVoorspellingen.find((x: any) => x.match_id === match.id && x.speler_id === s.id);
-            if (v && v.thuis_score !== null && v.uit_score !== null) ingevuldeSpelers.push({ speler: s, voorspelling: v });
-            else nietIngevuldeSpelers.push(s);
+            return !v || v.thuis_score === null || v.uit_score === null || v.thuis_score === '' || v.uit_score === '';
           });
 
           return (
-            <div id={`match-${match.id}`} key={match.id} style={{ background: 'rgba(255, 255, 255, 0.95)', borderRadius: '16px', border: isMatchGesloten ? '2px solid #E9ECEF' : '2px solid var(--crayola)', boxShadow: '0 4px 15px rgba(0,0,0,0.02)', overflow: 'hidden' }}>
+            <div id={`match-${match.id}`} key={match.id} style={{ 
+              background: theme.bg, color: theme.color, borderRadius: '24px', 
+              boxShadow: '0 10px 30px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden'
+            }}>
               
               {/* MATCH HEADER & TIMELINE */}
-              <div style={{ background: isMatchGesloten ? '#F8F9FA' : '#FFFDF5', padding: '10px 15px', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid #E9ECEF' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>
+              <div style={{ background: 'rgba(0,0,0,0.15)', padding: '10px 15px', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', fontWeight: 900, opacity: 0.8, textTransform: 'uppercase' }}>
                   <span>{dateStr} • {timeStr} • {match.ronde} {match.groep ? `(${match.groep})` : ''}</span>
-                  {saveStatus === 'saving' && <span style={{ color: 'var(--crayola)' }}>Opslaan... ⏳</span>}
-                  {saveStatus === 'saved' && <span style={{ color: '#40C057' }}>Opgeslagen ✅</span>}
-                  {isMatchGesloten && <span style={{ color: '#FA5252' }}>🔒 BEZIG / GESPEELD</span>}
+                  {saveStatus === 'saving' && <span style={{ color: '#FFF' }}>Opslaan... ⏳</span>}
+                  {saveStatus === 'saved' && <span style={{ color: 'var(--wk-lime)' }}>Opgeslagen ✅</span>}
+                  {isMatchGesloten && <span style={{ color: 'var(--wk-red)' }}>🔒 BEZIG / GESPEELD</span>}
                 </div>
 
-                <div style={{ width: '100%', height: '4px', background: '#E9ECEF', borderRadius: '2px', position: 'relative', marginTop: '4px' }}>
+                <div style={{ width: '100%', height: '4px', background: 'rgba(0,0,0,0.2)', borderRadius: '2px', position: 'relative', marginTop: '4px' }}>
                   <div style={{ position: 'absolute', left: `calc(${progress}% - 8px)`, top: '-8px', fontSize: '14px', transition: 'left 1s cubic-bezier(0.4, 0, 0.2, 1)', zIndex: 2 }}>
                     ⚽
                   </div>
-                  <div style={{ position: 'absolute', right: '-4px', top: '-6px', fontSize: '12px', opacity: isMatchGesloten ? 0.4 : 1 }}>
-                    🥅
-                  </div>
-                  <div style={{ width: `${progress}%`, height: '100%', background: isMatchGesloten ? '#40C057' : 'var(--crayola)', borderRadius: '2px', transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)' }} />
+                  <div style={{ width: `${progress}%`, height: '100%', background: isMatchGesloten ? 'var(--wk-lime)' : '#FFF', borderRadius: '2px', transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)' }} />
                 </div>
               </div>
 
               {/* MATCH BODY */}
-              <div style={{ padding: '15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '5px' }}>
+              <div style={{ padding: '20px 15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '5px' }}>
                 
                 <div 
                   onClick={() => setGeselecteerdTeamRaw(match.thuisploeg)}
@@ -331,25 +331,25 @@ export default function MatchenTab({
                   onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                   onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: thuisInfo.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', marginBottom: '6px', border: '2px solid #FFF' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+                  <div style={{ width: '45px', height: '45px', borderRadius: '50%', background: thuisInfo.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.4)', marginBottom: '6px', border: '2px solid #FFF' }}>
+                    <div style={{ width: '35px', height: '35px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
                       {thuisInfo.emoji}
                     </div>
                   </div>
-                  <span style={{ fontWeight: 900, fontSize: '0.8rem', color: '#111827', textAlign: 'center', lineHeight: 1.1 }}>{thuisInfo.name}</span>
+                  <span style={{ fontWeight: 900, fontSize: '0.85rem', textAlign: 'center', lineHeight: 1.1, textShadow: theme.color === '#FFF' ? '0 2px 4px rgba(0,0,0,0.4)' : 'none' }}>{thuisInfo.name}</span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <input 
                     type="tel" value={voorspelling.thuis} disabled={isMatchGesloten}
                     onChange={(e) => handleScore(match.id, 'thuis', e.target.value)}
-                    style={{ width: '45px', height: '45px', textAlign: 'center', fontSize: '1.4rem', fontWeight: 900, fontFamily: 'Bebas Neue', borderRadius: '12px', border: '2px solid #E9ECEF', background: isMatchGesloten ? '#F1F3F5' : '#FFF', color: '#111827', outline: 'none' }}
+                    style={{ width: '50px', height: '50px', textAlign: 'center', fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Bebas Neue', borderRadius: '12px', border: 'none', background: 'rgba(255,255,255,0.95)', color: '#111827', outline: 'none', boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.2)' }}
                   />
-                  <span style={{ fontWeight: 900, color: '#ADB5BD' }}>-</span>
+                  <span style={{ fontWeight: 900, opacity: 0.8 }}>-</span>
                   <input 
                     type="tel" value={voorspelling.uit} disabled={isMatchGesloten}
                     onChange={(e) => handleScore(match.id, 'uit', e.target.value)}
-                    style={{ width: '45px', height: '45px', textAlign: 'center', fontSize: '1.4rem', fontWeight: 900, fontFamily: 'Bebas Neue', borderRadius: '12px', border: '2px solid #E9ECEF', background: isMatchGesloten ? '#F1F3F5' : '#FFF', color: '#111827', outline: 'none' }}
+                    style={{ width: '50px', height: '50px', textAlign: 'center', fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Bebas Neue', borderRadius: '12px', border: 'none', background: 'rgba(255,255,255,0.95)', color: '#111827', outline: 'none', boxShadow: 'inset 0 2px 5px rgba(0,0,0,0.2)' }}
                   />
                 </div>
 
@@ -359,49 +359,51 @@ export default function MatchenTab({
                   onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                   onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: uitInfo.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.1)', marginBottom: '6px', border: '2px solid #FFF' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+                  <div style={{ width: '45px', height: '45px', borderRadius: '50%', background: uitInfo.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.4)', marginBottom: '6px', border: '2px solid #FFF' }}>
+                    <div style={{ width: '35px', height: '35px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
                       {uitInfo.emoji}
                     </div>
                   </div>
-                  <span style={{ fontWeight: 900, fontSize: '0.8rem', color: '#111827', textAlign: 'center', lineHeight: 1.1 }}>{uitInfo.name}</span>
+                  <span style={{ fontWeight: 900, fontSize: '0.85rem', textAlign: 'center', lineHeight: 1.1, textShadow: theme.color === '#FFF' ? '0 2px 4px rgba(0,0,0,0.4)' : 'none' }}>{uitInfo.name}</span>
                 </div>
               </div>
 
               {/* EVENTUELE EINDSTAND */}
               {isMatchGesloten && match.thuis_score !== null && (
-                <div style={{ background: '#FFFDF5', borderTop: '1px dashed #E9ECEF', padding: '8px', textAlign: 'center', fontSize: '0.8rem', fontWeight: 900, color: '#D4AF37' }}>
+                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 900, color: 'var(--wk-lime)', textTransform: 'uppercase', letterSpacing: '1px' }}>
                   EINDSTAND: {match.thuis_score} - {match.uit_score}
                 </div>
               )}
 
-              {/* DEELNEMERS STATUS / PRONOSTIEKEN ONDERAAN (COMPACT, ZONDER TITELS) */}
-              <div style={{ padding: '10px 15px', background: isMatchGesloten ? '#F8F9FA' : '#FFF', borderTop: '1px solid #E9ECEF' }}>
-                
-                {/* VÓÓR DE MATCH (Samen in 1 wolk, groen eerst dan rood) */}
+              {/* WIE MOET NOG INVULLEN (COMPACT) OF POST-MATCH OVERZICHT */}
+              <div style={{ padding: '12px 15px', background: 'rgba(0,0,0,0.1)' }}>
                 {!isMatchGesloten ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                    {ingevuldeSpelers.map((item: any) => (
-                      <div key={item.speler.id} style={{ background: '#40C057', color: '#FFF', padding: '3px 8px', borderRadius: '12px', fontSize: '0.65rem', fontWeight: 900, boxShadow: '0 2px 4px rgba(64, 192, 87, 0.2)' }}>
-                        {item.speler.naam.split(' ')[0]}
-                      </div>
-                    ))}
-                    {nietIngevuldeSpelers.map((s: any) => (
-                      <div key={s.id} style={{ background: '#FA5252', color: '#FFF', padding: '3px 8px', borderRadius: '12px', fontSize: '0.65rem', fontWeight: 900, boxShadow: '0 2px 4px rgba(250, 82, 82, 0.2)' }}>
-                        {s.naam.split(' ')[0]}
-                      </div>
-                    ))}
+                  <div>
+                    <div style={{ fontSize: '0.7rem', fontWeight: 900, opacity: 0.8, textTransform: 'uppercase', marginBottom: '8px' }}>Nog in te vullen:</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {nietIngevuldeSpelers.length === 0 ? (
+                        <div style={{ width: '100%', background: 'var(--wk-lime)', color: '#111827', padding: '6px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 900, textAlign: 'center' }}>
+                          🎉 Iedereen heeft ingevuld!
+                        </div>
+                      ) : (
+                        nietIngevuldeSpelers.map((s: any) => (
+                          <span key={s.id} style={{ background: 'var(--wk-red)', color: '#FFF', padding: '4px 12px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 900, border: '1px solid rgba(255,255,255,0.2)', boxShadow: '0 2px 5px rgba(0,0,0,0.3)' }}>
+                            {s.naam.split(' ')[0]}
+                          </span>
+                        ))
+                      )}
+                    </div>
                   </div>
                 ) : (
-                  /* TIJDENS / NA DE MATCH (GEDETAILLEERDE SCORES) */
+                  /* TIJDENS / NA DE MATCH (GEDETAILLEERDE SCORES VAN IEDEREEN) */
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                     {alleSpelers.map((s: any) => {
                       const v = alleMatchVoorspellingen.find((x: any) => x.match_id === match.id && x.speler_id === s.id);
                       const heeftIngevuld = v && v.thuis_score !== null && v.uit_score !== null;
                       const spelerNaam = s.naam.split(' ')[0];
 
-                      let pillBg = '#F1F3F5';
-                      let pillColor = '#495057';
+                      let pillBg = 'rgba(255,255,255,0.1)';
+                      let pillColor = theme.color;
                       let scoreTekst = heeftIngevuld ? `${v.thuis_score}-${v.uit_score}` : 'Geen';
                       let icoontje = heeftIngevuld ? '🤔' : '❌';
                       
@@ -409,19 +411,17 @@ export default function MatchenTab({
                         const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
                         const pred = v.thuis_score > v.uit_score ? 1 : v.thuis_score < v.uit_score ? 2 : 0;
                         if (v.thuis_score === match.thuis_score && v.uit_score === match.uit_score) { 
-                          pillBg = '#E8F5E9'; pillColor = '#2E7D32'; icoontje = '🎯'; 
+                          pillBg = 'var(--wk-lime)'; pillColor = '#111827'; icoontje = '🎯'; 
                         } else if (echt === pred) { 
-                          pillBg = '#E3F2FD'; pillColor = '#1565C0'; icoontje = '🟢'; 
+                          pillBg = 'var(--wk-aqua)'; pillColor = '#111827'; icoontje = '🟢'; 
                         } else { 
-                          pillBg = '#FFEBEE'; pillColor = '#C62828'; icoontje = '🔴'; 
+                          pillBg = 'var(--wk-red)'; pillColor = '#FFF'; icoontje = '🔴'; 
                         }
-                      } else if (match.thuis_score === null && heeftIngevuld) {
-                         pillBg = '#FFF'; pillColor = 'var(--crayola)'; 
                       }
 
                       return (
-                        <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: pillBg, border: `1px solid ${pillColor}40`, padding: '4px 8px', borderRadius: '10px', flex: '1 1 auto', minWidth: '45px', maxWidth: '75px' }}>
-                          <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
+                        <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: pillBg, padding: '4px 8px', borderRadius: '10px', flex: '1 1 auto', minWidth: '45px', maxWidth: '75px', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                          <span style={{ fontSize: '0.55rem', fontWeight: 900, color: pillColor, opacity: 0.8, textTransform: 'uppercase', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
                             {spelerNaam}
                           </span>
                           <span style={{ fontSize: '0.75rem', fontWeight: 900, color: pillColor, whiteSpace: 'nowrap', display: 'flex', gap: '2px', alignItems: 'center' }}>
@@ -439,23 +439,23 @@ export default function MatchenTab({
         })
       )}
 
-      {/* TEAM DOSSIER POP-UP */}
+      {/* TEAM DOSSIER POP-UP (Aangepast aan Dark Mode) */}
       {geselecteerdTeamRaw && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div 
           onClick={() => setGeselecteerdTeamRaw(null)} 
           style={{
             position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-            background: 'rgba(0, 0, 0, 0.65)', backdropFilter: 'blur(6px)', zIndex: 999999, 
+            background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)', zIndex: 999999, 
             display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px'
           }}
         >
           <div 
             onClick={(e) => e.stopPropagation()} 
             style={{
-              background: '#FFF', width: '100%', maxWidth: '420px', maxHeight: '88vh',
-              borderRadius: '24px', padding: '20px', boxShadow: '0 15px 50px rgba(0,0,0,0.3)',
+              background: '#1A1423', width: '100%', maxWidth: '420px', maxHeight: '88vh',
+              borderRadius: '24px', padding: '20px', boxShadow: '0 15px 50px rgba(0,0,0,0.5)',
               display: 'flex', flexDirection: 'column', animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-              overflowY: 'auto'
+              border: '2px solid var(--wk-aqua)', overflowY: 'auto', color: '#FFF'
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
@@ -464,28 +464,28 @@ export default function MatchenTab({
                   const teamData = parseTeam(geselecteerdTeamRaw);
                   return (
                     <>
-                      <div style={{ width: '45px', height: '45px', borderRadius: '50%', background: teamData.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #FFF', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
+                      <div style={{ width: '45px', height: '45px', borderRadius: '50%', background: teamData.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #FFF', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}>
                         <div style={{ width: '35px', height: '35px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
                           {teamData.emoji}
                         </div>
                       </div>
                       <div>
-                        <h2 style={{ margin: 0, fontFamily: 'Bebas Neue', fontSize: '2rem', color: 'var(--crayola)', lineHeight: 1 }}>{teamData.name}</h2>
+                        <h2 style={{ margin: 0, fontFamily: 'Bebas Neue', fontSize: '2rem', color: 'var(--wk-aqua)', lineHeight: 1 }}>{teamData.name}</h2>
                         <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', letterSpacing: '1px' }}>Team Dossier & Statistieken</div>
                       </div>
                     </>
                   );
                 })()}
               </div>
-              <button onClick={() => setGeselecteerdTeamRaw(null)} style={{ background: '#F1F3F5', border: 'none', width: '32px', height: '32px', borderRadius: '50%', fontSize: '0.9rem', fontWeight: 900, color: '#495057', cursor: 'pointer' }}>✕</button>
+              <button onClick={() => setGeselecteerdTeamRaw(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', width: '32px', height: '32px', borderRadius: '50%', fontSize: '0.9rem', fontWeight: 900, color: '#FFF', cursor: 'pointer' }}>✕</button>
             </div>
 
             {(() => {
               const groepData = genereerGroepsStand(geselecteerdTeamRaw);
               if (groepData) {
                 return (
-                  <div style={{ marginBottom: '15px', background: '#F8F9FA', borderRadius: '12px', border: '1px solid #E9ECEF', padding: '10px' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--magenta)', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  <div style={{ marginBottom: '15px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', padding: '10px' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--wk-lime)', textTransform: 'uppercase', marginBottom: '6px' }}>
                       📊 Stand {groepData.groepsNaamTonen}
                     </div>
                     <table className="stand-table">
@@ -503,13 +503,13 @@ export default function MatchenTab({
                           const isHuidigTeam = s.teamRaw === geselecteerdTeamRaw;
                           return (
                             <tr key={s.teamRaw} className={isHuidigTeam ? 'highlight' : ''}>
-                              <td>
+                              <td style={{ color: '#FFF' }}>
                                 <span style={{ marginRight: '4px', opacity: 0.6 }}>{idx + 1}.</span> 
-                                {sInfo.emoji} <span style={{ fontWeight: isHuidigTeam ? 900 : 800 }}>{sInfo.name}</span>
+                                {sInfo.emoji} <span style={{ fontWeight: isHuidigTeam ? 900 : 700 }}>{sInfo.name}</span>
                               </td>
-                              <td>{s.ges}</td>
-                              <td>{s.dv - s.dt > 0 ? `+${s.dv - s.dt}` : s.dv - s.dt}</td>
-                              <td style={{ color: 'var(--crayola)' }}>{s.pt}</td>
+                              <td style={{ color: '#ADB5BD' }}>{s.ges}</td>
+                              <td style={{ color: '#ADB5BD' }}>{s.dv - s.dt > 0 ? `+${s.dv - s.dt}` : s.dv - s.dt}</td>
+                              <td style={{ color: 'var(--wk-aqua)' }}>{s.pt}</td>
                             </tr>
                           );
                         })}
@@ -533,21 +533,21 @@ export default function MatchenTab({
                   const tegenstanderRaw = isThuis ? m.uitploeg : m.thuisploeg;
                   const tegenstanderInfo = parseTeam(tegenstanderRaw);
                   
-                  let uitslagKleur = '#111827';
+                  let uitslagKleur = '#FFF';
                   let statusIcoon = '⏳';
                   if (isGespeeld) {
-                    if ((isThuis && Number(m.thuis_score) > Number(m.uit_score)) || (!isThuis && Number(m.uit_score) > Number(m.thuis_score))) { uitslagKleur = '#40C057'; statusIcoon = '🟢'; } 
-                    else if (Number(m.thuis_score) === Number(m.uit_score)) { uitslagKleur = '#228BE6'; statusIcoon = '➖'; } 
-                    else { uitslagKleur = '#FA5252'; statusIcoon = '🔴'; } 
+                    if ((isThuis && Number(m.thuis_score) > Number(m.uit_score)) || (!isThuis && Number(m.uit_score) > Number(m.thuis_score))) { uitslagKleur = 'var(--wk-lime)'; statusIcoon = '🟢'; } 
+                    else if (Number(m.thuis_score) === Number(m.uit_score)) { uitslagKleur = 'var(--wk-aqua)'; statusIcoon = '➖'; } 
+                    else { uitslagKleur = 'var(--wk-red)'; statusIcoon = '🔴'; } 
                   }
 
                   return (
-                    <div key={m.id} style={{ background: '#FFF', padding: '10px 12px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid #E9ECEF' }}>
+                    <div key={m.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 12px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
                       <div>
                         <div style={{ fontSize: '0.6rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '2px' }}>
                           {new Date(m.datum).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' })} • {m.ronde}
                         </div>
-                        <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#111827', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '5px' }}>
                           <span style={{ fontSize: '0.65rem', color: '#6C757D' }}>vs</span> {tegenstanderInfo.name} <span style={{fontSize: '1rem'}}>{tegenstanderInfo.emoji}</span>
                         </div>
                       </div>
@@ -561,7 +561,7 @@ export default function MatchenTab({
                             <span style={{ fontSize: '0.7rem' }}>{statusIcoon}</span>
                           </div>
                         ) : (
-                          <div style={{ background: '#F1F3F5', color: '#6C757D', padding: '3px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase' }}>
+                          <div style={{ background: 'rgba(255,255,255,0.1)', color: '#ADB5BD', padding: '3px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase' }}>
                             Te spelen
                           </div>
                         )}
