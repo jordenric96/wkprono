@@ -37,7 +37,6 @@ export default function Home() {
 
   const [syncStatus, setSyncStatus] = useState('');
   
-  // --- ROLLEN VERDELING ---
   const adminNamen = ['jorden ricour', 'wesley moonens', 'yarni ricour'];
   const isAdmin = actieveSpeler?.naam && adminNamen.some((admin: string) => actieveSpeler.naam.toLowerCase().includes(admin));
   const isJorden = actieveSpeler?.naam?.toLowerCase().includes('jorden ricour');
@@ -119,6 +118,30 @@ export default function Home() {
 
     return () => { clearInterval(klokInterval); supabase.removeChannel(chatSub); };
   }, []);
+
+  // --- BIG BROTHER TRACKER ---
+  useEffect(() => {
+    if (!actieveSpeler) return;
+
+    const registreerLogin = async () => {
+      await supabase.from('spelers').update({
+        aantal_logins: (actieveSpeler.aantal_logins || 0) + 1,
+        laatste_login: new Date().toISOString()
+      }).eq('id', actieveSpeler.id);
+    };
+    registreerLogin();
+
+    const interval = setInterval(async () => {
+      const { data } = await supabase.from('spelers').select('tijd_gespendeerd').eq('id', actieveSpeler.id).single();
+      if (data) {
+        await supabase.from('spelers').update({
+          tijd_gespendeerd: (data.tijd_gespendeerd || 0) + 60
+        }).eq('id', actieveSpeler.id);
+      }
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [actieveSpeler?.id]); 
 
   useEffect(() => {
     if (actieveSpeler && (actieveSpeler.betaald || isJorden)) {
@@ -425,18 +448,17 @@ export default function Home() {
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@600;800;900&display=swap');
         
         :root { 
-          /* WK 2026 OFFICIAL COLORS */
+          /* WK 2026 OFFICIAL NEON COLORS VOOR DE VOORGROND */
           --wk-blue: #2B00FF;    /* Deep vibrant blue */
-          --wk-red: #E30022;     /* WK Bright Red */
+          --wk-red: #E30022;     /* Bright Red */
           --wk-orange: #FF6B00;  /* Bright Orange */
           --wk-lime: #CCFF00;    /* Neon Green */
           --wk-aqua: #00E5FF;    /* Bright Cyan */
-          --wk-green: #008037;   /* Forest Greenx */
           --wk-purple: #7A00E6;  /* Deep Purple */
           
-          /* Mapped legacy variables to prevent breaking inline styles in components */
+          /* Gekoppeld aan oude classes zodat andere tabs niet breken */
           --crayola: var(--wk-blue); 
-          --magenta: var(--wk-red); 
+          --magenta: var(--wk-purple); 
           --rose: var(--wk-orange); 
           --lime: var(--wk-lime); 
           --aqua: var(--wk-aqua); 
@@ -444,94 +466,82 @@ export default function Home() {
         
         *, *::before, *::after { box-sizing: border-box; }
 
+        /* DE ACHTERGROND: Kalm, donker, geen flitsende animaties meer */
         html, body { 
           margin: 0; padding: 0; width: 100%; min-height: 100%; 
-          font-family: 'Nunito', sans-serif; color: #111827; 
-          background: radial-gradient(circle at 10% 20%, rgba(204, 255, 0, 0.7), transparent 40%), 
-                      radial-gradient(circle at 90% 80%, rgba(255, 107, 0, 0.7), transparent 40%), 
-                      radial-gradient(circle at 50% 50%, rgba(0, 229, 255, 0.6), transparent 50%), 
-                      linear-gradient(135deg, var(--wk-purple), var(--wk-red)); 
-          background-size: 200% 200%; 
-          animation: background-fade 12s ease-in-out infinite; 
+          font-family: 'Nunito', sans-serif; 
+          color: #FFF; /* Witte tekst voor Dark Mode */
+          background: #090514; /* Heel diep donker paars/zwart canvas */
           overflow-x: hidden; 
         }
         
-        body::before, body::after { content: ''; position: fixed; border-radius: 50%; filter: blur(60px); opacity: 0.6; z-index: -1; pointer-events: none; }
-        body::before { width: 500px; height: 500px; top: -150px; left: -150px; background: var(--wk-green); animation: blob-movement-a 12s linear infinite; }
-        body::after { width: 400px; height: 400px; bottom: -80px; right: -80px; background: var(--wk-blue); animation: blob-movement-b 15s linear infinite; }
-        
         .main-container { padding: 25px 15px 120px 15px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; width: 100%; }
         
+        /* DE MAIN CARD: Grotendeels transparant om de neon te laten poppen */
         .glass-card { 
-          background: rgba(255, 255, 255, 0.85); 
-          backdrop-filter: blur(25px); 
-          -webkit-backdrop-filter: blur(25px);
-          padding: 25px 20px; border-radius: 24px; width: 100%; max-width: 500px; 
-          box-shadow: 0 20px 50px rgba(0,0,0,0.2); 
-          border: 3px solid rgba(255, 255, 255, 0.7); 
+          background: transparent; 
+          padding: 10px 0; 
+          width: 100%; max-width: 500px; 
           margin: 0 auto 20px auto; 
         }
         
         .title { 
-          font-family: 'Bebas Neue', sans-serif; font-size: 5rem; text-align: center; color: #FFF; 
-          line-height: 1; text-shadow: 4px 4px 0px var(--wk-blue), -2px -2px 0px var(--wk-red); 
-          margin: 0 0 15px 0; animation: title-glow 3s linear infinite; letter-spacing: 2px;
+          font-family: 'Bebas Neue', sans-serif; font-size: 5.5rem; text-align: center; color: #FFF; 
+          line-height: 1; 
+          text-shadow: 4px 4px 0px var(--wk-blue), -3px -3px 0px var(--wk-red); 
+          margin: 0 0 25px 0; letter-spacing: 2px;
         }
 
-        .bottom-nav { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 2px solid rgba(255, 255, 255, 0.9); padding: 6px; border-radius: 30px; display: flex; gap: 4px; z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.15); width: 95%; max-width: 420px; justify-content: space-between; align-items: center; }
-        .nav-item { display: flex; align-items: center; justify-content: center; height: 42px; border-radius: 21px; cursor: pointer; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); color: #495057; position: relative; overflow: hidden; flex: 1; }
-        .nav-item.active { background: var(--wk-blue); color: white; padding: 0 16px; box-shadow: 0 4px 12px rgba(43, 0, 255, 0.4); flex: 0 0 auto; }
+        /* BOTTOM NAVIGATIE IN DARK NEON MODE */
+        .bottom-nav { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(20, 15, 30, 0.9); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); padding: 6px; border-radius: 30px; display: flex; gap: 4px; z-index: 1000; box-shadow: 0 10px 40px rgba(0,0,0,0.5); width: 95%; max-width: 420px; justify-content: space-between; align-items: center; }
+        .nav-item { display: flex; align-items: center; justify-content: center; height: 42px; border-radius: 21px; cursor: pointer; transition: all 0.3s ease; color: #6C757D; position: relative; overflow: hidden; flex: 1; }
+        .nav-item.active { background: var(--wk-lime); color: #111827; padding: 0 16px; box-shadow: 0 0 15px rgba(204, 255, 0, 0.4); flex: 0 0 auto; }
         .nav-icon { font-size: 1.1rem; z-index: 2; }
         .nav-text { font-size: 0.65rem; font-weight: 900; margin-left: 4px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px; z-index: 2; }
-        .unread-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; background: var(--wk-red); border-radius: 50%; box-shadow: 0 0 8px var(--wk-red); animation: pulse-red 2s infinite; z-index: 3; }
+        .unread-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; background: var(--wk-red); border-radius: 50%; box-shadow: 0 0 8px var(--wk-red); z-index: 3; }
         
-        .speler-badge { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #FFF; padding: 6px 16px; border-radius: 20px; font-size: 0.9rem; font-weight: 900; color: var(--wk-blue); text-transform: uppercase; letter-spacing: 0.5px; border: 2px solid var(--wk-blue); box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .avatar-icon { font-size: 1.1rem; margin-top: -2px; }
+        .speler-badge { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--wk-lime); padding: 8px 20px; border-radius: 20px; font-size: 1rem; font-weight: 900; color: #111827; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(204, 255, 0, 0.3); margin-bottom: 25px; border: 2px solid #FFF; }
+        .avatar-icon { font-size: 1.2rem; margin-top: -2px; }
         
-        .admin-btn { background: #111827; color: #fff; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 900; cursor: pointer; font-size: 0.8rem; margin: 0 auto 15px; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .admin-btn { background: var(--wk-red); color: #fff; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 900; cursor: pointer; font-size: 0.8rem; margin: 0 auto 20px; display: block; box-shadow: 0 4px 15px rgba(227, 0, 34, 0.4); }
         
-        .login-title { font-family: 'Bebas Neue', sans-serif; color: var(--wk-blue); text-align: center; font-size: 2.5rem; margin: 0 0 20px 0; letter-spacing: 1px; }
-        .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #E9ECEF; font-weight: 800; font-size: 1rem; margin-bottom: 15px; outline: none; transition: 0.2s; }
-        .full-input::placeholder { text-align: center; color: #ADB5BD; font-weight: 700; }
-        .full-input:focus { border-color: var(--wk-blue); box-shadow: 0 0 0 4px rgba(43, 0, 255, 0.1); }
-        .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--wk-red); color: #FFF; border: none; font-weight: 900; font-size: 1.1rem; cursor: pointer; box-shadow: 0 4px 15px rgba(227, 0, 34, 0.3); transition: 0.2s; margin-top: 5px; display: block; text-transform: uppercase; letter-spacing: 1px; }
+        /* LOGIN SCHERM AANGEPAST AAN NEON THEMA */
+        .login-title { font-family: 'Bebas Neue', sans-serif; color: var(--wk-lime); text-align: center; font-size: 3rem; margin: 0 0 20px 0; letter-spacing: 2px; text-shadow: 0 0 10px rgba(204,255,0,0.3); }
+        .full-input { width: 100%; padding: 15px; border-radius: 15px; border: 2px solid #333; background: #1A1423; color: #FFF; font-weight: 800; font-size: 1rem; margin-bottom: 15px; outline: none; transition: 0.2s; }
+        .full-input::placeholder { text-align: center; color: #6C757D; font-weight: 700; }
+        .full-input:focus { border-color: var(--wk-aqua); box-shadow: 0 0 15px rgba(0, 229, 255, 0.2); }
+        .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--wk-blue); color: #FFF; border: none; font-weight: 900; font-size: 1.2rem; cursor: pointer; box-shadow: 0 4px 20px rgba(43, 0, 255, 0.5); transition: 0.2s; margin-top: 5px; display: block; text-transform: uppercase; letter-spacing: 1px; }
         .btn-primary:active { transform: scale(0.98); }
         
-        @keyframes background-fade { 0%, 100% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } }
-        @keyframes blob-movement-a { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(60px, 90px) scale(1.1); } }
-        @keyframes blob-movement-b { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(-50px, -70px) scale(0.9); } }
-        @keyframes title-glow { 0%, 100% { text-shadow: 4px 4px 0px var(--wk-blue), -2px -2px 0px var(--wk-red); } 50% { text-shadow: 4px 4px 15px rgba(43,0,255,0.8), -2px -2px 15px rgba(227,0,34,0.8); } }
-        @keyframes slide-down { 0% { top: -50px; opacity: 0; } 100% { top: 20px; opacity: 1; } }
-        @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(227, 0, 34, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(227, 0, 34, 0); } 100% { box-shadow: 0 0 0 0 rgba(227, 0, 34, 0); } }
       `}</style>
 
-      {/* 📱 INSTALLATIE POP-UP (VERDWIJNT NA DONDERDAG 19:00) */}
+      {/* 📱 INSTALLATIE POP-UP IN DARK MODE */}
       {toonInstallPopup && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)',
+          background: 'rgba(9, 5, 20, 0.8)', backdropFilter: 'blur(8px)',
           zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
         }}>
           <div style={{
-            background: '#FFF', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '350px',
-            position: 'relative', boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+            background: '#1A1423', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '350px',
+            position: 'relative', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid var(--wk-aqua)'
           }}>
             <button 
               onClick={() => setShowInstallPopup(false)}
-              style={{ position: 'absolute', top: '15px', right: '15px', background: '#F8F9FA', border: 'none', width: '30px', height: '30px', borderRadius: '50%', fontWeight: 900, color: '#495057', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.1)', border: 'none', width: '30px', height: '30px', borderRadius: '50%', fontWeight: 900, color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >✕</button>
-            <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', color: 'var(--wk-blue)', margin: '0 0 10px 0', lineHeight: 1 }}>📲 Installeer de app</h2>
-            <p style={{ fontSize: '0.85rem', color: '#495057', fontWeight: 800, marginBottom: '15px' }}>Voor de beste ervaring zet je deze pronostiek best op je startscherm. Zo heb je hem de komende maand altijd snel bij de hand!</p>
+            <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: 'var(--wk-aqua)', margin: '0 0 10px 0', lineHeight: 1 }}>📲 App Installeren</h2>
+            <p style={{ fontSize: '0.85rem', color: '#ADB5BD', fontWeight: 800, marginBottom: '20px' }}>Voor de beste ervaring zet je deze pronostiek op je startscherm. Altijd de tussenstand bij de hand!</p>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ background: '#F8F9FA', padding: '12px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
-                <strong style={{ fontSize: '0.85rem', color: '#111827' }}>🍎 iPhone (Safari):</strong>
-                <div style={{ fontSize: '0.75rem', color: '#6C757D', marginTop: '4px' }}>Tik onderaan op het <strong>deel-icoontje</strong> (vierkantje met pijl omhoog) en kies <strong>'Zet op beginscherm'</strong>.</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px', borderLeft: '4px solid var(--wk-red)' }}>
+                <strong style={{ fontSize: '0.85rem', color: '#FFF' }}>🍎 iPhone (Safari):</strong>
+                <div style={{ fontSize: '0.75rem', color: '#868E96', marginTop: '4px' }}>Tik onderaan op het <strong>deel-icoontje</strong> (vierkantje met pijl omhoog) en kies <strong>'Zet op beginscherm'</strong>.</div>
               </div>
 
-              <div style={{ background: '#F8F9FA', padding: '12px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
-                <strong style={{ fontSize: '0.85rem', color: '#111827' }}>🤖 Android (Chrome):</strong>
-                <div style={{ fontSize: '0.75rem', color: '#6C757D', marginTop: '4px' }}>Tik rechtsboven op de <strong>drie puntjes</strong> en kies <strong>'Toevoegen aan startscherm'</strong> of <strong>'App installeren'</strong>.</div>
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px', borderLeft: '4px solid var(--wk-lime)' }}>
+                <strong style={{ fontSize: '0.85rem', color: '#FFF' }}>🤖 Android (Chrome):</strong>
+                <div style={{ fontSize: '0.75rem', color: '#868E96', marginTop: '4px' }}>Tik rechtsboven op de <strong>drie puntjes</strong> en kies <strong>'Toevoegen aan startscherm'</strong>.</div>
               </div>
             </div>
           </div>
@@ -544,24 +554,21 @@ export default function Home() {
           onClick={() => { setActieveTab('kleedkamer'); setToast(null); }}
           style={{
             position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
-            background: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)',
+            background: '#1A1423', border: '2px solid var(--wk-lime)',
             padding: '12px 16px', borderRadius: '16px', zIndex: 9999,
-            boxShadow: '0 10px 30px rgba(0,0,0,0.15)', display: 'flex', gap: '12px',
-            alignItems: 'center', width: '90%', maxWidth: '350px', cursor: 'pointer',
-            border: '2px solid rgba(240, 56, 255, 0.3)', animation: 'slide-down 0.4s ease-out'
+            boxShadow: '0 10px 30px rgba(0,0,0,0.5)', display: 'flex', gap: '12px',
+            alignItems: 'center', width: '90%', maxWidth: '350px', cursor: 'pointer'
           }}
         >
-          <div style={{ background: 'linear-gradient(135deg, var(--wk-blue), var(--wk-red))', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
+          <div style={{ background: 'var(--wk-lime)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
             💬
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <span style={{ fontWeight: 900, color: '#111827', fontSize: '0.8rem', marginBottom: '2px' }}>{toast.naam}</span>
-            <span style={{ color: '#6C757D', fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 800 }}>{toast.bericht}</span>
+            <span style={{ fontWeight: 900, color: '#FFF', fontSize: '0.8rem', marginBottom: '2px' }}>{toast.naam}</span>
+            <span style={{ color: '#ADB5BD', fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 800 }}>{toast.bericht}</span>
           </div>
         </div>
       )}
-
-      {showConfetti && <div style={{position:'fixed',top:0,left:0,width:'100%',height:'100%',zIndex:999,textAlign:'center',fontSize:'5rem', pointerEvents:'none'}}>🎉🌟⚽</div>}
 
       <div className="glass-card">
         <h1 className="title">WK 2026</h1>
@@ -576,45 +583,44 @@ export default function Home() {
           </div>
         )}
 
-        {/* UITKLAPBAAR REGLEMENT (ENKEL BIJ RANKING) MET AANGEPASTE MOBIELE LAYOUT */}
+        {/* UITKLAPBAAR REGLEMENT IN NEON DARK THEME */}
         {actieveSpeler && actieveTab === 'ranking' && (
-          <div style={{ width: '100%', marginBottom: '15px' }}>
+          <div style={{ width: '100%', marginBottom: '20px' }}>
             <button 
               onClick={() => setInfoOpen(!infoOpen)}
-              style={{ width: '100%', background: 'rgba(255,255,255,0.9)', border: '2px solid var(--wk-blue)', color: 'var(--wk-blue)', padding: '12px', borderRadius: '12px', fontWeight: 900, fontSize: '0.8rem', cursor: 'pointer', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', transition: '0.2s', boxShadow: '0 4px 10px rgba(0,0,0,0.05)' }}
+              style={{ width: '100%', background: '#1A1423', border: '2px solid var(--wk-aqua)', color: 'var(--wk-aqua)', padding: '15px', borderRadius: '16px', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 15px rgba(0, 229, 255, 0.2)' }}
             >
               <span>📜 REGLEMENT & PUNTEN</span>
               <span>{infoOpen ? '▲' : '▼'}</span>
             </button>
 
             {infoOpen && (
-              <div style={{ background: 'rgba(255, 255, 255, 0.95)', padding: '20px', borderRadius: '12px', borderLeft: '4px solid var(--wk-red)', marginTop: '10px', fontSize: '0.8rem', color: '#495057', lineHeight: '1.5', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+              <div style={{ background: '#1A1423', padding: '20px', borderRadius: '16px', borderLeft: '4px solid var(--wk-purple)', marginTop: '10px', fontSize: '0.8rem', color: '#ADB5BD', lineHeight: '1.5', boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }}>
                 
-                {/* AANGEPAST VOOR MOBIEL: Blokken onder elkaar i.p.v. naast elkaar gepropt */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px' }}>
-                  <div style={{ background: '#F8F9FA', padding: '12px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '15px' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
                     <strong style={{color: 'var(--wk-red)', fontSize: '0.9rem'}}>⚽ MATCHEN</strong><br/>
-                    • Exacte score: <strong>3 pt</strong><br/>
-                    • Juiste winnaar/gelijk: <strong>1 pt</strong><br/>
-                    • Fout: <strong>0 pt</strong>
+                    <span style={{color: '#FFF'}}>• Exacte score: <strong>3 pt</strong></span><br/>
+                    <span style={{color: '#FFF'}}>• Juiste winnaar/gelijk: <strong>1 pt</strong></span><br/>
+                    <span style={{color: '#FFF'}}>• Fout: <strong>0 pt</strong></span>
                   </div>
-                  <div style={{ background: '#F8F9FA', padding: '12px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
-                    <strong style={{color: '#40C057', fontSize: '0.9rem'}}>💎 BONUSVRAGEN</strong><br/>
-                    • Goals/Kaarten/WK: <strong>5 pt</strong><br/>
-                    • Halve Fin/België: <strong>3 pt</strong><br/>
-                    • Aanval/Defensie: <strong>3 pt</strong>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <strong style={{color: 'var(--wk-lime)', fontSize: '0.9rem'}}>💎 BONUSVRAGEN</strong><br/>
+                    <span style={{color: '#FFF'}}>• Goals/Kaarten/WK: <strong>5 pt</strong></span><br/>
+                    <span style={{color: '#FFF'}}>• Halve Fin/België: <strong>3 pt</strong></span><br/>
+                    <span style={{color: '#FFF'}}>• Aanval/Defensie: <strong>3 pt</strong></span>
                   </div>
                 </div>
                 
-                <div style={{ background: '#FFFDF5', padding: '12px', borderRadius: '12px', border: '1px solid #FFE066', marginBottom: '10px' }}>
-                  <strong style={{color: '#D4AF37', fontSize: '0.9rem'}}>⚖️ GELIJKE STAND (EX-AEQUO)</strong><br/>
-                  • <strong>Klassement:</strong> Wie de meeste <em>'Exacte Uitslagen'</em> heeft, wint. Nog gelijk? Dan telt <em>'Juiste Winnaars'</em>.<br/>
-                  • <strong>Bonusvragen:</strong> Gedeelde eerste plaats bij topschutter/verdediging/cijfers? Iedereen met dit antwoord krijgt de volle punten.
+                <div style={{ background: 'rgba(255, 107, 0, 0.1)', padding: '12px', borderRadius: '12px', border: '1px solid var(--wk-orange)', marginBottom: '15px' }}>
+                  <strong style={{color: 'var(--wk-orange)', fontSize: '0.9rem'}}>⚖️ GELIJKE STAND (EX-AEQUO)</strong><br/>
+                  <span style={{color: '#FFF'}}>• <strong>Klassement:</strong> Wie de meeste <em>'Exacte Uitslagen'</em> heeft, wint. Nog gelijk? Dan telt <em>'Juiste Winnaars'</em>.</span><br/>
+                  <span style={{color: '#FFF'}}>• <strong>Bonusvragen:</strong> Gedeelde eerste plaats bij topschutter/verdediging/cijfers? Iedereen met dit antwoord krijgt de volle punten.</span>
                 </div>
 
-                <div style={{ background: '#F1F3F5', padding: '12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 900, textAlign: 'center' }}>
+                <div style={{ background: 'var(--wk-blue)', padding: '12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 900, textAlign: 'center', color: '#FFF', boxShadow: '0 4px 15px rgba(43,0,255,0.3)' }}>
                   💰 DEELNAME: €10 NAAR BE85 0018 2075 8506<br/>
-                  <span style={{color: 'var(--wk-red)'}}>Mededeling: Naam + WK2026</span>
+                  <span style={{color: 'var(--wk-lime)'}}>Mededeling: Naam + WK2026</span>
                 </div>
               </div>
             )}
@@ -625,58 +631,52 @@ export default function Home() {
           <button onClick={syncMetSpreadsheet} className="admin-btn">🔄 {syncStatus || 'SYNC MET GOOGLE SHEETS'}</button>
         )}
 
-        {/* TIMER FLEXBOX FIX VOOR MOBIEL */}
+        {/* WILDE TIMER BLOKKEN */}
         {!isGesloten && actieveSpeler && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', marginBottom: '25px', width: '100%' }}>
-            <div style={{ flex: 1, background: 'var(--wk-blue)', color: '#FFF', padding: '10px 5px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 10px rgba(43, 0, 255, 0.3)' }}>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.6rem', lineHeight: 1 }}>{tijdOver.dagen}</div>
-              <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Dagen</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '30px', width: '100%' }}>
+            <div style={{ flex: 1, background: 'var(--wk-lime)', color: '#111827', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(204, 255, 0, 0.3)' }}>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.dagen}</div>
+              <div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Dagen</div>
             </div>
-            <div style={{ flex: 1, background: 'var(--wk-blue)', color: '#FFF', padding: '10px 5px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 10px rgba(43, 0, 255, 0.3)' }}>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.6rem', lineHeight: 1 }}>{tijdOver.uren}</div>
-              <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Uren</div>
+            <div style={{ flex: 1, background: 'var(--wk-purple)', color: '#FFF', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(122, 0, 230, 0.4)' }}>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.uren}</div>
+              <div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Uren</div>
             </div>
-            <div style={{ flex: 1, background: 'var(--wk-red)', color: '#FFF', padding: '10px 5px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 10px rgba(227, 0, 34, 0.3)' }}>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.6rem', lineHeight: 1 }}>{tijdOver.minuten}</div>
-              <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Min</div>
+            <div style={{ flex: 1, background: 'var(--wk-aqua)', color: '#111827', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0, 229, 255, 0.4)' }}>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.minuten}</div>
+              <div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Min</div>
             </div>
-            <div style={{ flex: 1, background: 'var(--wk-red)', color: '#FFF', padding: '10px 5px', borderRadius: '12px', textAlign: 'center', boxShadow: '0 4px 10px rgba(227, 0, 34, 0.3)' }}>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.6rem', lineHeight: 1 }}>{tijdOver.seconden}</div>
-              <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Sec</div>
+            <div style={{ flex: 1, background: 'var(--wk-red)', color: '#FFF', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(227, 0, 34, 0.4)' }}>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.seconden}</div>
+              <div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Sec</div>
             </div>
           </div>
         )}
 
         {/* LOGICA: IS INGELOGD? */}
         {actieveSpeler ? (
-          /* LOGICA: HEEFT BETAALD OF IS JORDEN? (Voor de goedkeuringen) */
           (!actieveSpeler.betaald && !isJorden) ? (
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div style={{ textAlign: 'center', padding: '20px 0', background: '#1A1423', borderRadius: '24px', border: '2px solid var(--wk-red)' }}>
               <div style={{ fontSize: '4rem', marginBottom: '10px' }}>🔒</div>
-              <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: 'var(--wk-red)', lineHeight: 1, margin: '0 0 10px 0' }}>APP VERGRENDELD</h2>
-              <p style={{ fontWeight: 800, color: '#495057', fontSize: '0.9rem', marginBottom: '20px' }}>
-                Je account is nog niet geactiveerd. Om toegang te krijgen tot de pronostiek en de rest van de app, moet je eerst je deelname (<strong>€10</strong>) in orde brengen.
+              <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '3rem', color: 'var(--wk-red)', lineHeight: 1, margin: '0 0 10px 0' }}>APP VERGRENDELD</h2>
+              <p style={{ fontWeight: 800, color: '#ADB5BD', fontSize: '0.9rem', marginBottom: '20px', padding: '0 15px' }}>
+                Je account is nog niet geactiveerd. Breng je deelname (<strong>€10</strong>) in orde voor toegang tot de pronostiek.
               </p>
               
-              <div style={{ background: '#F8F9FA', border: '2px dashed var(--wk-blue)', borderRadius: '16px', padding: '15px', marginBottom: '20px' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>Overschrijven naar:</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#111827', margin: '5px 0' }}>BE85 0018 2075 8506</div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#6C757D' }}>Mededeling: <strong style={{ color: 'var(--wk-red)' }}>{actieveSpeler.naam} + WK2026</strong></div>
+              <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '16px', padding: '20px', margin: '0 15px 20px 15px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--wk-aqua)', textTransform: 'uppercase' }}>Overschrijven naar:</div>
+                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#FFF', margin: '8px 0' }}>BE85 0018 2075 8506</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#ADB5BD' }}>Mededeling: <strong style={{ color: 'var(--wk-lime)' }}>{actieveSpeler.naam} + WK2026</strong></div>
               </div>
 
-              <p style={{ fontSize: '0.75rem', color: '#ADB5BD', fontWeight: 800 }}>
-                Zodra we je betaling hebben ontvangen, wordt je account handmatig goedgekeurd en verdwijnt dit slotje.
-              </p>
-              
               <button 
-                style={{ background: '#E9ECEF', border: 'none', color: '#495057', fontWeight: 900, cursor: 'pointer', padding: '10px 20px', borderRadius: '12px', marginTop: '20px', fontSize: '0.8rem' }} 
+                style={{ background: '#333', border: 'none', color: '#FFF', fontWeight: 900, cursor: 'pointer', padding: '12px 25px', borderRadius: '12px', fontSize: '0.8rem' }} 
                 onClick={() => { localStorage.removeItem('wk_speler_id'); window.location.reload(); }}
               >
                 UITLOGGEN
               </button>
             </div>
           ) : (
-            /* WEL BETAALD (OF JORDEN) = TOON DE APP */
             <div>
               {actieveTab === 'matchen' && <MatchenTab gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} />}
             
@@ -687,8 +687,8 @@ export default function Home() {
               {actieveTab === 'tellers' && <TellersTab matchen={matchen} alleToernooiV={alleToernooiV} isAdmin={isAdmin} />}
               {actieveTab === 'kleedkamer' && <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} chatEindeRef={chatEindeRef} nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} />}
               
-              <div style={{textAlign:'center', marginTop:30, paddingBottom: 20}}>
-                <button style={{background:'none', border:'none', color:'#111827', fontWeight:900, cursor:'pointer', opacity: 0.6}} onClick={() => {localStorage.removeItem('wk_speler_id'); window.location.reload();}}>UITLOGGEN</button>
+              <div style={{textAlign:'center', marginTop:40, paddingBottom: 20}}>
+                <button style={{background:'rgba(255,255,255,0.1)', border:'none', color:'#ADB5BD', fontWeight:900, cursor:'pointer', padding: '10px 20px', borderRadius: '12px'}} onClick={() => {localStorage.removeItem('wk_speler_id'); window.location.reload();}}>UITLOGGEN</button>
               </div>
             </div>
           )
@@ -703,11 +703,11 @@ export default function Home() {
               <button className="btn-primary" type="submit">
                 {isRegistreren ? 'ACCOUNT AANMAKEN' : 'HET VELD OP ⚽'}
               </button>
-              <p style={{color:'red', textAlign:'center', fontWeight:900, marginTop: '10px'}}>{status}</p>
+              <p style={{color:'var(--wk-red)', textAlign:'center', fontWeight:900, marginTop: '15px'}}>{status}</p>
             </form>
             <button 
               onClick={(e) => { e.preventDefault(); setIsRegistreren(!isRegistreren); setStatus(''); setOntgrendelNaam(''); setInvoerCode(''); }}
-              style={{background: 'transparent', border: 'none', color: '#6C757D', fontWeight: 900, marginTop: '10px', cursor: 'pointer', textDecoration: 'underline', padding: '10px'}}
+              style={{background: 'transparent', border: 'none', color: '#ADB5BD', fontWeight: 900, marginTop: '10px', cursor: 'pointer', textDecoration: 'underline', padding: '10px'}}
             >
               {isRegistreren ? 'Heb je al een account? Log in' : 'Nieuw hier? Maak een account aan'}
             </button>
