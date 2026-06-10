@@ -39,6 +39,7 @@ export default function Home() {
   
   const adminNamen = ['jorden ricour', 'wesley moonens', 'yarni ricour'];
   const isAdmin = actieveSpeler?.naam && adminNamen.some((admin: string) => actieveSpeler.naam.toLowerCase().includes(admin));
+  const isJorden = actieveSpeler?.naam?.toLowerCase().includes('jorden ricour');
   
   const [matchen, setMatchen] = useState<any[]>([]);
   const [matchVoorspellingen, setMatchVoorspellingen] = useState<Record<number, {thuis: string, uit: string}>>({});
@@ -142,14 +143,14 @@ export default function Home() {
   }, [actieveSpeler?.id]); 
 
   useEffect(() => {
-    if (actieveSpeler) {
+    if (actieveSpeler && (actieveSpeler.betaald || isJorden)) {
       if (actieveTab === 'matchen') haalMatchenOp();
       if (actieveTab === 'bonus') haalToernooiVoorspellingOp();
       if (actieveTab === 'ranking' || actieveTab === 'prijs') haalKlassementOp();
       if (actieveTab === 'kleedkamer') haalChatOp();
       if (actieveTab === 'antwoorden') haalAlleAntwoordenOp();
     }
-  }, [actieveSpeler, actieveTab]);
+  }, [actieveSpeler, actieveTab, isJorden]);
 
   const haalSpelersOp = async (id?: string | null) => {
     const { data } = await supabase.from('spelers').select('*').order('created_at', { ascending: true });
@@ -370,6 +371,12 @@ export default function Home() {
     setKlassement(eindStats);
   };
 
+  const toggleBetaald = async (spelerId: number, huidigeStatus: boolean) => {
+    if (!isJorden) return;
+    const { error } = await supabase.from('spelers').update({ betaald: !huidigeStatus }).eq('id', spelerId);
+    if (!error) haalKlassementOp();
+  };
+
   const verstuurChat = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nieuwBericht.trim()) return;
@@ -398,42 +405,12 @@ export default function Home() {
     if (alleSpelers.some(s => s.naam.toLowerCase() === naam.toLowerCase())) { setStatus('Deze naam bestaat al! Kies onderaan voor inloggen. 🚩'); return; }
 
     setStatus('Aanmaken... ⏳');
-    // Iedereen is vanaf nu automatisch betaald
-    const { data, error } = await supabase.from('spelers').insert([{ naam: naam, code: code, betaald: true }]).select().single();
+    // Nieuwe spelers worden nu standaard op betaald: false gezet (vergrendeld)
+    const { data, error } = await supabase.from('spelers').insert([{ naam: naam, code: code, betaald: false }]).select().single();
 
     if (error) { setStatus('Oeps, fout bij aanmaken! 🚩'); }
     else if (data) { setAlleSpelers(prev => [...prev, data]); setActieveSpeler(data); localStorage.setItem('wk_speler_id', data.id.toString()); setStatus(''); }
   };
-
-  const tellersData = useMemo(() => {
-    let totaleGoals = 0, totaleGeleKaarten = 0, totaleRodeKaarten = 0;
-    const teamGoalsVoor: Record<string, number> = {};
-    const teamGoalsTegen: Record<string, number> = {};
-
-    matchen.forEach(m => {
-      if (m.thuis_score !== null && m.uit_score !== null) {
-        totaleGoals += (m.thuis_score + m.uit_score);
-        totaleGeleKaarten += (m.gele_kaarten || 0);
-        totaleRodeKaarten += (m.rode_kaarten || 0);
-        teamGoalsVoor[m.thuisploeg] = (teamGoalsVoor[m.thuisploeg] || 0) + m.thuis_score;
-        teamGoalsVoor[m.uitploeg] = (teamGoalsVoor[m.uitploeg] || 0) + m.uit_score;
-        teamGoalsTegen[m.thuisploeg] = (teamGoalsTegen[m.thuisploeg] || 0) + m.uit_score;
-        teamGoalsTegen[m.uitploeg] = (teamGoalsTegen[m.uitploeg] || 0) + m.thuis_score;
-      }
-    });
-
-    const meestScorendTeam = Object.entries(teamGoalsVoor).sort((a, b) => b[1] - a[1])[0] || ['Nog geen data', 0];
-    const minstTegenTeam = Object.entries(teamGoalsTegen).sort((a, b) => a[1] - b[1])[0] || ['Nog geen data', 0];
-
-    return { totaleGoals, totaleGeleKaarten, totaleRodeKaarten, meestScorendTeam, minstTegenTeam };
-  }, [matchen]);
-
-  const gefilterdeMatchen = useMemo(() => {
-    let basis = matchen;
-    if (filterRonde === 'Nog in te vullen') return basis.filter(m => (!matchVoorspellingen[m.id] || matchVoorspellingen[m.id].thuis === '') && (nu < new Date(m.datum).getTime()));
-    if (filterRonde !== 'Alle') basis = basis.filter(m => m.ronde === filterRonde);
-    return basis;
-  }, [matchen, filterRonde, matchVoorspellingen, nu]);
 
   return (
     <main className="main-container">
@@ -636,21 +613,45 @@ export default function Home() {
           </div>
         )}
 
+        {/* LOGICA: IS INGELOGD EN GOEDGEKEURD? */}
         {actieveSpeler ? (
-          <div style={{ width: '100%' }}>
-            {actieveTab === 'matchen' && <MatchenTab gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} />}
-          
-            {actieveTab === 'prijs' && <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />}
-            {actieveTab === 'bonus' && <BonusTab winnaar={winnaar} setWinnaar={setWinnaar} hf={hf} setHf={setHf} meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} eindstation={eindstation} setEindstation={setEindstation} totaalGoals={totaalGoals} setTotaalGoals={setTotaalGoals} totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} />}
-            {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} />}
-            {actieveTab === 'ranking' && <RankingTab klassement={klassement} actieveSpeler={actieveSpeler} />}
-            {actieveTab === 'tellers' && <TellersTab matchen={matchen} alleToernooiV={alleToernooiV} isAdmin={isAdmin} />}
-            {actieveTab === 'kleedkamer' && <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} chatEindeRef={chatEindeRef} nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} />}
-            
-            <div style={{textAlign:'center', marginTop:40, paddingBottom: 20}}>
-              <button style={{background:'rgba(255,255,255,0.1)', border:'none', color:'#ADB5BD', fontWeight:900, cursor:'pointer', padding: '10px 20px', borderRadius: '12px'}} onClick={() => {localStorage.removeItem('wk_speler_id'); window.location.reload();}}>UITLOGGEN</button>
+          (!actieveSpeler.betaald && !isJorden) ? (
+            <div style={{ textAlign: 'center', padding: '20px 0', background: '#1A1423', borderRadius: '24px', border: '2px solid var(--wk-red)' }}>
+              <div style={{ fontSize: '4rem', marginBottom: '10px' }}>🔒</div>
+              <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '3rem', color: 'var(--wk-red)', lineHeight: 1, margin: '0 0 10px 0' }}>APP VERGRENDELD</h2>
+              <p style={{ fontWeight: 800, color: '#ADB5BD', fontSize: '0.9rem', marginBottom: '20px', padding: '0 15px' }}>
+                Je account wacht nog op goedkeuring. Breng je deelname (<strong>€10</strong>) in orde om mee te doen.
+              </p>
+              
+              <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '16px', padding: '20px', margin: '0 15px 20px 15px' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--wk-aqua)', textTransform: 'uppercase' }}>Overschrijven naar:</div>
+                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#FFF', margin: '8px 0' }}>BE85 0018 2075 8506</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#ADB5BD' }}>Mededeling: <strong style={{ color: 'var(--wk-lime)' }}>{actieveSpeler.naam} + WK2026</strong></div>
+              </div>
+
+              <button 
+                style={{ background: '#333', border: 'none', color: '#FFF', fontWeight: 900, cursor: 'pointer', padding: '12px 25px', borderRadius: '12px', fontSize: '0.8rem' }} 
+                onClick={() => { localStorage.removeItem('wk_speler_id'); window.location.reload(); }}
+              >
+                UITLOGGEN
+              </button>
             </div>
-          </div>
+          ) : (
+            <div style={{ width: '100%' }}>
+              {actieveTab === 'matchen' && <MatchenTab gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} />}
+            
+              {actieveTab === 'prijs' && <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />}
+              {actieveTab === 'bonus' && <BonusTab winnaar={winnaar} setWinnaar={setWinnaar} hf={hf} setHf={setHf} meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} eindstation={eindstation} setEindstation={setEindstation} totaalGoals={totaalGoals} setTotaalGoals={setTotaalGoals} totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} />}
+              {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} />}
+              {actieveTab === 'ranking' && <RankingTab klassement={klassement} actieveSpeler={actieveSpeler} toggleBetaald={toggleBetaald} isJorden={isJorden} />}
+              {actieveTab === 'tellers' && <TellersTab matchen={matchen} alleToernooiV={alleToernooiV} isAdmin={isAdmin} />}
+              {actieveTab === 'kleedkamer' && <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} chatEindeRef={chatEindeRef} nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} />}
+              
+              <div style={{textAlign:'center', marginTop:40, paddingBottom: 20}}>
+                <button style={{background:'rgba(255,255,255,0.1)', border:'none', color:'#ADB5BD', fontWeight:900, cursor:'pointer', padding: '10px 20px', borderRadius: '12px'}} onClick={() => {localStorage.removeItem('wk_speler_id'); window.location.reload();}}>UITLOGGEN</button>
+              </div>
+            </div>
+          )
         ) : (
           <div style={{width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
             <form onSubmit={isRegistreren ? handleRegistreer : handleLogin} style={{width: '100%'}}>
@@ -674,7 +675,7 @@ export default function Home() {
         )}
       </div>
 
-      {actieveSpeler && (
+      {actieveSpeler && (actieveSpeler.betaald || isJorden) && (
         <div className="bottom-nav">
           {[
             {id:'ranking', i:'🏆', n:'Rank'},
