@@ -431,7 +431,7 @@ export default function Home() {
           --wk-orange: #FF6B00;  /* Bright Orange */
           --wk-lime: #CCFF00;    /* Neon Green */
           --wk-aqua: #00E5FF;    /* Bright Cyan */
-          --wk-green: #008037;   /* Forest Green */
+          --wk-green: #008037;   /* Forest Greenx */
           --wk-purple: #7A00E6;  /* Deep Purple */
           
           /* Mapped legacy variables to prevent breaking inline styles in components */
