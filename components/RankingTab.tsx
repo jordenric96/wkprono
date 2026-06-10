@@ -10,7 +10,8 @@ const cardThemes = [
   { bg: '#E30022', color: '#FFF' }     // Rood
 ];
 
-export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, isJorden }: any) {
+// VEILIGHEID: klassement = [] zorgt ervoor dat Vercel niet crasht tijdens het inladen
+export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaald, isJorden }: any) {
   const [modus, setModus] = useState('matchen'); 
   const [expandedBonusId, setExpandedBonusId] = useState<number | null>(null);
 
@@ -23,7 +24,7 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
     } else {
       if (b.bonus_score !== a.bonus_score) return b.bonus_score - a.bonus_score;
     }
-    return a.naam.localeCompare(b.naam);
+    return (a.naam || '').localeCompare(b.naam || '');
   });
 
   return (
@@ -76,7 +77,7 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
               background: theme.bg, 
               color: theme.color, 
               borderRadius: '14px', 
-              padding: '10px 14px',
+              padding: '10px 14px', // Flink compacter gemaakt
               border: isMij ? '2px solid #FFF' : '1px solid transparent',
               boxShadow: isMij ? '0 0 15px rgba(255,255,255,0.4)' : '0 4px 10px rgba(0,0,0,0.3)',
               cursor: modus === 'bonus' ? 'pointer' : 'default',
@@ -100,18 +101,16 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
                 )}
               </div>
 
-              {/* ADMIN CONTROLS EN SCORES */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                
-                {/* GEHEIME KNOP VOOR JORDEN OM BETALINGEN GOED TE KEUREN */}
-                {isJorden && (
+              {/* JOUW GEHEIME ADMIN KNOP OM BETALINGEN AF TE VINKEN */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {isJorden && toggleBetaald && (
                   <button
                     onClick={(e) => { e.stopPropagation(); toggleBetaald(speler.id, speler.betaald); }}
                     style={{
                       background: speler.betaald ? 'transparent' : '#E30022',
                       border: speler.betaald ? '1px solid rgba(255,255,255,0.3)' : 'none',
                       color: '#FFF',
-                      padding: '4px 8px', borderRadius: '6px', fontSize: '0.55rem', fontWeight: 900, cursor: 'pointer',
+                      padding: '4px 8px', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer',
                       boxShadow: speler.betaald ? 'none' : '0 2px 5px rgba(0,0,0,0.3)'
                     }}
                   >
