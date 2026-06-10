@@ -411,7 +411,7 @@ export default function Home() {
     else if (data) { setAlleSpelers(prev => [...prev, data]); setActieveSpeler(data); localStorage.setItem('wk_speler_id', data.id.toString()); setStatus(''); }
   };
 
-  // --- DIT IS HET STUKJE DAT ONTBRAB EN DE ERROR GAF ---
+  // --- BEREKENINGEN VOOR MATCHEN & TELLERS ---
   const tellersData = useMemo(() => {
     let totaleGoals = 0, totaleGeleKaarten = 0, totaleRodeKaarten = 0;
     const teamGoalsVoor: Record<string, number> = {};
@@ -441,7 +441,6 @@ export default function Home() {
     if (filterRonde !== 'Alle') basis = basis.filter(m => m.ronde === filterRonde);
     return basis;
   }, [matchen, filterRonde, matchVoorspellingen, nu]);
-  // --------------------------------------------------
 
   return (
     <main className="main-container">
