@@ -22,36 +22,60 @@ const parseTeam = (teamString: string) => {
   let cleanString = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
   let searchKey = cleanString.toLowerCase();
 
+  // STRIKT GECONTROLEERDE WOORDENLIJST (Geen dubbele keys!)
   const vertalingen: Record<string, string> = {
-    'brazil': 'Brazilië', 'brazilië': 'Brazilië', 'morocco': 'Marokko', 'marokko': 'Marokko',
-    'switzerland': 'Zwitserland', 'zwitserland': 'Zwitserland', 'bosnia and herzegovina': 'Bosnië', 'bosnia & herzegovina': 'Bosnië', 'bosnia': 'Bosnië', 'bosnië': 'Bosnië',
-    'south korea': 'Zuid-Korea', 'zuid-korea': 'Zuid-Korea', 'south africa': 'Zuid-Afrika', 'zuid-afrika': 'Zuid-Afrika',
-    'czechia': 'Tsjechië', 'czech republic': 'Tsjechië', 'tsjechië': 'Tsjechië', 'germany': 'Duitsland', 'duitsland': 'Duitsland',
-    'spain': 'Spanje', 'spanje': 'Spanje', 'france': 'Frankrijk', 'frankrijk': 'Frankrijk',
-    'netherlands': 'Nederland', 'nederland': 'Nederland', 'belgium': 'België', 'belgië': 'België',
-    'italy': 'Italië', 'italië': 'Italië', 'argentina': 'Argentinië', 'argentinië': 'Argentinië',
+    'brazil': 'Brazilië', 'brazilië': 'Brazilië',
+    'morocco': 'Marokko', 'marokko': 'Marokko',
+    'switzerland': 'Zwitserland', 'zwitserland': 'Zwitserland',
+    'bosnia and herzegovina': 'Bosnië', 'bosnia & herzegovina': 'Bosnië', 'bosnia': 'Bosnië', 'bosnië': 'Bosnië',
+    'south korea': 'Zuid-Korea', 'zuid-korea': 'Zuid-Korea',
+    'south africa': 'Zuid-Afrika', 'zuid-afrika': 'Zuid-Afrika',
+    'czechia': 'Tsjechië', 'czech republic': 'Tsjechië', 'tsjechië': 'Tsjechië',
+    'germany': 'Duitsland', 'duitsland': 'Duitsland',
+    'spain': 'Spanje', 'spanje': 'Spanje',
+    'france': 'Frankrijk', 'frankrijk': 'Frankrijk',
+    'netherlands': 'Nederland', 'nederland': 'Nederland',
+    'belgium': 'België', 'belgië': 'België',
+    'italy': 'Italië', 'italië': 'Italië',
+    'argentina': 'Argentinië', 'argentinië': 'Argentinië',
     'england': 'Engeland', 'wales': 'Wales', 'scotland': 'Schotland',
     'usa': 'Verenigde Staten', 'united states': 'Verenigde Staten', 'verenigde staten': 'Verenigde Staten',
-    'canada': 'Canada', 'mexico': 'Mexico', 'japan': 'Japan', 'croatia': 'Kroatië', 'kroatië': 'Kroatië',
+    'canada': 'Canada', 'mexico': 'Mexico', 'japan': 'Japan',
+    'croatia': 'Kroatië', 'kroatië': 'Kroatië',
     'uruguay': 'Uruguay', 'senegal': 'Senegal', 'ghana': 'Ghana', 'nigeria': 'Nigeria', 'ecuador': 'Ecuador',
-    'sweden': 'Zweden', 'zweden': 'Zweden', 'denmark': 'Denemarken', 'denemarken': 'Denemarken',
-    'poland': 'Polen', 'polen': 'Polen', 'serbia': 'Servië', 'servië': 'Servië',
-    'iran': 'Iran', 'ir iran': 'Iran', 'islamic republic of iran': 'Iran', 'saudi arabia': 'Saudi-Arabië', 'saudi-arabië': 'Saudi-Arabië',
-    'ukraine': 'Oekraïne', 'oekraïne': 'Oekraïne', 'peru': 'Peru', 'panama': 'Panama', 'egypt': 'Egypte', 'egypte': 'Egypte',
-    'tunisia': 'Tunesië', 'tunesië': 'Tunesië', 'new zealand': 'Nieuw-Zeeland', 'nieuw-zeeland': 'Nieuw-Zeeland',
+    'sweden': 'Zweden', 'zweden': 'Zweden',
+    'denmark': 'Denemarken', 'denemarken': 'Denemarken',
+    'poland': 'Polen', 'polen': 'Polen',
+    'serbia': 'Servië', 'servië': 'Servië',
+    'iran': 'Iran', 'ir iran': 'Iran', 'islamic republic of iran': 'Iran',
+    'saudi arabia': 'Saudi-Arabië', 'saudi-arabië': 'Saudi-Arabië',
+    'ukraine': 'Oekraïne', 'oekraïne': 'Oekraïne',
+    'peru': 'Peru', 'panama': 'Panama',
+    'egypt': 'Egypte', 'egypte': 'Egypte',
+    'tunisia': 'Tunesië', 'tunesië': 'Tunesië',
+    'new zealand': 'Nieuw-Zeeland', 'nieuw-zeeland': 'Nieuw-Zeeland',
     'qatar': 'Qatar', 'ireland': 'Ierland', 'ierland': 'Ierland',
     'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije', 'turkije': 'Turkije',
-    'romania': 'Roemenië', 'roemenië': 'Roemenië', 'hongarije': 'Hongarije', 'hongarije': 'Hongarije',
-    'norway': 'Noorwegen', 'noorwegen': 'Noorwegen', 'iceland': 'IJsland', 'ijsland': 'IJsland',
-    'slovakia': 'Slowakije', 'slowakije': 'Slowakije', 'iraq': 'Irak', 'irak': 'Irak',
-    'paraguay': 'Paraguay', 'venezuela': 'Venezuela', 'mali': 'Mali', 'algeria': 'Algerije', 'algerije': 'Algerije',
+    'romania': 'Roemenië', 'roemenië': 'Roemenië',
+    'hungary': 'Hongarije', 'hongarije': 'Hongarije',
+    'norway': 'Noorwegen', 'noorwegen': 'Noorwegen',
+    'iceland': 'IJsland', 'ijsland': 'IJsland',
+    'slovakia': 'Slowakije', 'slowakije': 'Slowakije',
+    'iraq': 'Irak', 'irak': 'Irak',
+    'paraguay': 'Paraguay', 'venezuela': 'Venezuela', 'mali': 'Mali',
+    'algeria': 'Algerije', 'algerije': 'Algerije',
     'zambia': 'Zambia', 'honduras': 'Honduras', 'el salvador': 'El Salvador',
     'ivory coast': 'Ivoorkust', 'cote d\'ivoire': 'Ivoorkust', 'côte d\'ivoire': 'Ivoorkust', 'cote divoire': 'Ivoorkust', 'cote d ivoire': 'Ivoorkust', 'core divoir': 'Ivoorkust', 'ivoorkust': 'Ivoorkust',
-    'cameroon': 'Kameroen', 'kameroen': 'Kameroen', 'chile': 'Chili', 'chili': 'Chili',
-    'colombia': 'Colombia', 'costa rica': 'Costa Rica', 'austria': 'Oostenrijk', 'oostenrijk': 'Oostenrijk',
-    'australia': 'Australië', 'australië': 'Australië', 'cabo verde': 'Kaapverdië', 'cape verde': 'Kaapverdië', 'kaapverdië': 'Kaapverdië',
-    'haiti': 'Haïti', 'haïti': 'Haïti', 'curacao': 'Curaçao', 'curaçao': 'Curaçao',
-    'jordan': 'Jordanië', 'jordanië': 'Jordanië', 'congo dr': 'Congo', 'dr congo': 'Congo', 'congo': 'Congo',
+    'cameroon': 'Kameroen', 'kameroen': 'Kameroen',
+    'chile': 'Chili', 'chili': 'Chili',
+    'colombia': 'Colombia', 'costa rica': 'Costa Rica',
+    'austria': 'Oostenrijk', 'oostenrijk': 'Oostenrijk',
+    'australia': 'Australië', 'australië': 'Australië',
+    'cabo verde': 'Kaapverdië', 'cape verde': 'Kaapverdië', 'kaapverdië': 'Kaapverdië',
+    'haiti': 'Haïti', 'haïti': 'Haïti',
+    'curacao': 'Curaçao', 'curaçao': 'Curaçao',
+    'jordan': 'Jordanië', 'jordanië': 'Jordanië',
+    'congo dr': 'Congo', 'dr congo': 'Congo', 'congo': 'Congo',
     'uzbekistan': 'Oezbekistan', 'oezbekistan': 'Oezbekistan'
   };
 
@@ -248,7 +272,7 @@ export default function MatchenTab({
         .stand-table tr.highlight td { background: rgba(55, 114, 255, 0.08); font-weight: 900; color: #2B00FF; }
       `}</style>
 
-      {/* FILTER KNOPPEN (Foutje is hier netjes weggewerkt, geen dubbele border!) */}
+      {/* FILTER KNOPPEN */}
       <div className="hide-scrollbar" style={{ display: 'flex', overflowX: 'auto', gap: '8px', paddingBottom: '5px' }}>
         {rondes.map(r => (
           <button 
@@ -286,7 +310,7 @@ export default function MatchenTab({
           const thuisInfo = parseTeam(match.thuisploeg);
           const uitInfo = parseTeam(match.uitploeg);
 
-          const theme = cardThemes[index % cardThemes.length]; // Nu roteert lime-groen ook écht mee!
+          const theme = cardThemes[index % cardThemes.length];
 
           const TOERNOOI_AANDACHT_START = new Date('2026-05-01').getTime();
           const matchTijd = matchDateObj.getTime();
@@ -306,7 +330,6 @@ export default function MatchenTab({
               boxShadow: '0 10px 30px rgba(0,0,0,0.4)', position: 'relative', overflow: 'hidden'
             }}>
               
-              {/* MATCH HEADER & TIMELINE */}
               <div style={{ background: 'rgba(0,0,0,0.15)', padding: '10px 15px', display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid rgba(0,0,0,0.15)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.7rem', fontWeight: 900, opacity: 0.8, textTransform: 'uppercase' }}>
                   <span>{dateStr} • {timeStr} • {match.ronde} {match.groep ? `(${match.groep})` : ''}</span>
@@ -323,7 +346,6 @@ export default function MatchenTab({
                 </div>
               </div>
 
-              {/* MATCH BODY (Witte kaders om de score zijn weg, nu subtiel doorschijnend donker) */}
               <div style={{ padding: '20px 15px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '5px' }}>
                 
                 <div 
@@ -376,7 +398,6 @@ export default function MatchenTab({
                 </div>
               )}
 
-              {/* WIE MOET NOG INVULLEN (COMPACT) OF POST-MATCH OVERZICHT */}
               <div style={{ padding: '12px 15px', background: 'rgba(0,0,0,0.1)' }}>
                 {!isMatchGesloten ? (
                   <div>
@@ -396,7 +417,6 @@ export default function MatchenTab({
                     </div>
                   </div>
                 ) : (
-                  /* TIJDENS / NA DE MATCH (GEDETAILLEERDE SCORES VAN IEDEREEN) */
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                     {alleSpelers.map((s: any) => {
                       const v = alleMatchVoorspellingen.find((x: any) => x.match_id === match.id && x.speler_id === s.id);
