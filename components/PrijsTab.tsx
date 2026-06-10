@@ -1,123 +1,145 @@
 // src/components/PrijsTab.tsx
 import React, { useMemo } from 'react';
 
-export default function PrijsTab({ klassement }: any) {
+export default function PrijsTab({ klassement }: { klassement: any[] }) {
+  const top5 = klassement.slice(0, 5);
+
+  // --- NEVENKLASSEMENTEN ---
+  const bonusKoning = useMemo(() => {
+    if (!klassement || klassement.length === 0) return null;
+    return [...klassement].sort((a, b) => b.bonus_score - a.bonus_score)[0];
+  }, [klassement]);
+
+  const scherpschutter = useMemo(() => {
+    if (!klassement || klassement.length === 0) return null;
+    return [...klassement].sort((a, b) => b.exact - a.exact)[0];
+  }, [klassement]);
+
+  // --- DYNAMISCHE PRIJZENPOT BEREKENING ---
+  const aantalDeelnemers = klassement.length;
+  const totalePot = aantalDeelnemers * 10;
   
-  // 1. Bereken de Pot (ALLE deelnemers * €10)
-  const totaalAantalSpelers = klassement.length;
-  const totalePot = totaalAantalSpelers * 10;
-
-  // 2. Definieer vaste prijzen voor Side-Quests
-  const prijsBonusKoning = totaalAantalSpelers > 5 ? 20 : 0;
-  const prijsScherpschutter = totaalAantalSpelers > 5 ? 20 : 0; // Vervangt de Cijfer Vreter
+  // Vaste prijzen voor de nevenklassementen
+  const prijsBonusKoning = 20;
+  const prijsScherpschutter = 20;
   
-  const potVoorTop3 = totalePot - prijsBonusKoning - prijsScherpschutter;
+  // Wat overblijft is voor het algemeen klassement
+  const algemenePot = Math.max(0, totalePot - prijsBonusKoning - prijsScherpschutter);
 
-  // 3. Bereken wie de winnaars zijn en haal de Top 3 lijstjes op
-  const winnaars = useMemo(() => {
-    if (klassement.length === 0) return null;
-
-    // Top 3 Algemeen (Voor de grote pot)
-    const top3Algemeen = [...klassement].sort((a, b) => b.totaal_score - a.totaal_score);
-
-    // Top 3 Bonus Koning (Meeste bonuspunten)
-    const top3Bonus = [...klassement].sort((a, b) => b.bonus_score - a.bonus_score).slice(0, 3);
-
-    // Top 3 Scherpschutter (Meeste EXACTE pronostieken)
-    const top3Exact = [...klassement].sort((a, b) => b.exact - a.exact).slice(0, 3);
-
-    return {
-      eerste: { speler: top3Algemeen[0], bedrag: Math.max(0, Math.round(potVoorTop3 * 0.5)) },
-      tweede: { speler: top3Algemeen[1], bedrag: Math.max(0, Math.round(potVoorTop3 * 0.3)) },
-      derde: { speler: top3Algemeen[2], bedrag: Math.max(0, Math.round(potVoorTop3 * 0.2)) },
-      bonusTop3: top3Bonus,
-      exactTop3: top3Exact,
-      bedragBonus: prijsBonusKoning,
-      bedragExact: prijsScherpschutter
-    };
-  }, [klassement, potVoorTop3]);
-
-  if (!winnaars) return <div style={{textAlign:'center', padding:20, fontWeight:800}}>Laden...</div>;
-
-  // Vernieuwd PrizeCard component (ondersteunt nu de Top 3 lijst weergave!)
-  const PrizeCard = ({ titel, winnaarNaam, bedrag, sub, kleur, icon, top3Lijst, scoreLabel }: any) => (
-    <div className="prize-card" style={{ borderLeft: `6px solid ${kleur}` }}>
-      
-      {/* Hoofd info */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-        <div className="prize-circle" style={{ background: kleur }}>
-          <span style={{ fontSize: '1.2rem' }}>{icon}</span>
-        </div>
-        <div style={{ flex: 1 }}>
-          <div className="prize-titel">{titel}</div>
-          <div className="prize-naam">{winnaarNaam || 'Nog onbekend'}</div>
-          <div className="prize-sub">{sub}</div>
-        </div>
-        <div className="prize-bedrag">€{bedrag}</div>
-      </div>
-
-      {/* TOP 3 LIJST (Alleen zichtbaar als er een lijst is meegegeven) */}
-      {top3Lijst && top3Lijst.length > 0 && (
-        <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed #DEE2E6' }}>
-          <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', marginBottom: '6px', letterSpacing: '1px' }}>HUIDIGE TOP 3:</div>
-          {top3Lijst.map((sp: any, idx: number) => (
-            <div key={sp.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 800, color: idx === 0 ? kleur : '#6C757D', padding: '3px 0' }}>
-              <span>{idx + 1}. {sp.naam}</span>
-              <span>{scoreLabel === 'exact' ? `${sp.exact} exact` : `${sp.bonus_score} pt`}</span>
-            </div>
-          ))}
-        </div>
-      )}
-      
-    </div>
-  );
+  // Percentages toepassen op de overgebleven pot (en afronden op hele euro's)
+  const prijs1 = Math.round(algemenePot * 0.45);
+  const prijs2 = Math.round(algemenePot * 0.25);
+  const prijs3 = Math.round(algemenePot * 0.15);
+  const prijs4 = Math.round(algemenePot * 0.10);
+  const prijs5 = Math.round(algemenePot * 0.05);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      <style>{`
-        .pot-header { background: #111827; border-radius: 16px; padding: 20px; text-align: center; color: #FFF; margin-bottom: 5px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); border: 2px solid var(--aqua); }
-        .prize-card { background: #FFF; border-radius: 14px; padding: 15px; display: flex; flex-direction: column; box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative; }
-        .prize-circle { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #FFF; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        .prize-titel { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; line-height: 1; color: #6C757D; }
-        .prize-naam { font-weight: 900; font-size: 1.1rem; color: #111827; margin-top: 2px; }
-        .prize-sub { font-size: 0.65rem; font-weight: 800; color: #ADB5BD; text-transform: uppercase; margin-top: 2px; }
-        .prize-bedrag { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: #40C057; }
-      `}</style>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      
+      {/* 🏆 HOOFDPRIJZEN (ALGEMEEN KLASSEMENT) */}
+      <div style={{ background: 'rgba(255, 255, 255, 0.95)', borderRadius: '24px', padding: '25px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', border: '2px solid #E9ECEF' }}>
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: '#111827', margin: 0, lineHeight: 1 }}>PRIJZENPOT</h2>
+          <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--crayola)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            Totale inleg: €{totalePot}
+          </div>
+        </div>
 
-      <div className="pot-header">
-        <div style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--aqua)', textTransform: 'uppercase', letterSpacing: '2px' }}>Totale Prijzenpot</div>
-        <div style={{ fontSize: '3.5rem', fontFamily: 'Bebas Neue', lineHeight: 1 }}>€{totalePot}</div>
-        <div style={{ fontSize: '0.65rem', opacity: 0.7 }}>Gebaseerd op {totaalAantalSpelers} deelnemers</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {/* 1E PLAATS */}
+          <div style={{ display: 'flex', alignItems: 'center', background: 'linear-gradient(135deg, #FFD700 0%, #FDB931 100%)', borderRadius: '16px', padding: '15px', color: '#FFF', boxShadow: '0 4px 15px rgba(253, 185, 49, 0.4)' }}>
+            <div style={{ fontSize: '2rem', marginRight: '15px' }}>🥇</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', opacity: 0.9 }}>1e Plaats (45%)</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                {top5[0]?.naam ? top5[0].naam.split(' ')[0] : '...'}
+              </div>
+            </div>
+            <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>€{prijs1}</div>
+          </div>
+
+          {/* 2E PLAATS */}
+          <div style={{ display: 'flex', alignItems: 'center', background: 'linear-gradient(135deg, #E0E0E0 0%, #BDBDBD 100%)', borderRadius: '16px', padding: '15px', color: '#111827', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+            <div style={{ fontSize: '2rem', marginRight: '15px' }}>🥈</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', color: '#6C757D' }}>2e Plaats (25%)</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 900 }}>
+                {top5[1]?.naam ? top5[1].naam.split(' ')[0] : '...'}
+              </div>
+            </div>
+            <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', color: '#495057' }}>€{prijs2}</div>
+          </div>
+
+          {/* 3E PLAATS */}
+          <div style={{ display: 'flex', alignItems: 'center', background: 'linear-gradient(135deg, #CD7F32 0%, #A0522D 100%)', borderRadius: '16px', padding: '15px', color: '#FFF', boxShadow: '0 4px 15px rgba(205, 127, 50, 0.4)' }}>
+            <div style={{ fontSize: '2rem', marginRight: '15px' }}>🥉</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', opacity: 0.9 }}>3e Plaats (15%)</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 900, textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                {top5[2]?.naam ? top5[2].naam.split(' ')[0] : '...'}
+              </div>
+            </div>
+            <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>€{prijs3}</div>
+          </div>
+
+          {/* 4E & 5E PLAATS */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div style={{ background: '#F8F9FA', borderRadius: '12px', padding: '12px', border: '1px solid #E9ECEF', textAlign: 'center' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>4e Plaats (10%)</div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#495057', margin: '4px 0' }}>{top5[3]?.naam ? top5[3].naam.split(' ')[0] : '...'}</div>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem', color: 'var(--crayola)' }}>€{prijs4}</div>
+            </div>
+            <div style={{ background: '#F8F9FA', borderRadius: '12px', padding: '12px', border: '1px solid #E9ECEF', textAlign: 'center' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>5e Plaats (5%)</div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#495057', margin: '4px 0' }}>{top5[4]?.naam ? top5[4].naam.split(' ')[0] : '...'}</div>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem', color: '#40C057' }}>€{prijs5}</div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <PrizeCard titel="🥇 1e Plaats" winnaarNaam={winnaars.eerste.speler?.naam} bedrag={winnaars.eerste.bedrag} sub="Algemeen Klassement" kleur="#FFD700" icon="🏆" />
-      <PrizeCard titel="🥈 2e Plaats" winnaarNaam={winnaars.tweede.speler?.naam} bedrag={winnaars.tweede.bedrag} sub="Algemeen Klassement" kleur="#C0C0C0" icon="🥈" />
-      <PrizeCard titel="🥉 3e Plaats" winnaarNaam={winnaars.derde.speler?.naam} bedrag={winnaars.derde.bedrag} sub="Algemeen Klassement" kleur="#CD7F32" icon="🥉" />
-      
-      <div style={{ height: '1px', background: 'rgba(0,0,0,0.1)', margin: '5px 0' }} />
+      {/* 💎 NEVENKLASSEMENTEN */}
+      <div style={{ background: 'rgba(255, 255, 255, 0.95)', borderRadius: '24px', padding: '25px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)', border: '2px solid #E9ECEF' }}>
+        <h3 style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: '#111827', margin: '0 0 15px 0', textAlign: 'center' }}>💎 NEVENKLASSEMENTEN</h3>
 
-      {/* De extra prijzen MET de Top 3 weergave */}
-      <PrizeCard 
-        titel="💎 Bonus Koning" 
-        winnaarNaam={winnaars.bonusTop3[0]?.naam} 
-        bedrag={winnaars.bedragBonus} 
-        sub="Meeste punten in Bonus-tab" 
-        kleur="var(--magenta)" 
-        icon="💎" 
-        top3Lijst={winnaars.bonusTop3} 
-        scoreLabel="bonus"
-      />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+          
+          {/* BONUS KONING */}
+          <div style={{ border: '2px solid var(--magenta)', borderRadius: '16px', padding: '15px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: '-10px', right: '-10px', fontSize: '4rem', opacity: 0.1 }}>👑</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--magenta)', textTransform: 'uppercase' }}>Bonus Koning</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#111827' }}>
+                  {bonusKoning && bonusKoning.bonus_score > 0 ? bonusKoning.naam.split(' ')[0] : 'Nog niet beslist'}
+                </div>
+                {bonusKoning && bonusKoning.bonus_score > 0 && (
+                  <div style={{ fontSize: '0.7rem', color: '#6C757D', fontWeight: 800 }}>{bonusKoning.bonus_score} bonuspunten</div>
+                )}
+              </div>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', color: 'var(--magenta)' }}>€{prijsBonusKoning}</div>
+            </div>
+          </div>
 
-      <PrizeCard 
-        titel="🎯 Scherpschutter" 
-        winnaarNaam={winnaars.exactTop3[0]?.naam} 
-        bedrag={winnaars.bedragExact} 
-        sub="Meeste exacte pronostieken" 
-        kleur="var(--crayola)" 
-        icon="🎯" 
-        top3Lijst={winnaars.exactTop3} 
-        scoreLabel="exact"
-      />
+          {/* SCHERPSCHUTTER */}
+          <div style={{ border: '2px solid #40C057', borderRadius: '16px', padding: '15px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: '-10px', right: '-10px', fontSize: '4rem', opacity: 0.1 }}>🎯</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 900, color: '#40C057', textTransform: 'uppercase' }}>Scherpschutter</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#111827' }}>
+                  {scherpschutter && scherpschutter.exact > 0 ? scherpschutter.naam.split(' ')[0] : 'Nog niet beslist'}
+                </div>
+                {scherpschutter && scherpschutter.exact > 0 && (
+                  <div style={{ fontSize: '0.7rem', color: '#6C757D', fontWeight: 800 }}>{scherpschutter.exact} exacte matchen</div>
+                )}
+              </div>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', color: '#40C057' }}>€{prijsScherpschutter}</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
 
     </div>
   );
