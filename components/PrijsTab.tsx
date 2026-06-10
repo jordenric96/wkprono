@@ -12,18 +12,20 @@ export default function PrijsTab({
 }) {
   const top5 = klassement.slice(0, 5);
 
-  // --- NEVENKLASSEMENTEN ---
-  const bonusKoning = useMemo(() => {
-    if (!klassement || klassement.length === 0) return null;
-    return [...klassement].sort((a, b) => b.bonus_score - a.bonus_score)[0];
+  // --- NEVENKLASSEMENTEN TOP 5 BEREKENEN ---
+  const top5Bonus = useMemo(() => {
+    if (!klassement || klassement.length === 0) return [];
+    // Sorteer dalend op bonus_score en pak de top 5
+    return [...klassement].sort((a, b) => b.bonus_score - a.bonus_score).slice(0, 5);
   }, [klassement]);
 
-  const scherpschutter = useMemo(() => {
-    if (!klassement || klassement.length === 0) return null;
-    return [...klassement].sort((a, b) => b.exact - a.exact)[0];
+  const top5Scherp = useMemo(() => {
+    if (!klassement || klassement.length === 0) return [];
+    // Sorteer dalend op aantal exacte uitslagen en pak de top 5
+    return [...klassement].sort((a, b) => b.exact - a.exact).slice(0, 5);
   }, [klassement]);
 
-  // --- DYNAMISCHE PRIJZENPOT BEREKENING ---
+  // --- DYNAMISCHE PRIJZENPOT BEREKENING (WATERDICHT) ---
   const aantalDeelnemers = klassement.filter(s => s.betaald === true).length;
   const totalePot = aantalDeelnemers * 10;
   
@@ -87,7 +89,7 @@ export default function PrijsTab({
             <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem' }}>€{prijs3 > 0 ? prijs3 : 0}</div>
           </div>
 
-          {/* 4E & 5E PLAATS - WILDE KLEUREN OP DE VOORGROND */}
+          {/* 4E & 5E PLAATS */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <div style={{ background: 'var(--wk-blue)', borderRadius: '12px', padding: '12px', textAlign: 'center', color: '#FFF', boxShadow: '0 4px 15px rgba(43,0,255,0.4)' }}>
               <div style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.8, textTransform: 'uppercase' }}>4e Plaats (10%)</div>
@@ -105,43 +107,68 @@ export default function PrijsTab({
 
       {/* 💎 NEVENKLASSEMENTEN */}
       <div style={{ background: '#1A1423', borderRadius: '24px', padding: '25px', boxShadow: '0 10px 40px rgba(0,0,0,0.3)', border: '2px solid var(--wk-aqua)' }}>
-        <h3 style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', color: '#FFF', margin: '0 0 20px 0', textAlign: 'center', letterSpacing: '1px' }}>💎 NEVENKLASSEMENTEN</h3>
+        <h3 style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', color: '#FFF', margin: '0 0 5px 0', textAlign: 'center', letterSpacing: '1px' }}>💎 NEVENKLASSEMENTEN</h3>
+        
+        {/* DISCLAIMER OVER GELIJKE STAND */}
+        <div style={{ background: 'rgba(0, 229, 255, 0.05)', padding: '10px', borderRadius: '12px', border: '1px dashed rgba(0, 229, 255, 0.3)', marginBottom: '20px' }}>
+          <p style={{ fontSize: '0.75rem', color: '#ADB5BD', textAlign: 'center', margin: 0, fontWeight: 700 }}>
+            *Bij een <strong style={{color: '#FFF'}}>gelijke stand</strong> op de 1e plaats wordt de prijzenpot voor dat nevenklassement eerlijk verdeeld onder de winnaars.
+          </p>
+        </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
           {/* BONUS KONING */}
           <div style={{ background: 'rgba(227, 0, 34, 0.1)', border: '2px solid var(--wk-red)', borderRadius: '16px', padding: '15px', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: '-10px', right: '-10px', fontSize: '4rem', opacity: 0.1 }}>👑</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1, marginBottom: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 1, marginBottom: '15px' }}>
               <div>
                 <div style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--wk-red)', textTransform: 'uppercase' }}>Bonus Koning</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FFF' }}>
-                  {bonusKoning && bonusKoning.bonus_score > 0 ? bonusKoning.naam.split(' ')[0] : 'Nog niet beslist'}
+                <div style={{ fontSize: '0.75rem', color: '#ADB5BD', fontWeight: 700, marginTop: '4px', maxWidth: '85%' }}>
+                  De speler met de beste glazen bol. Gekroond door de <strong>meeste bonuspunten</strong>.
                 </div>
               </div>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: 'var(--wk-red)' }}>€{totalePot >= 40 ? prijsBonusKoning : 0}</div>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: 'var(--wk-red)', lineHeight: 1 }}>€{totalePot >= 40 ? prijsBonusKoning : 0}</div>
             </div>
-            {/* DE UITLEG */}
-            <div style={{ fontSize: '0.75rem', color: '#ADB5BD', fontWeight: 700, lineHeight: 1.4, borderTop: '1px solid rgba(227, 0, 34, 0.2)', paddingTop: '8px' }}>
-              De speler met de best voorspellende glazen bol. Gekroond door de <strong>meeste punten</strong> te halen uit de extra WK-bonusvragen (wereldkampioen, topschutter, kaarten, etc.).
+
+            {/* TOP 5 LIJSTJE BONUS */}
+            <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '12px', position: 'relative', zIndex: 1 }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#6C757D', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.5px' }}>Huidige Top 5</div>
+              {top5Bonus.map((speler, index) => (
+                <div key={speler.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', borderBottom: index !== 4 ? '1px solid rgba(255,255,255,0.05)' : 'none', padding: '5px 0' }}>
+                  <span style={{ color: index === 0 ? '#FFF' : '#ADB5BD', fontWeight: index === 0 ? 900 : 700 }}>
+                    {index + 1}. {speler.naam.split(' ')[0]}
+                  </span>
+                  <span style={{ color: 'var(--wk-red)', fontWeight: 900 }}>{speler.bonus_score} pt</span>
+                </div>
+              ))}
             </div>
           </div>
 
           {/* SCHERPSCHUTTER */}
           <div style={{ background: 'rgba(204, 255, 0, 0.05)', border: '2px solid var(--wk-lime)', borderRadius: '16px', padding: '15px', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: '-10px', right: '-10px', fontSize: '4rem', opacity: 0.1 }}>🎯</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1, marginBottom: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative', zIndex: 1, marginBottom: '15px' }}>
               <div>
                 <div style={{ fontSize: '0.85rem', fontWeight: 900, color: 'var(--wk-lime)', textTransform: 'uppercase' }}>Scherpschutter</div>
-                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FFF' }}>
-                  {scherpschutter && scherpschutter.exact > 0 ? scherpschutter.naam.split(' ')[0] : 'Nog niet beslist'}
+                <div style={{ fontSize: '0.75rem', color: '#ADB5BD', fontWeight: 700, marginTop: '4px', maxWidth: '85%' }}>
+                  De voetbalkenner. Winnaar is degene met de <strong>meeste exacte scores</strong> correct.
                 </div>
               </div>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: 'var(--wk-lime)' }}>€{totalePot >= 40 ? prijsScherpschutter : 0}</div>
+              <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: 'var(--wk-lime)', lineHeight: 1 }}>€{totalePot >= 40 ? prijsScherpschutter : 0}</div>
             </div>
-            {/* DE UITLEG */}
-            <div style={{ fontSize: '0.75rem', color: '#ADB5BD', fontWeight: 700, lineHeight: 1.4, borderTop: '1px solid rgba(204, 255, 0, 0.2)', paddingTop: '8px' }}>
-              De pure voetbalkenner van de groep. Gewonnen door de speler die het <strong>meeste aantal keer de exacte uitslag</strong> van een wedstrijd juist wist te voorspellen.
+
+            {/* TOP 5 LIJSTJE SCHERPSCHUTTER */}
+            <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '12px', padding: '12px', position: 'relative', zIndex: 1 }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#6C757D', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.5px' }}>Huidige Top 5</div>
+              {top5Scherp.map((speler, index) => (
+                <div key={speler.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', borderBottom: index !== 4 ? '1px solid rgba(255,255,255,0.05)' : 'none', padding: '5px 0' }}>
+                  <span style={{ color: index === 0 ? '#FFF' : '#ADB5BD', fontWeight: index === 0 ? 900 : 700 }}>
+                    {index + 1}. {speler.naam.split(' ')[0]}
+                  </span>
+                  <span style={{ color: 'var(--wk-lime)', fontWeight: 900 }}>{speler.exact} matchen</span>
+                </div>
+              ))}
             </div>
           </div>
 
