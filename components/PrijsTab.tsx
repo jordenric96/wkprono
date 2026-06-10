@@ -1,7 +1,15 @@
 // src/components/PrijsTab.tsx
 import React, { useMemo } from 'react';
 
-export default function PrijsTab({ klassement }: { klassement: any[] }) {
+export default function PrijsTab({ 
+  klassement, 
+  matchen, 
+  alleToernooiV 
+}: { 
+  klassement: any[], 
+  matchen?: any[], 
+  alleToernooiV?: any[] 
+}) {
   const top5 = klassement.slice(0, 5);
 
   // --- NEVENKLASSEMENTEN ---
