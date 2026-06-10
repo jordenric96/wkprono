@@ -13,6 +13,7 @@ import ChatTab from '../components/ChatTab';
 import PrijsTab from '../components/PrijsTab';
 
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
+const POPUP_DEADLINE = new Date('2026-06-11T19:00:00+02:00').getTime();
 
 export default function Home() {
   const [ontgrendelNaam, setOntgrendelNaam] = useState('');
@@ -28,6 +29,7 @@ export default function Home() {
   
   const [toast, setToast] = useState<{naam: string, bericht: string} | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [showInstallPopup, setShowInstallPopup] = useState(true);
 
   const actieveTabRef = useRef(actieveTab);
   const actieveSpelerRef = useRef(actieveSpeler);
@@ -67,6 +69,8 @@ export default function Home() {
   const [nu, setNu] = useState(new Date().getTime());
   const [tijdOver, setTijdOver] = useState({ dagen: 0, uren: 0, minuten: 0, seconden: 0 });
   const [isGesloten, setIsGesloten] = useState(false); 
+
+  const toonInstallPopup = nu < POPUP_DEADLINE && showInstallPopup;
 
   const veranderTab = (tab: string) => {
     setActieveTab(tab);
@@ -314,7 +318,7 @@ export default function Home() {
       };
     });
 
-    // --- 🚨 PROMO TRUCJE: MAARTEN, JONAS EN SAMMY OP 1, 2 EN 3 ZONDER ECHTE PUNTEN ---
+    // --- 🚨 PROMO TRUCJE ---
     const matchenGespeeld = m.some((match: any) => match.thuis_score !== null);
     
     let eindStats = stats.map(sp => {
@@ -328,7 +332,6 @@ export default function Home() {
     // FORCEER SORTERING VOOR HET PODIUM
     eindStats.sort((a, b) => {
       if (!matchenGespeeld) {
-        // Geheime "weighing" voor het klassement: puur voor de volgorde!
         const getPromoWeight = (naam: string) => {
           const n = naam.toLowerCase();
           if (n.includes('maarten')) return 3;
@@ -468,6 +471,39 @@ export default function Home() {
         @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 112, 157, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(239, 112, 157, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 112, 157, 0); } }
       `}</style>
 
+      {/* 📱 INSTALLATIE POP-UP (VERDWIJNT NA DONDERDAG 19:00) */}
+      {toonInstallPopup && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)',
+          zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+        }}>
+          <div style={{
+            background: '#FFF', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '350px',
+            position: 'relative', boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
+          }}>
+            <button 
+              onClick={() => setShowInstallPopup(false)}
+              style={{ position: 'absolute', top: '15px', right: '15px', background: '#F8F9FA', border: 'none', width: '30px', height: '30px', borderRadius: '50%', fontWeight: 900, color: '#495057', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >✕</button>
+            <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', color: 'var(--crayola)', margin: '0 0 10px 0', lineHeight: 1 }}>📲 Installeer de app</h2>
+            <p style={{ fontSize: '0.85rem', color: '#495057', fontWeight: 800, marginBottom: '15px' }}>Voor de beste ervaring zet je deze pronostiek best op je startscherm. Zo heb je hem de komende maand altijd snel bij de hand!</p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ background: '#F8F9FA', padding: '12px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
+                <strong style={{ fontSize: '0.85rem', color: '#111827' }}>🍎 iPhone (Safari):</strong>
+                <div style={{ fontSize: '0.75rem', color: '#6C757D', marginTop: '4px' }}>Tik onderaan op het <strong>deel-icoontje</strong> (vierkantje met pijl omhoog) en kies <strong>'Zet op beginscherm'</strong>.</div>
+              </div>
+
+              <div style={{ background: '#F8F9FA', padding: '12px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
+                <strong style={{ fontSize: '0.85rem', color: '#111827' }}>🤖 Android (Chrome):</strong>
+                <div style={{ fontSize: '0.75rem', color: '#6C757D', marginTop: '4px' }}>Tik rechtsboven op de <strong>drie puntjes</strong> en kies <strong>'Toevoegen aan startscherm'</strong>.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TOAST POP-UP MELDING */}
       {toast && (
         <div 
@@ -506,7 +542,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* UITKLAPBAAR REGLEMENT (ENKEL BIJ RANKING) */}
+        {/* UITKLAPBAAR REGLEMENT (ENKEL BIJ RANKING) MET AANGEPASTE MOBIELE LAYOUT */}
         {actieveSpeler && actieveTab === 'ranking' && (
           <div style={{ width: '100%', marginBottom: '15px' }}>
             <button 
@@ -520,28 +556,29 @@ export default function Home() {
             {infoOpen && (
               <div style={{ background: 'rgba(255, 255, 255, 0.95)', padding: '20px', borderRadius: '12px', borderLeft: '4px solid var(--magenta)', marginTop: '10px', fontSize: '0.8rem', color: '#495057', lineHeight: '1.5', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-                  <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
-                    <strong style={{color: 'var(--magenta)'}}>⚽ MATCHEN</strong><br/>
+                {/* AANGEPAST VOOR MOBIEL: Blokken onder elkaar i.p.v. naast elkaar gepropt */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '10px' }}>
+                  <div style={{ background: '#F8F9FA', padding: '12px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
+                    <strong style={{color: 'var(--magenta)', fontSize: '0.9rem'}}>⚽ MATCHEN</strong><br/>
                     • Exacte score: <strong>3 pt</strong><br/>
                     • Juiste winnaar/gelijk: <strong>1 pt</strong><br/>
                     • Fout: <strong>0 pt</strong>
                   </div>
-                  <div style={{ background: '#F8F9FA', padding: '10px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
-                    <strong style={{color: '#40C057'}}>💎 BONUSVRAGEN</strong><br/>
+                  <div style={{ background: '#F8F9FA', padding: '12px', borderRadius: '12px', border: '1px solid #E9ECEF' }}>
+                    <strong style={{color: '#40C057', fontSize: '0.9rem'}}>💎 BONUSVRAGEN</strong><br/>
                     • Goals/Kaarten/WK: <strong>5 pt</strong><br/>
                     • Halve Fin/België: <strong>3 pt</strong><br/>
                     • Aanval/Defensie: <strong>3 pt</strong>
                   </div>
                 </div>
                 
-                <div style={{ background: '#FFFDF5', padding: '10px', borderRadius: '12px', border: '1px solid #FFE066', marginBottom: '10px' }}>
-                  <strong style={{color: '#D4AF37'}}>⚖️ GELIJKE STAND (EX-AEQUO)</strong><br/>
+                <div style={{ background: '#FFFDF5', padding: '12px', borderRadius: '12px', border: '1px solid #FFE066', marginBottom: '10px' }}>
+                  <strong style={{color: '#D4AF37', fontSize: '0.9rem'}}>⚖️ GELIJKE STAND (EX-AEQUO)</strong><br/>
                   • <strong>Klassement:</strong> Wie de meeste <em>'Exacte Uitslagen'</em> heeft, wint. Nog gelijk? Dan telt <em>'Juiste Winnaars'</em>.<br/>
                   • <strong>Bonusvragen:</strong> Gedeelde eerste plaats bij topschutter/verdediging/cijfers? Iedereen met dit antwoord krijgt de volle punten.
                 </div>
 
-                <div style={{ background: '#F1F3F5', padding: '10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900, textAlign: 'center' }}>
+                <div style={{ background: '#F1F3F5', padding: '12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 900, textAlign: 'center' }}>
                   💰 DEELNAME: €10 NAAR BE85 0018 2075 8506<br/>
                   <span style={{color: 'var(--magenta)'}}>Mededeling: Naam + WK2026</span>
                 </div>
