@@ -10,21 +10,17 @@ const cardThemes = [
   { hex: '#E30022' }  // Rood
 ];
 
-// VEILIGHEID: klassement = [] zorgt ervoor dat Vercel niet crasht tijdens het inladen
 export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaald, isJorden }: any) {
-  // We starten nu standaard op de zuivere tussenstand
   const [modus, setModus] = useState('tussenstand'); 
   const [expandedBonusId, setExpandedBonusId] = useState<number | null>(null);
 
-  // Sorteer de spelers op basis van de gekozen modus
-  const gesorteerd = [...klassement].sort((a, b) => {
+  // Sorteer de spelers op basis van de gekozen modus (100% Vercel Strict Mode Proof!)
+  const gesorteerd = [...klassement].sort((a: any, b: any) => {
     if (modus === 'tussenstand') {
-      // Sorteer op de PURE prono score (enkel matchen)
       if (b.prono_score !== a.prono_score) return b.prono_score - a.prono_score;
       if (b.exact !== a.exact) return b.exact - a.exact;
       if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect;
     } else {
-      // Sorteer op de TOTALE score (matchen + bonus) voor de eindstand
       if (b.totaal_score !== a.totaal_score) return b.totaal_score - a.totaal_score;
       if (b.exact !== a.exact) return b.exact - a.exact;
       if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect;
@@ -83,7 +79,7 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
       )}
 
       {/* KLASSEMENT LIJST (Donkere kaarten met Neon Randen) */}
-      {gesorteerd.map((speler, index) => {
+      {gesorteerd.map((speler: any, index: number) => {
         const isMij = speler.id === actieveSpeler?.id;
         const theme = cardThemes[index % cardThemes.length]; // Roteer door de 5 WK kleuren
         const isExpanded = expandedBonusId === speler.id;
