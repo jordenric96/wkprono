@@ -12,17 +12,22 @@ const cardThemes = [
 
 // VEILIGHEID: klassement = [] zorgt ervoor dat Vercel niet crasht tijdens het inladen
 export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaald, isJorden }: any) {
-  const [modus, setModus] = useState('matchen'); 
+  // We starten nu standaard op de zuivere tussenstand
+  const [modus, setModus] = useState('tussenstand'); 
   const [expandedBonusId, setExpandedBonusId] = useState<number | null>(null);
 
   // Sorteer de spelers op basis van de gekozen modus
   const gesorteerd = [...klassement].sort((a, b) => {
-    if (modus === 'matchen') {
-      if (b.totaal_score !== a.totaal_score) return b.totaal_score - a.totaal_score;
+    if (modus === 'tussenstand') {
+      // Sorteer op de PURE prono score (enkel matchen)
+      if (b.prono_score !== a.prono_score) return b.prono_score - a.prono_score;
       if (b.exact !== a.exact) return b.exact - a.exact;
       if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect;
     } else {
-      if (b.bonus_score !== a.bonus_score) return b.bonus_score - a.bonus_score;
+      // Sorteer op de TOTALE score (matchen + bonus) voor de eindstand
+      if (b.totaal_score !== a.totaal_score) return b.totaal_score - a.totaal_score;
+      if (b.exact !== a.exact) return b.exact - a.exact;
+      if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect;
     }
     return (a.naam || '').localeCompare(b.naam || '');
   });
@@ -31,32 +36,51 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
       
       {/* HIGH CONTRAST MENU KNOPPEN */}
-      <div style={{ display: 'flex', background: '#090514', borderRadius: '16px', padding: '6px', border: '2px solid #00E5FF', boxShadow: '0 10px 20px rgba(0,0,0,0.5)', marginBottom: '8px' }}>
+      <div style={{ display: 'flex', background: '#090514', borderRadius: '16px', padding: '6px', border: '2px solid #00E5FF', boxShadow: '0 10px 20px rgba(0,0,0,0.5)', marginBottom: '4px' }}>
         <button
-          onClick={() => { setModus('matchen'); setExpandedBonusId(null); }}
+          onClick={() => { setModus('tussenstand'); setExpandedBonusId(null); }}
           style={{
             flex: 1, padding: '8px', borderRadius: '12px', border: 'none', fontWeight: 900, cursor: 'pointer',
-            background: modus === 'matchen' ? '#CCFF00' : 'transparent',
-            color: modus === 'matchen' ? '#111827' : '#ADB5BD',
+            background: modus === 'tussenstand' ? '#CCFF00' : 'transparent',
+            color: modus === 'tussenstand' ? '#111827' : '#ADB5BD',
             transition: 'all 0.3s',
-            boxShadow: modus === 'matchen' ? '0 0 15px rgba(204, 255, 0, 0.4)' : 'none'
+            boxShadow: modus === 'tussenstand' ? '0 0 15px rgba(204, 255, 0, 0.4)' : 'none'
           }}
         >
-          ⚽ MATCHEN <br/><span style={{fontSize:'0.6rem', fontWeight:700, opacity: 0.8}}>(Tussenstand)</span>
+          ⚽ TUSSENSTAND <br/><span style={{fontSize:'0.6rem', fontWeight:700, opacity: 0.8}}>(Enkel Matchen)</span>
         </button>
         <button
-          onClick={() => setModus('bonus')}
+          onClick={() => setModus('eindstand')}
           style={{
             flex: 1, padding: '8px', borderRadius: '12px', border: 'none', fontWeight: 900, cursor: 'pointer',
-            background: modus === 'bonus' ? '#CCFF00' : 'transparent',
-            color: modus === 'bonus' ? '#111827' : '#ADB5BD',
+            background: modus === 'eindstand' ? '#CCFF00' : 'transparent',
+            color: modus === 'eindstand' ? '#111827' : '#ADB5BD',
             transition: 'all 0.3s',
-            boxShadow: modus === 'bonus' ? '0 0 15px rgba(204, 255, 0, 0.4)' : 'none'
+            boxShadow: modus === 'eindstand' ? '0 0 15px rgba(204, 255, 0, 0.4)' : 'none'
           }}
         >
-          💎 BONUS <br/><span style={{fontSize:'0.6rem', fontWeight:700, opacity: 0.8}}>(Eindstand)</span>
+          🏆 EINDSTAND <br/><span style={{fontSize:'0.6rem', fontWeight:700, opacity: 0.8}}>(Matchen + Bonus)</span>
         </button>
       </div>
+
+      {/* DUIDELIJKE UITLEG BANNERS PER MODUS */}
+      {modus === 'tussenstand' && (
+        <div style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '10px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', marginBottom: '8px', textAlign: 'center' }}>
+          <p style={{ fontSize: '0.75rem', color: '#ADB5BD', margin: 0, fontWeight: 800 }}>
+            ℹ️ <strong style={{color: '#FFF'}}>ZUIVERE TUSSENSTAND</strong><br/>
+            Hier zie je puur de punten uit je match-voorspellingen, zónder de bonusvragen inberekend.
+          </p>
+        </div>
+      )}
+
+      {modus === 'eindstand' && (
+        <div style={{ background: 'rgba(204, 255, 0, 0.1)', padding: '10px', borderRadius: '12px', border: '1px solid #CCFF00', marginBottom: '8px', textAlign: 'center', boxShadow: '0 4px 10px rgba(204, 255, 0, 0.1)' }}>
+          <p style={{ fontSize: '0.75rem', color: '#FFF', margin: 0, fontWeight: 800 }}>
+            ⚠️ <strong style={{color: '#CCFF00'}}>DIT KLASSEMENT TELT VOOR DE PRIJZEN!</strong><br/>
+            Hier is de verdiende bonus bij opgeteld. Tik op een speler om de details te zien.
+          </p>
+        </div>
+      )}
 
       {/* KLASSEMENT LIJST (Donkere kaarten met Neon Randen) */}
       {gesorteerd.map((speler, index) => {
@@ -72,14 +96,14 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
         return (
           <div 
             key={speler.id} 
-            onClick={() => { if (modus === 'bonus') setExpandedBonusId(isExpanded ? null : speler.id); }}
+            onClick={() => { if (modus === 'eindstand') setExpandedBonusId(isExpanded ? null : speler.id); }}
             style={{ 
-              background: '#1A1423', // Stijlvolle donkere achtergrond
+              background: '#1A1423', 
               borderRadius: '14px', 
               padding: '10px 14px', 
-              border: isMij ? '3px solid #FFF' : `2px solid ${theme.hex}`, // Neon rand!
-              boxShadow: isMij ? '0 0 15px rgba(255,255,255,0.4)' : `0 4px 10px ${theme.hex}30`, // Subtiele neon gloed
-              cursor: modus === 'bonus' ? 'pointer' : 'default',
+              border: isMij ? '3px solid #FFF' : `2px solid ${theme.hex}`, 
+              boxShadow: isMij ? '0 0 15px rgba(255,255,255,0.4)' : `0 4px 10px ${theme.hex}30`, 
+              cursor: modus === 'eindstand' ? 'pointer' : 'default',
               transition: 'all 0.2s'
             }}
           >
@@ -89,15 +113,14 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 900, fontSize: '1.05rem', color: '#FFF', letterSpacing: '0.5px' }}>{speler.naam}</div>
                 
-                {modus === 'matchen' ? (
-                  <div style={{ fontSize: '0.7rem', marginTop: '2px', fontWeight: 800, color: '#ADB5BD' }}>
-                    🎯 {speler.exact} &nbsp; 🟢 {speler.winnaarCorrect} &nbsp; ❌ {speler.fout}
-                  </div>
-                ) : (
-                  <div style={{ fontSize: '0.7rem', marginTop: '2px', fontWeight: 800, color: '#ADB5BD' }}>
-                    Bekijk details {isExpanded ? '▲' : '▼'}
-                  </div>
-                )}
+                <div style={{ fontSize: '0.7rem', marginTop: '2px', fontWeight: 800, color: '#ADB5BD' }}>
+                  🎯 {speler.exact} &nbsp; 🟢 {speler.winnaarCorrect} &nbsp; ❌ {speler.fout}
+                  {modus === 'eindstand' && (
+                    <div style={{ marginTop: '4px', color: theme.hex }}>
+                      Bekijk bonusdetails {isExpanded ? '▲' : '▼'}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* ADMIN CONTROLS EN SCORES */}
@@ -121,15 +144,15 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
 
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', lineHeight: 0.9, color: theme.hex }}>
-                    {modus === 'matchen' ? speler.totaal_score : speler.bonus_score}
+                    {modus === 'tussenstand' ? speler.prono_score : speler.totaal_score}
                   </div>
                   <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', color: '#ADB5BD', marginTop: '2px' }}>Punten</div>
                 </div>
               </div>
             </div>
 
-            {/* UITKLAPBARE BONUS DETAILS */}
-            {modus === 'bonus' && isExpanded && (
+            {/* UITKLAPBARE BONUS DETAILS (Alleen in Eindstand Modus) */}
+            {modus === 'eindstand' && isExpanded && (
               <div style={{ 
                 marginTop: '10px', paddingTop: '10px', 
                 borderTop: '1px dashed rgba(255,255,255,0.2)', 
