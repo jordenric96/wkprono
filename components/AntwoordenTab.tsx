@@ -5,7 +5,6 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV = [] }:
   const isGesloten = nu >= DEADLINE_DATE;
   const [openThema, setOpenTheme] = useState<string | null>('winnaar');
 
-  // Zolang het geen 21u is, ziet iedereen het slotje
   if (!isGesloten) {
     return (
       <div style={{ textAlign: 'center', padding: '40px 20px', background: '#1A1423', borderRadius: '24px', border: '2px solid #E30022', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
@@ -18,17 +17,16 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV = [] }:
     );
   }
 
-  // --- HELPER FUNCTIES VOOR HET GROEPEREN (Nu 100% TypeScript proof) ---
-  
+  // --- HELPER FUNCTIES (Nu 100% Vercel & TypeScript Proof) ---
   const groepeerOpAntwoord = (veld: string) => {
     const groepen: Record<string, string[]> = {};
     alleToernooiV.forEach((v: any) => {
       const antwoord = String(v[veld] || 'Niets ingevuld');
-      const naam = v.spelers?.naam?.split(' ')[0] || 'Onbekend';
+      const naam = String(v.spelers?.naam?.split(' ')[0] || 'Onbekend');
       if (!groepen[antwoord]) groepen[antwoord] = [];
       groepen[antwoord].push(naam);
     });
-    return Object.entries(groepen).sort((a: any, b: any) => b[1].length - a[1].length);
+    return Object.entries(groepen).sort((a: [string, string[]], b: [string, string[]]) => b[1].length - a[1].length);
   };
 
   const groepeerHalveFinalisten = () => {
@@ -44,7 +42,7 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV = [] }:
         groepen[landStr].push(naam);
       });
     });
-    return Object.entries(groepen).sort((a: any, b: any) => b[1].length - a[1].length);
+    return Object.entries(groepen).sort((a: [string, string[]], b: [string, string[]]) => b[1].length - a[1].length);
   };
 
   const sorteerCijfers = (veld: string) => {
@@ -77,7 +75,6 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV = [] }:
             boxShadow: isOpen ? `0 4px 15px ${thema.kleur}30` : '0 4px 10px rgba(0,0,0,0.3)',
             transition: 'all 0.3s ease'
           }}>
-            {/* ACCORDION HEADER */}
             <div 
               onClick={() => setOpenTheme(isOpen ? null : thema.id)}
               style={{ 
@@ -95,31 +92,25 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV = [] }:
               </span>
             </div>
 
-            {/* ACCORDION INHOUD (Uitgeklapt) */}
             {isOpen && (
               <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {thema.data.map((item: any, index: number) => {
-                  const antwoord = item[0];
-                  const namen = item[1] as string[];
-                  
-                  return (
-                    <div key={index} style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px', borderLeft: `4px solid ${thema.kleur}` }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
-                        <span style={{ fontWeight: 900, fontSize: '1.1rem', color: '#FFF' }}>{antwoord}</span>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 900, color: thema.kleur, textTransform: 'uppercase' }}>
-                          {namen.length}x gekozen
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                        {namen.map((naam: string, i: number) => (
-                          <span key={i} style={{ background: 'rgba(255,255,255,0.1)', color: '#ADB5BD', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800 }}>
-                            {naam}
-                          </span>
-                        ))}
-                      </div>
+                {thema.data.map(([antwoord, namen]: [string, string[]], index: number) => (
+                  <div key={index} style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px', borderLeft: `4px solid ${thema.kleur}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
+                      <span style={{ fontWeight: 900, fontSize: '1.1rem', color: '#FFF' }}>{antwoord}</span>
+                      <span style={{ fontSize: '0.7rem', fontWeight: 900, color: thema.kleur, textTransform: 'uppercase' }}>
+                        {namen.length}x gekozen
+                      </span>
                     </div>
-                  )
-                })}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {namen.map((naam: string, i: number) => (
+                        <span key={i} style={{ background: 'rgba(255,255,255,0.1)', color: '#ADB5BD', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800 }}>
+                          {naam}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
