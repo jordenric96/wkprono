@@ -30,6 +30,7 @@ export default function Home() {
   const [toast, setToast] = useState<{naam: string, bericht: string} | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
   const [showInstallPopup, setShowInstallPopup] = useState(true);
+  const [ontbrekendeBonus, setOntbrekendeBonus] = useState<string[]>([]); // NIEUW: Houdt bij wie bonus mist
 
   const actieveTabRef = useRef(actieveTab);
   const actieveSpelerRef = useRef(actieveSpeler);
@@ -83,6 +84,7 @@ export default function Home() {
   useEffect(() => {
     const opgeslagenId = localStorage.getItem('wk_speler_id');
     haalSpelersOp(opgeslagenId);
+    haalDataVoorPopupOp(); // NIEUW: Laad direct de ontbrekende bonussen in voor de pop-up
     
     const klokInterval = setInterval(() => {
       const nuTijd = new Date().getTime();
@@ -118,6 +120,24 @@ export default function Home() {
 
     return () => { clearInterval(klokInterval); supabase.removeChannel(chatSub); };
   }, []);
+
+  // --- NIEUWE FUNCTIE: WIE HEEFT GEEN BONUS INGEVULD? ---
+  const haalDataVoorPopupOp = async () => {
+    const { data: spelers } = await supabase.from('spelers').select('id, naam, betaald');
+    const { data: bonus } = await supabase.from('toernooi_voorspellingen').select('speler_id, winnaar');
+    
+    if (spelers && bonus) {
+      const ontbrekend = spelers
+        .filter(s => s.betaald) // Check enkel de actieve/betaalde spelers
+        .filter(s => {
+           const v = bonus.find(b => b.speler_id === s.id);
+           // Als ze nog niks hebben opgeslagen OF de winnaar is nog leeg
+           return !v || !v.winnaar || v.winnaar.trim() === '';
+        })
+        .map(s => s.naam.split(' ')[0]); // Neem enkel de voornaam
+      setOntbrekendeBonus(ontbrekend);
+    }
+  };
 
   useEffect(() => {
     if (!actieveSpeler) return;
@@ -411,7 +431,6 @@ export default function Home() {
     else if (data) { setAlleSpelers(prev => [...prev, data]); setActieveSpeler(data); localStorage.setItem('wk_speler_id', data.id.toString()); setStatus(''); }
   };
 
-  // --- BEREKENINGEN VOOR MATCHEN & TELLERS ---
   const tellersData = useMemo(() => {
     let totaleGoals = 0, totaleGeleKaarten = 0, totaleRodeKaarten = 0;
     const teamGoalsVoor: Record<string, number> = {};
@@ -508,33 +527,63 @@ export default function Home() {
         .btn-primary:active { transform: scale(0.98); }
       `}</style>
 
-      {/* 📱 INSTALLATIE POP-UP IN DARK MODE */}
+      {/* 🚨 INSTALLATIE POP-UP & BONUS WAARSCHUWING IN DARK MODE 🚨 */}
       {toonInstallPopup && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          background: 'rgba(9, 5, 20, 0.8)', backdropFilter: 'blur(8px)',
+          background: 'rgba(9, 5, 20, 0.85)', backdropFilter: 'blur(10px)',
           zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
         }}>
           <div style={{
-            background: '#1A1423', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '350px',
-            position: 'relative', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid var(--wk-aqua)'
+            background: '#1A1423', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '380px',
+            position: 'relative', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid var(--wk-red)',
+            maxHeight: '90vh', overflowY: 'auto'
           }}>
             <button 
               onClick={() => setShowInstallPopup(false)}
               style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.1)', border: 'none', width: '30px', height: '30px', borderRadius: '50%', fontWeight: 900, color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >✕</button>
-            <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: 'var(--wk-aqua)', margin: '0 0 10px 0', lineHeight: 1 }}>📲 App Installeren</h2>
-            <p style={{ fontSize: '0.85rem', color: '#ADB5BD', fontWeight: 800, marginBottom: '20px' }}>Voor de beste ervaring zet je deze pronostiek op je startscherm. Altijd de tussenstand bij de hand!</p>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px', borderLeft: '4px solid var(--wk-red)' }}>
-                <strong style={{ fontSize: '0.85rem', color: '#FFF' }}>🍎 iPhone (Safari):</strong>
-                <div style={{ fontSize: '0.75rem', color: '#868E96', marginTop: '4px' }}>Tik onderaan op het <strong>deel-icoontje</strong> (vierkantje met pijl omhoog) en kies <strong>'Zet op beginscherm'</strong>.</div>
+            {/* NIEUWE BONUS WAARSCHUWING */}
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ fontSize: '3rem', lineHeight: 1, marginBottom: '10px' }}>🚨</div>
+              <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: 'var(--wk-red)', margin: '0 0 5px 0', lineHeight: 1, letterSpacing: '1px' }}>VERGEET DE BONUS NIET!</h2>
+              <div style={{ background: 'var(--wk-red)', color: '#FFF', padding: '8px', borderRadius: '12px', fontSize: '0.9rem', fontWeight: 900, textTransform: 'uppercase', display: 'inline-block', marginBottom: '15px', boxShadow: '0 4px 15px rgba(227, 0, 34, 0.4)' }}>
+                ⏰ DEADLINE: VANAVOND OM 21:00
+              </div>
+              
+              <p style={{ fontSize: '0.85rem', color: '#ADB5BD', fontWeight: 800, margin: '0 0 10px 0' }}>Deze spelers moeten hun bonusvragen nog invullen:</p>
+              
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
+                {ontbrekendeBonus.length === 0 ? (
+                  <span style={{ background: 'var(--wk-lime)', color: '#111827', padding: '6px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 900 }}>
+                    🎉 Iedereen heeft de bonus ingevuld!
+                  </span>
+                ) : (
+                  ontbrekendeBonus.map((naam, i) => (
+                    <span key={i} style={{ background: 'rgba(227, 0, 34, 0.15)', color: '#FFF', border: '1px solid var(--wk-red)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900 }}>
+                      {naam}
+                    </span>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <hr style={{ border: 'none', borderTop: '1px dashed rgba(255,255,255,0.2)', margin: '20px 0' }} />
+
+            {/* OUDE INSTALLATIE TEKST COMPACTER */}
+            <h3 style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: 'var(--wk-aqua)', margin: '0 0 10px 0', lineHeight: 1 }}>📲 App Installeren</h3>
+            <p style={{ fontSize: '0.75rem', color: '#ADB5BD', fontWeight: 800, marginBottom: '15px' }}>Voor de beste ervaring zet je deze pronostiek op je startscherm.</p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '12px', borderLeft: '3px solid var(--wk-blue)' }}>
+                <strong style={{ fontSize: '0.75rem', color: '#FFF' }}>🍎 iPhone (Safari):</strong>
+                <div style={{ fontSize: '0.65rem', color: '#868E96', marginTop: '2px' }}>Tik onderaan op het <strong>deel-icoontje</strong> en kies <strong>'Zet op beginscherm'</strong>.</div>
               </div>
 
-              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '12px', borderLeft: '4px solid var(--wk-lime)' }}>
-                <strong style={{ fontSize: '0.85rem', color: '#FFF' }}>🤖 Android (Chrome):</strong>
-                <div style={{ fontSize: '0.75rem', color: '#868E96', marginTop: '4px' }}>Tik rechtsboven op de <strong>drie puntjes</strong> en kies <strong>'Toevoegen aan startscherm'</strong> of <strong>'App installeren'</strong>.</div>
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '12px', borderLeft: '3px solid var(--wk-lime)' }}>
+                <strong style={{ fontSize: '0.75rem', color: '#FFF' }}>🤖 Android (Chrome):</strong>
+                <div style={{ fontSize: '0.65rem', color: '#868E96', marginTop: '2px' }}>Tik rechtsboven op de <strong>drie puntjes</strong> en kies <strong>'Toevoegen aan startscherm'</strong>.</div>
               </div>
             </div>
           </div>
