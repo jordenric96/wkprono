@@ -196,21 +196,14 @@ export default function MatchenTab({
 
   const rondes = ['Alle', 'Nog in te vullen', 'Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale'];
 
-  // --- AUTO-SCROLL FUNCTIE (VERBETERD!) ---
+  // --- AUTO-SCROLL FUNCTIE ---
   useEffect(() => {
-    // Alleen triggeren als we écht matchen hebben
     if (!gefilterdeMatchen || gefilterdeMatchen.length === 0) return;
 
-    // Zoek de laatst gestarte match (die nu bezig is of net voorbij is)
     let targetMatch = [...gefilterdeMatchen].reverse().find(m => nu >= new Date(m.datum).getTime());
-
-    // Als het toernooi nog niet bezig is, scrollen we gewoon naar de allereerste match
-    if (!targetMatch) {
-      targetMatch = gefilterdeMatchen[0];
-    }
+    if (!targetMatch) targetMatch = gefilterdeMatchen[0];
 
     if (targetMatch) {
-      // Kleine timeout zodat we zeker weten dat alle 'div' elementen getekend zijn op het scherm
       const timer = setTimeout(() => {
         const element = document.getElementById(`match-${targetMatch.id}`);
         if (element) {
@@ -220,7 +213,6 @@ export default function MatchenTab({
       return () => clearTimeout(timer);
     }
   }, [filterRonde, gefilterdeMatchen?.length]); 
-  // We luisteren express NIET naar 'nu', want dan scrollt je scherm elke seconde weg als je zelf wil swipen!
 
   const genereerGroepsStand = (rawNaam: string) => {
     const groepsMatchenVanDitTeam = gefilterdeMatchen.filter((m: any) => 
@@ -337,7 +329,7 @@ export default function MatchenTab({
               boxShadow: '0 8px 20px rgba(0,0,0,0.3)', position: 'relative', overflow: 'hidden', marginBottom: '10px'
             }}>
               
-              {/* MATCH HEADER ZONDER BAL-ANIMATIE */}
+              {/* MATCH HEADER */}
               <div style={{ background: 'rgba(0,0,0,0.15)', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', fontWeight: 900, opacity: 0.9, textTransform: 'uppercase' }}>
                 <span>{dateStr} • {timeStr} • {match.ronde} {match.groep ? `(${match.groep})` : ''}</span>
                 <span>
@@ -389,10 +381,32 @@ export default function MatchenTab({
                 </div>
               </div>
 
-              {/* EVENTUELE EINDSTAND */}
+              {/* EVENTUELE EINDSTAND & KAARTEN */}
               {isMatchGesloten && match.thuis_score !== null && (
-                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px', textAlign: 'center', fontSize: '0.8rem', fontWeight: 900, color: theme.color, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                  EINDSTAND: {match.thuis_score} - {match.uit_score}
+                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ textAlign: 'center', fontSize: '0.85rem', fontWeight: 900, color: theme.color, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    EINDSTAND: {match.thuis_score} - {match.uit_score}
+                  </div>
+                  
+                  {/* KAARTEN WEERGAVE */}
+                  { ((match.gele_kaarten !== null && match.gele_kaarten !== undefined) || match.thuis_geel !== undefined) && (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '0.7rem', fontWeight: 800, color: '#FFF', opacity: 0.9 }}>
+                      {match.thuis_geel !== undefined ? (
+                        /* PER TEAM WEERGAVE (Als de kolommen 'thuis_geel', 'thuis_rood', 'uit_geel', 'uit_rood' in de DB bestaan) */
+                        <div style={{ display: 'flex', width: '80%', justifyContent: 'space-between' }}>
+                          <div style={{ flex: 1, textAlign: 'right', paddingRight: '10px' }}>🟨 {match.thuis_geel || 0} &nbsp;&nbsp; 🟥 {match.thuis_rood || 0}</div>
+                          <div style={{ opacity: 0.3 }}>|</div>
+                          <div style={{ flex: 1, textAlign: 'left', paddingLeft: '10px' }}>🟨 {match.uit_geel || 0} &nbsp;&nbsp; 🟥 {match.uit_rood || 0}</div>
+                        </div>
+                      ) : (
+                        /* FALLBACK: TOTAAL VAN DE MATCH TONEN (Huidige Database Structuur) */
+                        <div style={{ display: 'flex', gap: '15px' }}>
+                          <span title="Gele kaarten in deze match">🟨 Match Totaal: {match.gele_kaarten || 0}</span>
+                          <span title="Rode kaarten in deze match">🟥 Match Totaal: {match.rode_kaarten || 0}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
