@@ -30,7 +30,7 @@ export default function Home() {
   const [toast, setToast] = useState<{naam: string, bericht: string} | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
   const [showInstallPopup, setShowInstallPopup] = useState(true);
-  const [ontbrekendeBonus, setOntbrekendeBonus] = useState<string[]>([]); // NIEUW: Houdt bij wie bonus mist
+  const [ontbrekendeBonus, setOntbrekendeBonus] = useState<string[]>([]); 
 
   const actieveTabRef = useRef(actieveTab);
   const actieveSpelerRef = useRef(actieveSpeler);
@@ -68,6 +68,7 @@ export default function Home() {
 
   const [nu, setNu] = useState(new Date().getTime());
   const [tijdOver, setTijdOver] = useState({ dagen: 0, uren: 0, minuten: 0, seconden: 0 });
+  const [isTimerLoaded, setIsTimerLoaded] = useState(false); // NIEUW: Zorgt ervoor dat we geen 0 0 0 0 zien
   const [isGesloten, setIsGesloten] = useState(false); 
 
   const toonInstallPopup = nu < POPUP_DEADLINE && showInstallPopup;
@@ -84,14 +85,16 @@ export default function Home() {
   useEffect(() => {
     const opgeslagenId = localStorage.getItem('wk_speler_id');
     haalSpelersOp(opgeslagenId);
-    haalDataVoorPopupOp(); // NIEUW: Laad direct de ontbrekende bonussen in voor de pop-up
+    haalDataVoorPopupOp(); 
     
-    const klokInterval = setInterval(() => {
+    // Klok update functie
+    const updateKlok = () => {
       const nuTijd = new Date().getTime();
       setNu(nuTijd); 
       const verschil = DEADLINE_DATE - nuTijd;
-      if (verschil <= 0) setIsGesloten(true);
-      else {
+      if (verschil <= 0) {
+        setIsGesloten(true);
+      } else {
         setTijdOver({
           dagen: Math.floor(verschil / (1000 * 60 * 60 * 24)),
           uren: Math.floor((verschil % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
@@ -99,7 +102,11 @@ export default function Home() {
           seconden: Math.floor((verschil % (1000 * 60)) / 1000)
         });
       }
-    }, 1000);
+      setIsTimerLoaded(true); // Nu mag hij getoond worden!
+    };
+
+    updateKlok(); // Voer direct 1x uit om de "0 0 0 0" te vermijden
+    const klokInterval = setInterval(updateKlok, 1000);
 
     const chatSub = supabase.channel('chat').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kleedkamer' }, (payload) => {
       haalChatOp();
@@ -121,20 +128,18 @@ export default function Home() {
     return () => { clearInterval(klokInterval); supabase.removeChannel(chatSub); };
   }, []);
 
-  // --- NIEUWE FUNCTIE: WIE HEEFT GEEN BONUS INGEVULD? ---
   const haalDataVoorPopupOp = async () => {
     const { data: spelers } = await supabase.from('spelers').select('id, naam, betaald');
     const { data: bonus } = await supabase.from('toernooi_voorspellingen').select('speler_id, winnaar');
     
     if (spelers && bonus) {
       const ontbrekend = spelers
-        .filter(s => s.betaald) // Check enkel de actieve/betaalde spelers
+        .filter(s => s.betaald) 
         .filter(s => {
            const v = bonus.find(b => b.speler_id === s.id);
-           // Als ze nog niks hebben opgeslagen OF de winnaar is nog leeg
            return !v || !v.winnaar || v.winnaar.trim() === '';
         })
-        .map(s => s.naam.split(' ')[0]); // Neem enkel de voornaam
+        .map(s => s.naam.split(' ')[0]); 
       setOntbrekendeBonus(ontbrekend);
     }
   };
@@ -431,29 +436,6 @@ export default function Home() {
     else if (data) { setAlleSpelers(prev => [...prev, data]); setActieveSpeler(data); localStorage.setItem('wk_speler_id', data.id.toString()); setStatus(''); }
   };
 
-  const tellersData = useMemo(() => {
-    let totaleGoals = 0, totaleGeleKaarten = 0, totaleRodeKaarten = 0;
-    const teamGoalsVoor: Record<string, number> = {};
-    const teamGoalsTegen: Record<string, number> = {};
-
-    matchen.forEach(m => {
-      if (m.thuis_score !== null && m.uit_score !== null) {
-        totaleGoals += (m.thuis_score + m.uit_score);
-        totaleGeleKaarten += (m.gele_kaarten || 0);
-        totaleRodeKaarten += (m.rode_kaarten || 0);
-        teamGoalsVoor[m.thuisploeg] = (teamGoalsVoor[m.thuisploeg] || 0) + m.thuis_score;
-        teamGoalsVoor[m.uitploeg] = (teamGoalsVoor[m.uitploeg] || 0) + m.uit_score;
-        teamGoalsTegen[m.thuisploeg] = (teamGoalsTegen[m.thuisploeg] || 0) + m.uit_score;
-        teamGoalsTegen[m.uitploeg] = (teamGoalsTegen[m.uitploeg] || 0) + m.thuis_score;
-      }
-    });
-
-    const meestScorendTeam = Object.entries(teamGoalsVoor).sort((a, b) => b[1] - a[1])[0] || ['Nog geen data', 0];
-    const minstTegenTeam = Object.entries(teamGoalsTegen).sort((a, b) => a[1] - b[1])[0] || ['Nog geen data', 0];
-
-    return { totaleGoals, totaleGeleKaarten, totaleRodeKaarten, meestScorendTeam, minstTegenTeam };
-  }, [matchen]);
-
   const gefilterdeMatchen = useMemo(() => {
     let basis = matchen;
     if (filterRonde === 'Nog in te vullen') return basis.filter(m => (!matchVoorspellingen[m.id] || matchVoorspellingen[m.id].thuis === '') && (nu < new Date(m.datum).getTime()));
@@ -527,7 +509,7 @@ export default function Home() {
         .btn-primary:active { transform: scale(0.98); }
       `}</style>
 
-      {/* 🚨 INSTALLATIE POP-UP & BONUS WAARSCHUWING IN DARK MODE 🚨 */}
+      {/* 🚨 INSTALLATIE POP-UP & BONUS WAARSCHUWING 🚨 */}
       {toonInstallPopup && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
@@ -544,7 +526,6 @@ export default function Home() {
               style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.1)', border: 'none', width: '30px', height: '30px', borderRadius: '50%', fontWeight: 900, color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >✕</button>
             
-            {/* NIEUWE BONUS WAARSCHUWING */}
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
               <div style={{ fontSize: '3rem', lineHeight: 1, marginBottom: '10px' }}>🚨</div>
               <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: 'var(--wk-red)', margin: '0 0 5px 0', lineHeight: 1, letterSpacing: '1px' }}>VERGEET DE BONUS NIET!</h2>
@@ -571,7 +552,6 @@ export default function Home() {
 
             <hr style={{ border: 'none', borderTop: '1px dashed rgba(255,255,255,0.2)', margin: '20px 0' }} />
 
-            {/* OUDE INSTALLATIE TEKST COMPACTER */}
             <h3 style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: 'var(--wk-aqua)', margin: '0 0 10px 0', lineHeight: 1 }}>📲 App Installeren</h3>
             <p style={{ fontSize: '0.75rem', color: '#ADB5BD', fontWeight: 800, marginBottom: '15px' }}>Voor de beste ervaring zet je deze pronostiek op je startscherm.</p>
             
@@ -670,8 +650,8 @@ export default function Home() {
           <button onClick={syncMetSpreadsheet} className="admin-btn">🔄 {syncStatus || 'SYNC MET GOOGLE SHEETS'}</button>
         )}
 
-        {/* WILDE TIMER BLOKKEN */}
-        {!isGesloten && actieveSpeler && (
+        {/* TIMER WORDT PAS GETOOND ALS DE BEREKENING KLAAR IS OM FLITSEN TE VERMIJDEN */}
+        {!isGesloten && actieveSpeler && isTimerLoaded && (
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '30px', width: '100%' }}>
             <div style={{ flex: 1, background: 'var(--wk-lime)', color: '#111827', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(204, 255, 0, 0.3)' }}>
               <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.dagen}</div>
@@ -692,7 +672,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* LOGICA: IS INGELOGD EN GOEDGEKEURD? */}
         {actieveSpeler ? (
           (!actieveSpeler.betaald && !isJorden) ? (
             <div style={{ textAlign: 'center', padding: '20px 0', background: '#1A1423', borderRadius: '24px', border: '2px solid var(--wk-red)' }}>
