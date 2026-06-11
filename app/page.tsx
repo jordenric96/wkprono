@@ -87,7 +87,6 @@ export default function Home() {
     haalSpelersOp(opgeslagenId);
     haalDataVoorPopupOp(); 
     
-    // Klok update functie
     const updateKlok = () => {
       const nuTijd = new Date().getTime();
       setNu(nuTijd); 
@@ -108,24 +107,7 @@ export default function Home() {
     updateKlok(); 
     const klokInterval = setInterval(updateKlok, 1000);
 
-    const chatSub = supabase.channel('chat').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kleedkamer' }, (payload) => {
-      haalChatOp();
-      if (actieveTabRef.current !== 'kleedkamer') {
-        setOngelezenBerichten(true);
-        if (payload.new.speler_id !== actieveSpelerRef.current?.id) {
-          const afzender = alleSpelersRef.current.find(s => s.id === payload.new.speler_id);
-          const afzenderNaam = afzender ? afzender.naam.split(' ')[0] : 'Nieuw bericht';
-          setToast({ naam: afzenderNaam, bericht: payload.new.bericht });
-          try {
-            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
-            audio.play();
-          } catch(e) {} 
-          setTimeout(() => setToast(null), 4500); 
-        }
-      }
-    }).subscribe();
-
-    return () => { clearInterval(klokInterval); supabase.removeChannel(chatSub); };
+    return () => { clearInterval(klokInterval); };
   }, []);
 
   const haalDataVoorPopupOp = async () => {
@@ -192,6 +174,40 @@ export default function Home() {
     const { data } = await supabase.from('kleedkamer').select('*, spelers(naam)').order('created_at', { ascending: true });
     if (data) setChatBerichten(data);
   };
+
+  // --- KOGELVRIJE REALTIME VERBINDING VOOR DE POP-UP ---
+  useEffect(() => {
+    // Alleen luisteren als we effectief ingelogd zijn
+    if (!actieveSpeler?.id) return;
+
+    const chatKanaal = supabase.channel('popup_notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kleedkamer' }, (payload) => {
+        
+        haalChatOp(); // Zorg dat de data op de achtergrond toch up-to-date is
+        
+        // Popup mag enkel als we NIET in de chat zitten EN het bericht niet van onszelf is
+        if (actieveTabRef.current !== 'kleedkamer' && payload.new.speler_id !== actieveSpeler.id) {
+          setOngelezenBerichten(true);
+          
+          const afzender = alleSpelersRef.current.find(s => s.id === payload.new.speler_id);
+          const afzenderNaam = afzender ? afzender.naam.split(' ')[0] : 'Bericht';
+          
+          setToast({ naam: afzenderNaam, bericht: payload.new.bericht });
+          
+          // Geluidje (Veilig opgebouwd voor mobiele browsers)
+          try {
+            const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+            audio.play().catch(() => {}); 
+          } catch(e) {} 
+          
+          // Verberg de pop-up na 5 seconden
+          setTimeout(() => setToast(null), 5000); 
+        }
+      }).subscribe();
+
+    return () => { supabase.removeChannel(chatKanaal); };
+  }, [actieveSpeler?.id]);
+
 
   const syncMetSpreadsheet = async () => {
     if (!isAdmin) return;
@@ -703,7 +719,7 @@ export default function Home() {
               {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} />}
               {actieveTab === 'ranking' && <RankingTab klassement={klassement} actieveSpeler={actieveSpeler} toggleBetaald={toggleBetaald} isJorden={isJorden} />}
               {actieveTab === 'tellers' && <TellersTab matchen={matchen} alleToernooiV={alleToernooiV} isAdmin={isAdmin} />}
-              {actieveTab === 'kleedkamer' && <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} chatEindeRef={chatEindeRef} nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} matchen={matchen} alleMatchVoorspellingen={alleMatchVoorspellingen} klassement={klassement} />}
+              {actieveTab === 'kleedkamer' && <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} matchen={matchen} alleMatchVoorspellingen={alleMatchVoorspellingen} klassement={klassement} />}
               
               <div style={{textAlign:'center', marginTop:40, paddingBottom: 20}}>
                 <button style={{background:'rgba(255,255,255,0.1)', border:'none', color:'#ADB5BD', fontWeight:900, cursor:'pointer', padding: '10px 20px', borderRadius: '12px'}} onClick={() => {localStorage.removeItem('wk_speler_id'); window.location.reload();}}>UITLOGGEN</button>
