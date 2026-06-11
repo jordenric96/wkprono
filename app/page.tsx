@@ -68,7 +68,7 @@ export default function Home() {
 
   const [nu, setNu] = useState(new Date().getTime());
   const [tijdOver, setTijdOver] = useState({ dagen: 0, uren: 0, minuten: 0, seconden: 0 });
-  const [isTimerLoaded, setIsTimerLoaded] = useState(false); // NIEUW: Zorgt ervoor dat we geen 0 0 0 0 zien
+  const [isTimerLoaded, setIsTimerLoaded] = useState(false); 
   const [isGesloten, setIsGesloten] = useState(false); 
 
   const toonInstallPopup = nu < POPUP_DEADLINE && showInstallPopup;
@@ -102,10 +102,10 @@ export default function Home() {
           seconden: Math.floor((verschil % (1000 * 60)) / 1000)
         });
       }
-      setIsTimerLoaded(true); // Nu mag hij getoond worden!
+      setIsTimerLoaded(true); 
     };
 
-    updateKlok(); // Voer direct 1x uit om de "0 0 0 0" te vermijden
+    updateKlok(); 
     const klokInterval = setInterval(updateKlok, 1000);
 
     const chatSub = supabase.channel('chat').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kleedkamer' }, (payload) => {
@@ -703,7 +703,7 @@ export default function Home() {
               {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} />}
               {actieveTab === 'ranking' && <RankingTab klassement={klassement} actieveSpeler={actieveSpeler} toggleBetaald={toggleBetaald} isJorden={isJorden} />}
               {actieveTab === 'tellers' && <TellersTab matchen={matchen} alleToernooiV={alleToernooiV} isAdmin={isAdmin} />}
-              {actieveTab === 'kleedkamer' && <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} chatEindeRef={chatEindeRef} nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} />}
+              {actieveTab === 'kleedkamer' && <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} chatEindeRef={chatEindeRef} nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} matchen={matchen} alleMatchVoorspellingen={alleMatchVoorspellingen} klassement={klassement} />}
               
               <div style={{textAlign:'center', marginTop:40, paddingBottom: 20}}>
                 <button style={{background:'rgba(255,255,255,0.1)', border:'none', color:'#ADB5BD', fontWeight:900, cursor:'pointer', padding: '10px 20px', borderRadius: '12px'}} onClick={() => {localStorage.removeItem('wk_speler_id'); window.location.reload();}}>UITLOGGEN</button>
