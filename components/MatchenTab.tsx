@@ -196,17 +196,31 @@ export default function MatchenTab({
 
   const rondes = ['Alle', 'Nog in te vullen', 'Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale'];
 
+  // --- AUTO-SCROLL FUNCTIE (VERBETERD!) ---
   useEffect(() => {
-    const laatstGespeeldeMatch = [...gefilterdeMatchen].reverse().find(m => nu >= new Date(m.datum).getTime());
-    if (laatstGespeeldeMatch) {
-      setTimeout(() => {
-        const element = document.getElementById(`match-${laatstGespeeldeMatch.id}`);
+    // Alleen triggeren als we écht matchen hebben
+    if (!gefilterdeMatchen || gefilterdeMatchen.length === 0) return;
+
+    // Zoek de laatst gestarte match (die nu bezig is of net voorbij is)
+    let targetMatch = [...gefilterdeMatchen].reverse().find(m => nu >= new Date(m.datum).getTime());
+
+    // Als het toernooi nog niet bezig is, scrollen we gewoon naar de allereerste match
+    if (!targetMatch) {
+      targetMatch = gefilterdeMatchen[0];
+    }
+
+    if (targetMatch) {
+      // Kleine timeout zodat we zeker weten dat alle 'div' elementen getekend zijn op het scherm
+      const timer = setTimeout(() => {
+        const element = document.getElementById(`match-${targetMatch.id}`);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-      }, 500); 
+      }, 300); 
+      return () => clearTimeout(timer);
     }
-  }, [filterRonde]);
+  }, [filterRonde, gefilterdeMatchen?.length]); 
+  // We luisteren express NIET naar 'nu', want dan scrollt je scherm elke seconde weg als je zelf wil swipen!
 
   const genereerGroepsStand = (rawNaam: string) => {
     const groepsMatchenVanDitTeam = gefilterdeMatchen.filter((m: any) => 
@@ -333,7 +347,7 @@ export default function MatchenTab({
                 </span>
               </div>
 
-              {/* MATCH BODY (COMPACTER) */}
+              {/* MATCH BODY */}
               <div style={{ padding: '12px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '5px' }}>
                 
                 <div 
