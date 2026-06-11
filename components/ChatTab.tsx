@@ -1,29 +1,31 @@
 // src/components/ChatTab.tsx
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 
 export default function ChatTab({ 
-  chatBerichten = [], actieveSpeler, chatEindeRef, nieuwBericht, setNieuwBericht, verstuurChat,
+  chatBerichten = [], actieveSpeler, nieuwBericht, setNieuwBericht, verstuurChat,
   matchen = [], alleMatchVoorspellingen = [], klassement = []
 }: any) {
   const [modus, setModus] = useState('chat'); // 'chat' of 'stats'
+  
+  // Nieuwe, veilige ref specifiek voor het scroll-vak van de chat
+  const scrollBoxRef = useRef<HTMLDivElement>(null);
 
-  // Scroll automatisch naar beneden als er een nieuw bericht is in de chat-modus
+  // Scroll automatisch naar beneden BINNEN de chat-box (zonder de hele pagina mee te trekken!)
   useEffect(() => {
-    if (modus === 'chat' && chatEindeRef?.current) {
-      chatEindeRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (modus === 'chat' && scrollBoxRef.current) {
+      scrollBoxRef.current.scrollTop = scrollBoxRef.current.scrollHeight;
     }
-  }, [chatBerichten, modus, chatEindeRef]);
+  }, [chatBerichten, modus]);
 
   // --- 🎭 WATERDICHTE BEREKENING VAN DE AWARDS & STATS ---
   const stats = useMemo(() => {
-    // Alleen filteren op matchen die écht gespeeld zijn
     const afgewerkteMatchen = matchen.filter((m: any) => m.thuis_score !== null && m.uit_score !== null);
     if (afgewerkteMatchen.length === 0 || !klassement.length) return null; 
 
     const spelerStats: Record<number, any> = {};
     klassement.forEach((s: any) => {
       spelerStats[s.id] = {
-        naam: s.naam.split(' ')[0], // Alleen voornaam
+        naam: s.naam.split(' ')[0], 
         streak: 0, maxStreak: 0,
         cold: 0, maxCold: 0,
         belgiePt: 0,
@@ -37,7 +39,6 @@ export default function ChatTab({
       matchPunten[m.id] = 0;
       const isBelgie = m.thuisploeg.toLowerCase() === 'belgië' || m.uitploeg.toLowerCase() === 'belgië';
       
-      // Zoek wat de meest ingevulde (populairste) score was voor deze match
       const scoreTelling: Record<string, number> = {};
       const voorspellingenVoorMatch = alleMatchVoorspellingen.filter((v: any) => v.match_id === m.id);
       
@@ -54,7 +55,6 @@ export default function ChatTab({
         if (count > maxCount) { maxCount = count; popScore = scoreStr; }
       });
 
-      // Analyseer elke speler voor deze match
       voorspellingenVoorMatch.forEach((v: any) => {
         if (!spelerStats[v.speler_id]) return;
         const echt = m.thuis_score > m.uit_score ? 1 : m.thuis_score < m.uit_score ? 2 : 0;
@@ -64,9 +64,8 @@ export default function ChatTab({
         if (v.thuis_score === m.thuis_score && v.uit_score === m.uit_score) pt = 3;
         else if (echt === pred) pt = 1;
 
-        matchPunten[m.id] += pt; // Totaal aantal punten dat de groep pakte op deze match
+        matchPunten[m.id] += pt; 
 
-        // Bereken Streaks
         if (pt > 0) {
           spelerStats[v.speler_id].streak += 1;
           spelerStats[v.speler_id].cold = 0;
@@ -81,10 +80,7 @@ export default function ChatTab({
           }
         }
 
-        // Punten op België
         if (isBelgie) spelerStats[v.speler_id].belgiePt += pt;
-
-        // Kuddegedrag / Grijze muis check
         if (`${v.thuis_score}-${v.uit_score}` === popScore) {
           spelerStats[v.speler_id].kuddeGedrag += 1;
         }
@@ -93,19 +89,16 @@ export default function ChatTab({
 
     const spelersArr = Object.values(spelerStats);
 
-    // Bepaal winnaars
     const winStreak = [...spelersArr].sort((a, b) => b.maxStreak - a.maxStreak)[0];
     const winCold = [...spelersArr].sort((a, b) => b.maxCold - a.maxCold)[0];
     const winBelgie = [...spelersArr].sort((a, b) => b.belgiePt - a.belgiePt)[0];
     const winMuis = [...spelersArr].sort((a, b) => b.kuddeGedrag - a.kuddeGedrag)[0];
 
-    // De Pechvogel: Wie heeft de meeste 1-punters, maar staat laag qua 3-punters?
     const pechvogel = [...klassement].sort((a: any, b: any) => {
-      if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect; // Meeste 1-punters bovenaan
-      return a.exact - b.exact; // Als dat gelijk is, degene met de MINSTE 3-punters bovenaan
+      if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect; 
+      return a.exact - b.exact; 
     })[0];
 
-    // Match Extremen (Beste en slechtste match van de groep)
     const matchScoresArr = Object.entries(matchPunten).map(([id, pt]) => ({ id: Number(id), pt }));
     matchScoresArr.sort((a, b) => b.pt - a.pt);
     
@@ -156,11 +149,15 @@ export default function ChatTab({
       {/* --- DE CHAT WEERGAVE --- */}
       {modus === 'chat' && (
         <>
-          <div style={{ 
-            flex: 1, overflowY: 'auto', background: '#1A1423', borderRadius: '20px', 
-            padding: '15px', display: 'flex', flexDirection: 'column', gap: '15px',
-            border: '1px solid rgba(255,255,255,0.05)', boxShadow: 'inset 0 10px 20px rgba(0,0,0,0.3)'
-          }}>
+          {/* HIER ZIT DE OPLOSSING: We geven dit venster de ref, zodat enkel dit stukje scrolt! */}
+          <div 
+            ref={scrollBoxRef}
+            style={{ 
+              flex: 1, overflowY: 'auto', background: '#1A1423', borderRadius: '20px', 
+              padding: '15px', display: 'flex', flexDirection: 'column', gap: '15px',
+              border: '1px solid rgba(255,255,255,0.05)', boxShadow: 'inset 0 10px 20px rgba(0,0,0,0.3)'
+            }}
+          >
             {chatBerichten.length === 0 ? (
               <div style={{ margin: 'auto', textAlign: 'center', color: '#6C757D', fontWeight: 900, fontSize: '0.9rem' }}>
                 De kleedkamer is nog leeg...
@@ -193,7 +190,6 @@ export default function ChatTab({
                 );
               })
             )}
-            <div ref={chatEindeRef} />
           </div>
 
           <form onSubmit={verstuurChat} style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
