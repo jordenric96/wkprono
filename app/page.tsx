@@ -149,13 +149,33 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [actieveSpeler?.id]); 
 
+  // --- HIER ZAT DE FOUT! ---
+  // De app haalde de matchen enkel op als je op de Matchen-tab zat. 
+  // Nu forceert hij het inladen van de data op élk tabblad dat dit nodig heeft!
   useEffect(() => {
     if (actieveSpeler && (actieveSpeler.betaald || isJorden)) {
-      if (actieveTab === 'matchen') haalMatchenOp();
-      if (actieveTab === 'bonus') haalToernooiVoorspellingOp();
-      if (actieveTab === 'ranking' || actieveTab === 'prijs') haalKlassementOp();
-      if (actieveTab === 'kleedkamer') haalChatOp();
-      if (actieveTab === 'antwoorden') haalAlleAntwoordenOp();
+      
+      if (actieveTab === 'matchen' || actieveTab === 'tellers') {
+        haalMatchenOp();
+      }
+      
+      if (actieveTab === 'bonus') {
+        haalToernooiVoorspellingOp();
+      }
+      
+      if (actieveTab === 'ranking' || actieveTab === 'prijs') {
+        haalKlassementOp();
+      }
+      
+      if (actieveTab === 'kleedkamer') {
+        haalChatOp();
+        haalMatchenOp(); // Nodig voor het genereren van de stats in de chat!
+        haalKlassementOp(); // Nodig voor het genereren van de stats in de chat!
+      }
+      
+      if (actieveTab === 'antwoorden') {
+        haalAlleAntwoordenOp();
+      }
     }
   }, [actieveSpeler, actieveTab, isJorden]);
 
@@ -175,17 +195,14 @@ export default function Home() {
     if (data) setChatBerichten(data);
   };
 
-  // --- KOGELVRIJE REALTIME VERBINDING VOOR DE POP-UP ---
   useEffect(() => {
-    // Alleen luisteren als we effectief ingelogd zijn
     if (!actieveSpeler?.id) return;
 
     const chatKanaal = supabase.channel('popup_notifications')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kleedkamer' }, (payload) => {
         
-        haalChatOp(); // Zorg dat de data op de achtergrond toch up-to-date is
+        haalChatOp(); 
         
-        // Popup mag enkel als we NIET in de chat zitten EN het bericht niet van onszelf is
         if (actieveTabRef.current !== 'kleedkamer' && payload.new.speler_id !== actieveSpeler.id) {
           setOngelezenBerichten(true);
           
@@ -194,13 +211,11 @@ export default function Home() {
           
           setToast({ naam: afzenderNaam, bericht: payload.new.bericht });
           
-          // Geluidje (Veilig opgebouwd voor mobiele browsers)
           try {
             const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
             audio.play().catch(() => {}); 
           } catch(e) {} 
           
-          // Verberg de pop-up na 5 seconden
           setTimeout(() => setToast(null), 5000); 
         }
       }).subscribe();
