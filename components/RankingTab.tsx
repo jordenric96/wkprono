@@ -91,12 +91,13 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
       {/* HET GROTE "TV BROADCAST" KADER */}
       <div style={{
         background: tvBroadcastBorder,
-        padding: '6px', // Dikte van de strakke, meerkleurige rand
+        padding: '6px', // De dikte van de buitenste gekleurde tv-rand
         borderRadius: '20px',
         boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
         marginTop: '5px'
       }}>
-        <div style={{ background: '#000', borderRadius: '14px', padding: '8px 0' }}>
+        {/* De zwarte opvulling van het grote kader */}
+        <div style={{ background: '#000', borderRadius: '14px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
           
           {/* KLASSEMENT LIJST */}
           {gesorteerd.map((speler: any, index: number) => {
@@ -104,7 +105,7 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
             const isExpanded = expandedBonusId === speler.id;
             const theme = cardThemes[index % cardThemes.length];
             
-            // Als het jouw blok is, gebruiken we de tekstkleuren uit het theme. Anders gewoon witte tekst op zwart.
+            // Textkleur: Als het jouw blok is, gebruiken we de felle contrastkleur. Anders wit.
             const textColor = isMij ? theme.text : '#FFF';
             const subTextColor = isMij ? theme.sub : '#ADB5BD';
             
@@ -119,17 +120,17 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
                 key={speler.id} 
                 onClick={() => { if (modus === 'eindstand') setExpandedBonusId(isExpanded ? null : speler.id); }}
                 style={{ 
-                  // VOLLE BLOK STIJL VOOR DE ACTIEVE SPELER
-                  background: isMij ? theme.hex : 'transparent', 
-                  borderRadius: isMij ? '12px' : '0px', 
-                  padding: '12px 15px', 
-                  margin: isMij ? '4px 8px' : '0 8px', // Geeft het blokje wat ademruimte links/rechts
-                  borderBottom: (!isMij && index !== gesorteerd.length - 1) ? '1px solid rgba(255,255,255,0.08)' : 'none',
+                  // ELKE SPELER HEEFT EEN HARDE KADER
+                  background: isMij ? theme.hex : '#000', 
+                  border: isMij ? `4px solid #FFF` : `4px solid ${theme.hex}`, // Dikke witte kader voor jou, gekleurde kader voor de rest
+                  borderRadius: '12px', 
+                  padding: '12px 14px', 
                   cursor: modus === 'eindstand' ? 'pointer' : 'default',
                   transition: 'all 0.2s',
-                  transform: isMij ? 'scale(1.02)' : 'scale(1)', // Pop-out effect
-                  boxShadow: isMij ? `0 4px 15px ${theme.hex}60` : 'none',
-                  position: 'relative'
+                  transform: isMij ? 'scale(1.02)' : 'scale(1)', // Jouw blokje komt iets naar voren
+                  boxShadow: isMij ? `0 6px 20px ${theme.hex}80` : 'none',
+                  position: 'relative',
+                  zIndex: isMij ? 10 : 1
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -166,9 +167,13 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
                         fontFamily: 'Bebas Neue', 
                         fontSize: '2.5rem', 
                         lineHeight: 0.9, 
-                        color: textColor
+                        // Zorgt ervoor dat de score opvalt en matcht met de kaart
+                        color: isMij ? textColor : theme.hex
                       }}>
                         {modus === 'tussenstand' ? speler.prono_score : speler.totaal_score}
+                      </div>
+                      <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', color: subTextColor, marginTop: '2px' }}>
+                        Punten
                       </div>
                     </div>
                   </div>
