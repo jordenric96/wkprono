@@ -17,7 +17,6 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
   // --- AUTO-SCROLL NAAR JEZELF ---
   useEffect(() => {
     if (actieveSpeler?.id) {
-      // Kleine timeout zorgt ervoor dat de lijst eerst netjes kan inladen op het scherm
       const timer = setTimeout(() => {
         const element = document.getElementById(`speler-${actieveSpeler.id}`);
         if (element) {
@@ -28,7 +27,7 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
     }
   }, [actieveSpeler?.id]);
 
-  // Sorteer de spelers op basis van de gekozen modus (100% Vercel Strict Mode Proof!)
+  // Sorteer de spelers op basis van de gekozen modus
   const gesorteerd = [...klassement].sort((a: any, b: any) => {
     if (modus === 'tussenstand') {
       if (b.prono_score !== a.prono_score) return b.prono_score - a.prono_score;
@@ -109,15 +108,15 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
             key={speler.id} 
             onClick={() => { if (modus === 'eindstand') setExpandedBonusId(isExpanded ? null : speler.id); }}
             style={{ 
-              // VOLLE KADER EFFECT VOOR DE ACTIEVE SPELER
-              background: isMij ? 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 100%)' : '#1A1423', 
+              // VOLLE KADER EFFECT IN DE MATCHENDE NEON KLEUR
+              background: isMij ? `linear-gradient(135deg, ${theme.hex}50 0%, ${theme.hex}15 100%)` : '#1A1423', 
               borderRadius: '14px', 
               padding: '10px 14px', 
-              border: isMij ? '3px solid #FFF' : `2px solid ${theme.hex}`, 
-              boxShadow: isMij ? '0 0 25px rgba(255,255,255,0.3), inset 0 0 10px rgba(255,255,255,0.2)' : `0 4px 10px ${theme.hex}30`, 
+              border: isMij ? `3px solid ${theme.hex}` : `2px solid ${theme.hex}`, 
+              boxShadow: isMij ? `0 0 25px ${theme.hex}60, inset 0 0 15px ${theme.hex}40` : `0 4px 10px ${theme.hex}30`, 
               cursor: modus === 'eindstand' ? 'pointer' : 'default',
               transition: 'all 0.2s',
-              transform: isMij ? 'scale(1.02)' : 'scale(1)', // Maakt jouw blokje een fractie groter
+              transform: isMij ? 'scale(1.02)' : 'scale(1)', 
               position: 'relative',
               zIndex: isMij ? 10 : 1
             }}
@@ -128,15 +127,9 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: 900, fontSize: '1.05rem', color: '#FFF', letterSpacing: '0.5px' }}>
                   {speler.naam}
-                  {/* EXTRA BADGE OM JOUW NAAM TE ACCENTUEREN */}
-                  {isMij && (
-                    <span style={{ fontSize: '0.65rem', background: '#FFF', color: '#111827', padding: '2px 6px', borderRadius: '6px', marginLeft: '8px', verticalAlign: 'middle', fontWeight: 900 }}>
-                      JIJ
-                    </span>
-                  )}
                 </div>
                 
-                <div style={{ fontSize: '0.7rem', marginTop: '2px', fontWeight: 800, color: isMij ? '#E9ECEF' : '#ADB5BD' }}>
+                <div style={{ fontSize: '0.7rem', marginTop: '2px', fontWeight: 800, color: isMij ? '#FFF' : '#ADB5BD', opacity: isMij ? 0.9 : 1 }}>
                   🎯 {speler.exact} &nbsp; 🟢 {speler.winnaarCorrect} &nbsp; ❌ {speler.fout}
                   {modus === 'eindstand' && (
                     <div style={{ marginTop: '4px', color: isMij ? '#FFF' : theme.hex }}>
@@ -169,7 +162,7 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
                   <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', lineHeight: 0.9, color: isMij ? '#FFF' : theme.hex }}>
                     {modus === 'tussenstand' ? speler.prono_score : speler.totaal_score}
                   </div>
-                  <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', color: isMij ? '#E9ECEF' : '#ADB5BD', marginTop: '2px' }}>Punten</div>
+                  <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', color: isMij ? '#FFF' : '#ADB5BD', marginTop: '2px', opacity: isMij ? 0.9 : 1 }}>Punten</div>
                 </div>
               </div>
             </div>
