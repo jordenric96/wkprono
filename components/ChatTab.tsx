@@ -1,5 +1,6 @@
 // src/components/ChatTab.tsx
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { supabase } from '../lib/supabase'; 
 
 export default function ChatTab({ 
   chatBerichten = [], actieveSpeler, nieuwBericht, setNieuwBericht, verstuurChat,
@@ -7,15 +8,55 @@ export default function ChatTab({
 }: any) {
   const [modus, setModus] = useState('chat'); // 'chat' of 'stats'
   
-  // Nieuwe, veilige ref specifiek voor het scroll-vak van de chat
+  // Refs voor scrollen en typ-indicator
   const scrollBoxRef = useRef<HTMLDivElement>(null);
+  const [typendeSpeler, setTypendeSpeler] = useState<string | null>(null);
+  const typChannelRef = useRef<any>(null);
+  const typTimerRef = useRef<any>(null);
 
-  // Scroll automatisch naar beneden BINNEN de chat-box (zonder de hele pagina mee te trekken!)
+  // 1. Scroll automatisch naar beneden BINNEN de chat-box
   useEffect(() => {
     if (modus === 'chat' && scrollBoxRef.current) {
       scrollBoxRef.current.scrollTop = scrollBoxRef.current.scrollHeight;
     }
   }, [chatBerichten, modus]);
+
+  // 2. Opzetten van het "is aan het typen..." onzichtbare netwerk
+  useEffect(() => {
+    const channel = supabase.channel('typing_indicator', {
+      config: { broadcast: { self: false } } 
+    });
+
+    channel.on('broadcast', { event: 'typing' }, (payload) => {
+      if (payload.payload?.naam && payload.payload.naam !== actieveSpeler?.naam?.split(' ')[0]) {
+        setTypendeSpeler(payload.payload.naam);
+        
+        if (typTimerRef.current) clearTimeout(typTimerRef.current);
+        typTimerRef.current = setTimeout(() => setTypendeSpeler(null), 2500);
+      }
+    }).subscribe();
+
+    typChannelRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+      if (typTimerRef.current) clearTimeout(typTimerRef.current);
+    };
+  }, [actieveSpeler]);
+
+  // 3. Typ-detectie
+  const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNieuwBericht(e.target.value);
+
+    if (typChannelRef.current && e.target.value.length > 0) {
+      typChannelRef.current.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { naam: actieveSpeler?.naam?.split(' ')[0] }
+      }).catch(() => {}); 
+    }
+  };
+
 
   // --- 🎭 WATERDICHTE BEREKENING VAN DE AWARDS & STATS ---
   const stats = useMemo(() => {
@@ -99,21 +140,26 @@ export default function ChatTab({
       return a.exact - b.exact; 
     })[0];
 
+    // TOP 3 BESTE EN SLECHTSTE MATCHEN BEREKENEN
     const matchScoresArr = Object.entries(matchPunten).map(([id, pt]) => ({ id: Number(id), pt }));
     matchScoresArr.sort((a, b) => b.pt - a.pt);
     
-    const bestMatchId = matchScoresArr[0]?.id;
-    const worstMatchId = matchScoresArr[matchScoresArr.length - 1]?.id;
+    const bestMatches = matchScoresArr.slice(0, 3).map(score => {
+      const m = afgewerkteMatchen.find((x: any) => x.id === score.id);
+      return { naam: m ? `${m.thuisploeg} - ${m.uitploeg}` : '-', pt: score.pt };
+    });
 
-    const bestMatch = afgewerkteMatchen.find((m: any) => m.id === bestMatchId);
-    const worstMatch = afgewerkteMatchen.find((m: any) => m.id === worstMatchId);
+    const worstMatches = [...matchScoresArr].sort((a, b) => a.pt - b.pt).slice(0, 3).map(score => {
+      const m = afgewerkteMatchen.find((x: any) => x.id === score.id);
+      return { naam: m ? `${m.thuisploeg} - ${m.uitploeg}` : '-', pt: score.pt };
+    });
 
     return {
       winStreak, winCold,
       pechvogel: pechvogel ? { naam: pechvogel.naam.split(' ')[0], eenpt: pechvogel.winnaarCorrect, driept: pechvogel.exact } : null,
       winBelgie, winMuis,
-      bestMatch: bestMatch ? { naam: `${bestMatch.thuisploeg} - ${bestMatch.uitploeg}`, pt: matchScoresArr[0].pt } : null,
-      worstMatch: worstMatch ? { naam: `${worstMatch.thuisploeg} - ${worstMatch.uitploeg}`, pt: matchScoresArr[matchScoresArr.length - 1].pt } : null
+      bestMatches,
+      worstMatches
     };
   }, [matchen, alleMatchVoorspellingen, klassement]);
 
@@ -149,7 +195,6 @@ export default function ChatTab({
       {/* --- DE CHAT WEERGAVE --- */}
       {modus === 'chat' && (
         <>
-          {/* HIER ZIT DE OPLOSSING: We geven dit venster de ref, zodat enkel dit stukje scrolt! */}
           <div 
             ref={scrollBoxRef}
             style={{ 
@@ -192,35 +237,47 @@ export default function ChatTab({
             )}
           </div>
 
-          <form onSubmit={verstuurChat} style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-            <input 
-              value={nieuwBericht} 
-              onChange={(e) => setNieuwBericht(e.target.value)}
-              placeholder="Zeg iets in de kleedkamer..."
-              style={{ 
-                flex: 1, padding: '14px', borderRadius: '16px', border: 'none', background: '#1A1423', 
-                color: '#FFF', fontSize: '0.9rem', fontWeight: 800, outline: 'none',
-                boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
-              }}
-            />
-            <button 
-              type="submit" 
-              style={{ 
-                background: '#00E5FF', border: 'none', color: '#111827', width: '50px', 
-                borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', fontSize: '1.2rem', boxShadow: '0 4px 15px rgba(0, 229, 255, 0.4)'
-              }}
-            >
-              🚀
-            </button>
-          </form>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flexShrink: 0 }}>
+            {/* DE TYPING INDICATOR */}
+            <div style={{ height: '14px', marginLeft: '10px', fontSize: '0.7rem', color: '#00E5FF', fontStyle: 'italic', fontWeight: 900, transition: 'opacity 0.3s', opacity: typendeSpeler ? 1 : 0 }}>
+              {typendeSpeler ? `✍️ ${typendeSpeler} is aan het typen...` : ' '}
+            </div>
+            
+            <form onSubmit={verstuurChat} style={{ display: 'flex', gap: '8px' }}>
+              <input 
+                value={nieuwBericht} 
+                onChange={handleTyping}
+                placeholder="Zeg iets in de kleedkamer..."
+                style={{ 
+                  flex: 1, padding: '14px', borderRadius: '16px', border: 'none', background: '#1A1423', 
+                  color: '#FFF', fontSize: '0.9rem', fontWeight: 800, outline: 'none',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
+                }}
+              />
+              <button 
+                type="submit" 
+                style={{ 
+                  background: '#00E5FF', border: 'none', color: '#111827', width: '50px', 
+                  borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', fontSize: '1.2rem', boxShadow: '0 4px 15px rgba(0, 229, 255, 0.4)'
+                }}
+              >
+                🚀
+              </button>
+            </form>
+          </div>
         </>
       )}
 
       {/* --- 🎭 DE AWARDS & STATS WEERGAVE --- */}
       {modus === 'stats' && (
-        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '15px', paddingBottom: '20px' }}>
+        <div className="hide-scrollbar" style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '15px', paddingBottom: '20px' }}>
           
+          <style>{`
+            .hide-scrollbar::-webkit-scrollbar { display: none; }
+            .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+          `}</style>
+
           {!stats ? (
             <div style={{ textAlign: 'center', padding: '40px 20px', background: '#1A1423', borderRadius: '24px', border: '2px dashed #6C757D' }}>
               <div style={{ fontSize: '3rem', marginBottom: '10px' }}>⏳</div>
@@ -278,33 +335,41 @@ export default function ChatTab({
 
               </div>
 
-              {/* MATCH STATS */}
+              {/* MATCH STATS (TOP 3) */}
               <div style={{ background: '#090514', borderRadius: '16px', padding: '15px', border: '2px solid rgba(255,255,255,0.1)' }}>
-                <h3 style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem', color: '#FFF', margin: '0 0 10px 0', textAlign: 'center', letterSpacing: '1px' }}>🤯 Groepsdynamiek</h3>
+                <h3 style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem', color: '#FFF', margin: '0 0 15px 0', textAlign: 'center', letterSpacing: '1px' }}>🤯 Groepsdynamiek</h3>
                 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(204, 255, 0, 0.05)', padding: '10px', borderRadius: '10px', marginBottom: '8px' }}>
-                  <div>
-                    <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#CCFF00', textTransform: 'uppercase' }}>De "Weggever" Match</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#FFF' }}>{stats.bestMatch?.naam || '-'}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem', color: '#CCFF00', lineHeight: 1 }}>{stats.bestMatch?.pt || 0}</div>
-                    <div style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>PUNTEN (GROEP)</div>
+                {/* DE WEGGEVERS */}
+                <div style={{ background: 'rgba(204, 255, 0, 0.05)', padding: '15px', borderRadius: '12px', marginBottom: '15px', border: '1px solid rgba(204, 255, 0, 0.2)' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 900, color: '#CCFF00', textTransform: 'uppercase', marginBottom: '10px' }}>🎁 De "Weggever" Matchen</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {stats.bestMatches.map((m, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: i !== 2 ? '1px dashed rgba(255,255,255,0.1)' : 'none', paddingBottom: i !== 2 ? '6px' : '0' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#FFF' }}>{i + 1}. {m.naam}</span>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ fontFamily: 'Bebas Neue', fontSize: '1.2rem', color: '#CCFF00', lineHeight: 1 }}>{m.pt} PT</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(227, 0, 34, 0.05)', padding: '10px', borderRadius: '10px' }}>
-                  <div>
-                    <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#E30022', textTransform: 'uppercase' }}>De Grootste Shock</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#FFF' }}>{stats.worstMatch?.naam || '-'}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem', color: '#E30022', lineHeight: 1 }}>{stats.worstMatch?.pt || 0}</div>
-                    <div style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>PUNTEN (GROEP)</div>
+                {/* DE SHOCKS */}
+                <div style={{ background: 'rgba(227, 0, 34, 0.05)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(227, 0, 34, 0.2)' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 900, color: '#E30022', textTransform: 'uppercase', marginBottom: '10px' }}>⚡ De Grootste Shocks</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {stats.worstMatches.map((m, i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: i !== 2 ? '1px dashed rgba(255,255,255,0.1)' : 'none', paddingBottom: i !== 2 ? '6px' : '0' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#FFF' }}>{i + 1}. {m.naam}</span>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ fontFamily: 'Bebas Neue', fontSize: '1.2rem', color: '#E30022', lineHeight: 1 }}>{m.pt} PT</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
+
               </div>
-
             </>
           )}
         </div>
