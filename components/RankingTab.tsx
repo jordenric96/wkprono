@@ -88,123 +88,113 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
         </div>
       )}
 
-      {/* HET GROTE "TV BROADCAST" KADER */}
-      <div style={{
-        background: tvBroadcastBorder,
-        padding: '6px', // De dikte van de buitenste gekleurde tv-rand
-        borderRadius: '20px',
-        boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
-        marginTop: '5px'
-      }}>
-        {/* De zwarte opvulling van het grote kader */}
-        <div style={{ background: '#000', borderRadius: '14px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+      {/* KLASSEMENT LIJST */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '4px' }}>
+        {gesorteerd.map((speler: any, index: number) => {
+          const isMij = speler.id === actieveSpeler?.id;
+          const isExpanded = expandedBonusId === speler.id;
+          const theme = cardThemes[index % cardThemes.length];
           
-          {/* KLASSEMENT LIJST */}
-          {gesorteerd.map((speler: any, index: number) => {
-            const isMij = speler.id === actieveSpeler?.id;
-            const isExpanded = expandedBonusId === speler.id;
-            const theme = cardThemes[index % cardThemes.length];
-            
-            // Textkleur: Als het jouw blok is, gebruiken we de felle contrastkleur. Anders wit.
-            const textColor = isMij ? theme.text : '#FFF';
-            const subTextColor = isMij ? theme.sub : '#ADB5BD';
-            
-            let rankIcon = <span style={{ opacity: isMij ? 0.9 : 0.6, color: textColor }}>{index + 1}</span>;
-            if (index === 0) rankIcon = <span>🥇</span>;
-            if (index === 1) rankIcon = <span>🥈</span>;
-            if (index === 2) rankIcon = <span>🥉</span>;
+          // Textkleur: Als het jouw blok is, gebruiken we de felle contrastkleur. Anders wit.
+          const textColor = isMij ? theme.text : '#FFF';
+          const subTextColor = isMij ? theme.sub : '#ADB5BD';
+          
+          let rankIcon = <span style={{ opacity: isMij ? 0.9 : 0.6, color: textColor }}>{index + 1}</span>;
+          if (index === 0) rankIcon = <span>🥇</span>;
+          if (index === 1) rankIcon = <span>🥈</span>;
+          if (index === 2) rankIcon = <span>🥉</span>;
 
-            return (
-              <div 
-                id={`speler-${speler.id}`}
-                key={speler.id} 
-                onClick={() => { if (modus === 'eindstand') setExpandedBonusId(isExpanded ? null : speler.id); }}
-                style={{ 
-                  // ELKE SPELER HEEFT EEN HARDE KADER
-                  background: isMij ? theme.hex : '#000', 
-                  border: isMij ? `4px solid #FFF` : `4px solid ${theme.hex}`, // Dikke witte kader voor jou, gekleurde kader voor de rest
-                  borderRadius: '12px', 
-                  padding: '12px 14px', 
-                  cursor: modus === 'eindstand' ? 'pointer' : 'default',
-                  transition: 'all 0.2s',
-                  transform: isMij ? 'scale(1.02)' : 'scale(1)', // Jouw blokje komt iets naar voren
-                  boxShadow: isMij ? `0 6px 20px ${theme.hex}80` : 'none',
-                  position: 'relative',
-                  zIndex: isMij ? 10 : 1
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ fontSize: '1.4rem', width: '30px', textAlign: 'center', fontWeight: 900 }}>{rankIcon}</div>
-                  
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 900, fontSize: '1.15rem', color: textColor, letterSpacing: '0.5px' }}>
-                      {speler.naam}
-                    </div>
-                    <div style={{ fontSize: '0.7rem', marginTop: '4px', fontWeight: 800, color: subTextColor }}>
-                      🎯 {speler.exact} &nbsp; 🟢 {speler.winnaarCorrect} &nbsp; ❌ {speler.fout}
-                    </div>
+          return (
+            <div 
+              id={`speler-${speler.id}`}
+              key={speler.id} 
+              onClick={() => { if (modus === 'eindstand') setExpandedBonusId(isExpanded ? null : speler.id); }}
+              style={{ 
+                // ELKE SPELER HEEFT DE HARDE WK KADER
+                // Door padding-box en border-box te gebruiken kunnen we een border-radius combineren met een gradient border!
+                background: isMij 
+                  ? `linear-gradient(${theme.hex}, ${theme.hex}) padding-box, ${tvBroadcastBorder} border-box` 
+                  : `linear-gradient(#05020A, #05020A) padding-box, ${tvBroadcastBorder} border-box`, 
+                border: isMij ? '5px solid transparent' : '4px solid transparent', 
+                borderRadius: '16px', 
+                padding: '12px 14px', 
+                cursor: modus === 'eindstand' ? 'pointer' : 'default',
+                transition: 'all 0.2s',
+                transform: isMij ? 'scale(1.02)' : 'scale(1)', 
+                boxShadow: isMij ? `0 6px 20px rgba(0,0,0,0.6)` : '0 4px 15px rgba(0,0,0,0.4)',
+                position: 'relative',
+                zIndex: isMij ? 10 : 1
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ fontSize: '1.4rem', width: '30px', textAlign: 'center', fontWeight: 900 }}>{rankIcon}</div>
+                
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 900, fontSize: '1.15rem', color: textColor, letterSpacing: '0.5px' }}>
+                    {speler.naam}
                   </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    
-                    {/* ADMIN KNOP */}
-                    {isJorden && toggleBetaald && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); toggleBetaald(speler.id, speler.betaald); }}
-                        style={{
-                          background: speler.betaald ? 'rgba(255,255,255,0.1)' : '#E30022',
-                          border: 'none', color: '#FFF',
-                          padding: '4px 8px', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer',
-                          boxShadow: speler.betaald ? 'none' : '0 2px 5px rgba(0,0,0,0.3)'
-                        }}
-                      >
-                        {speler.betaald ? '✅ OK' : '💰 BETALEN'}
-                      </button>
-                    )}
-
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ 
-                        fontFamily: 'Bebas Neue', 
-                        fontSize: '2.5rem', 
-                        lineHeight: 0.9, 
-                        // Zorgt ervoor dat de score opvalt en matcht met de kaart
-                        color: isMij ? textColor : theme.hex
-                      }}>
-                        {modus === 'tussenstand' ? speler.prono_score : speler.totaal_score}
-                      </div>
-                      <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', color: subTextColor, marginTop: '2px' }}>
-                        Punten
-                      </div>
-                    </div>
+                  <div style={{ fontSize: '0.7rem', marginTop: '4px', fontWeight: 800, color: subTextColor }}>
+                    🎯 {speler.exact} &nbsp; 🟢 {speler.winnaarCorrect} &nbsp; ❌ {speler.fout}
                   </div>
                 </div>
 
-                {/* UITKLAPBAAR BONUS BLOK (Alleen in de Eindstand tab) */}
-                {modus === 'eindstand' && isExpanded && (
-                  <div style={{ 
-                    marginTop: '12px', paddingTop: '12px', 
-                    borderTop: `1px solid ${isMij ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'}`, 
-                    fontSize: '0.75rem', fontWeight: 800, color: textColor
-                  }}>
-                    {speler.bonus_breakdown && speler.bonus_breakdown.length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        {speler.bonus_breakdown.map((b: any, i: number) => (
-                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9, background: isMij ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.05)', padding: '6px 10px', borderRadius: '6px' }}>
-                            <span>• {b.label}</span>
-                            <span style={{ fontWeight: 900 }}>+{b.pt} pt</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div style={{ opacity: 0.6, fontStyle: 'italic', textAlign: 'center' }}>Nog geen extra punten gescoord...</div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  
+                  {/* ADMIN KNOP */}
+                  {isJorden && toggleBetaald && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleBetaald(speler.id, speler.betaald); }}
+                      style={{
+                        background: speler.betaald ? 'rgba(255,255,255,0.2)' : '#E30022',
+                        border: 'none', color: '#FFF',
+                        padding: '4px 8px', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer',
+                        boxShadow: speler.betaald ? 'none' : '0 2px 5px rgba(0,0,0,0.3)'
+                      }}
+                    >
+                      {speler.betaald ? '✅ OK' : '💰 BETALEN'}
+                    </button>
+                  )}
 
-        </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ 
+                      fontFamily: 'Bebas Neue', 
+                      fontSize: '2.5rem', 
+                      lineHeight: 0.9, 
+                      color: isMij ? textColor : theme.hex
+                    }}>
+                      {modus === 'tussenstand' ? speler.prono_score : speler.totaal_score}
+                    </div>
+                    <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', color: subTextColor, marginTop: '2px' }}>
+                      Punten
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* UITKLAPBAAR BONUS BLOK (Alleen in de Eindstand tab) */}
+              {modus === 'eindstand' && isExpanded && (
+                <div style={{ 
+                  marginTop: '12px', paddingTop: '12px', 
+                  borderTop: `1px solid ${isMij ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'}`, 
+                  fontSize: '0.75rem', fontWeight: 800, color: textColor
+                }}>
+                  {speler.bonus_breakdown && speler.bonus_breakdown.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {speler.bonus_breakdown.map((b: any, i: number) => (
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9, background: isMij ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.05)', padding: '6px 10px', borderRadius: '6px' }}>
+                          <span>• {b.label}</span>
+                          <span style={{ fontWeight: 900 }}>+{b.pt} pt</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ opacity: 0.6, fontStyle: 'italic', textAlign: 'center' }}>Nog geen extra punten gescoord...</div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
