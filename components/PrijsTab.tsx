@@ -2,29 +2,41 @@
 import React, { useMemo } from 'react';
 
 export default function PrijsTab({ 
-  klassement, 
-  matchen, 
-  alleToernooiV 
-}: { 
-  klassement: any[], 
-  matchen?: any[], 
-  alleToernooiV?: any[] 
-}) {
-  const top5 = klassement.slice(0, 5);
+  klassement = [], 
+  matchen = [], 
+  alleToernooiV = [] 
+}: any) {
 
-  // --- NEVENKLASSEMENTEN TOP 5 BEREKENEN ---
+  // --- HOOFDPRIJZEN (EXACT DEZELFDE SORTERING ALS DE ZUIVERE TUSSENSTAND) ---
+  const top5 = useMemo(() => {
+    if (!klassement || klassement.length === 0) return [];
+    return [...klassement].sort((a: any, b: any) => {
+      if (b.prono_score !== a.prono_score) return b.prono_score - a.prono_score;
+      if (b.exact !== a.exact) return b.exact - a.exact;
+      if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect;
+      return (a.naam || '').localeCompare(b.naam || '');
+    }).slice(0, 5);
+  }, [klassement]);
+
+  // --- NEVENKLASSEMENTEN TOP 5 ---
   const top5Bonus = useMemo(() => {
     if (!klassement || klassement.length === 0) return [];
-    return [...klassement].sort((a, b) => b.bonus_score - a.bonus_score).slice(0, 5);
+    return [...klassement].sort((a: any, b: any) => {
+      if (b.bonus_score !== a.bonus_score) return b.bonus_score - a.bonus_score;
+      return (a.naam || '').localeCompare(b.naam || '');
+    }).slice(0, 5);
   }, [klassement]);
 
   const top5Scherp = useMemo(() => {
     if (!klassement || klassement.length === 0) return [];
-    return [...klassement].sort((a, b) => b.exact - a.exact).slice(0, 5);
+    return [...klassement].sort((a: any, b: any) => {
+      if (b.exact !== a.exact) return b.exact - a.exact;
+      return (a.naam || '').localeCompare(b.naam || '');
+    }).slice(0, 5);
   }, [klassement]);
 
-  // --- DYNAMISCHE PRIJZENPOT BEREKENING (WATERDICHT) ---
-  const aantalDeelnemers = klassement.filter(s => s.betaald === true).length;
+  // --- DYNAMISCHE PRIJZENPOT BEREKENING ---
+  const aantalDeelnemers = klassement.filter((s: any) => s.betaald === true).length;
   const totalePot = aantalDeelnemers * 10;
   
   const prijsBonusKoning = 20;
@@ -38,7 +50,7 @@ export default function PrijsTab({
   const prijs2 = Math.round(algemenePot * 0.25);
   const prijs1 = algemenePot - prijs2 - prijs3 - prijs4 - prijs5;
 
-  // De 5 WK Kleuren gekoppeld aan de 5 winstplekken
+  // De 5 WK Kleuren
   const colors = ['#2B00FF', '#7A00E6', '#CCFF00', '#00E5FF', '#E30022'];
   const prijzen = [prijs1, prijs2, prijs3, prijs4, prijs5];
   const percentages = ['45%', '25%', '15%', '10%', '5%'];
@@ -47,7 +59,7 @@ export default function PrijsTab({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
       
-      {/* 🏆 HOOFDPRIJZEN (ALGEMEEN KLASSEMENT) */}
+      {/* 🏆 HOOFDPRIJZEN */}
       <div style={{ background: '#1A1423', borderRadius: '24px', padding: '25px', boxShadow: '0 10px 40px rgba(0,0,0,0.3)', border: '2px solid rgba(255,255,255,0.1)' }}>
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '3rem', color: '#FFF', margin: 0, lineHeight: 1, letterSpacing: '2px' }}>PRIJZENPOT</h2>
@@ -56,7 +68,6 @@ export default function PrijsTab({
           </div>
         </div>
 
-        {/* STRAKKE DARK-MODE LIJST MET NEON RANDEN */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {[0, 1, 2, 3, 4].map((index) => {
             const speler = top5[index];
@@ -67,13 +78,8 @@ export default function PrijsTab({
 
             return (
               <div key={index} style={{
-                background: '#090514', 
-                borderRadius: '16px',
-                padding: '12px 16px',
-                display: 'flex',
-                alignItems: 'center',
-                border: `2px solid ${color}`,
-                boxShadow: `0 4px 15px ${color}30` // Subtiele neon gloed in de bijbehorende kleur
+                background: '#090514', borderRadius: '16px', padding: '12px 16px', display: 'flex', alignItems: 'center',
+                border: `2px solid ${color}`, boxShadow: `0 4px 15px ${color}30` 
               }}>
                 <div style={{ fontSize: index < 3 ? '1.8rem' : '1.4rem', width: '35px', textAlign: 'center', fontWeight: 900, color: '#FFF', opacity: index < 3 ? 1 : 0.6 }}>
                   {icon}
@@ -97,7 +103,6 @@ export default function PrijsTab({
       <div style={{ background: '#1A1423', borderRadius: '24px', padding: '25px', boxShadow: '0 10px 40px rgba(0,0,0,0.3)', border: '2px solid rgba(255,255,255,0.1)' }}>
         <h3 style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', color: '#FFF', margin: '0 0 5px 0', textAlign: 'center', letterSpacing: '1px' }}>💎 NEVENKLASSEMENTEN</h3>
         
-        {/* DISCLAIMER OVER GELIJKE STAND */}
         <div style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '10px', borderRadius: '12px', border: '1px dashed rgba(255, 255, 255, 0.2)', marginBottom: '20px' }}>
           <p style={{ fontSize: '0.75rem', color: '#ADB5BD', textAlign: 'center', margin: 0, fontWeight: 700 }}>
             *Bij een <strong style={{color: '#FFF'}}>gelijke stand</strong> op de 1e plaats wordt de prijzenpot voor dat nevenklassement eerlijk verdeeld onder de winnaars.
@@ -119,10 +124,9 @@ export default function PrijsTab({
               <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: 'var(--wk-red)', lineHeight: 1 }}>€{totalePot >= 40 ? prijsBonusKoning : 0}</div>
             </div>
 
-            {/* TOP 5 LIJSTJE BONUS */}
             <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px', position: 'relative', zIndex: 1 }}>
               <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#6C757D', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.5px' }}>Huidige Top 5</div>
-              {top5Bonus.map((speler, index) => (
+              {top5Bonus.map((speler: any, index: number) => (
                 <div key={speler.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', borderBottom: index !== 4 ? '1px solid rgba(255,255,255,0.05)' : 'none', padding: '5px 0' }}>
                   <span style={{ color: index === 0 ? '#FFF' : '#ADB5BD', fontWeight: index === 0 ? 900 : 700 }}>
                     {index + 1}. {speler.naam.split(' ')[0]}
@@ -146,10 +150,9 @@ export default function PrijsTab({
               <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: 'var(--wk-lime)', lineHeight: 1 }}>€{totalePot >= 40 ? prijsScherpschutter : 0}</div>
             </div>
 
-            {/* TOP 5 LIJSTJE SCHERPSCHUTTER */}
             <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px', position: 'relative', zIndex: 1 }}>
               <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#6C757D', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.5px' }}>Huidige Top 5</div>
-              {top5Scherp.map((speler, index) => (
+              {top5Scherp.map((speler: any, index: number) => (
                 <div key={speler.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', borderBottom: index !== 4 ? '1px solid rgba(255,255,255,0.05)' : 'none', padding: '5px 0' }}>
                   <span style={{ color: index === 0 ? '#FFF' : '#ADB5BD', fontWeight: index === 0 ? 900 : 700 }}>
                     {index + 1}. {speler.naam.split(' ')[0]}
