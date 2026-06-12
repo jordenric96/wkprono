@@ -1,5 +1,5 @@
 // src/components/RankingTab.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 // Hardcoded Hex-kleuren voor de Neon randen en tekst-accenten
 const cardThemes = [
@@ -13,6 +13,20 @@ const cardThemes = [
 export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaald, isJorden }: any) {
   const [modus, setModus] = useState('tussenstand'); 
   const [expandedBonusId, setExpandedBonusId] = useState<number | null>(null);
+
+  // --- AUTO-SCROLL NAAR JEZELF ---
+  useEffect(() => {
+    if (actieveSpeler?.id) {
+      // Kleine timeout zorgt ervoor dat de lijst eerst netjes kan inladen op het scherm
+      const timer = setTimeout(() => {
+        const element = document.getElementById(`speler-${actieveSpeler.id}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [actieveSpeler?.id]);
 
   // Sorteer de spelers op basis van de gekozen modus (100% Vercel Strict Mode Proof!)
   const gesorteerd = [...klassement].sort((a: any, b: any) => {
@@ -78,7 +92,7 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
         </div>
       )}
 
-      {/* KLASSEMENT LIJST (Donkere kaarten met Neon Randen) */}
+      {/* KLASSEMENT LIJST */}
       {gesorteerd.map((speler: any, index: number) => {
         const isMij = speler.id === actieveSpeler?.id;
         const theme = cardThemes[index % cardThemes.length]; // Roteer door de 5 WK kleuren
@@ -91,28 +105,41 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
 
         return (
           <div 
+            id={`speler-${speler.id}`} // Nodig voor de Auto-Scroll!
             key={speler.id} 
             onClick={() => { if (modus === 'eindstand') setExpandedBonusId(isExpanded ? null : speler.id); }}
             style={{ 
-              background: '#1A1423', 
+              // VOLLE KADER EFFECT VOOR DE ACTIEVE SPELER
+              background: isMij ? 'linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.05) 100%)' : '#1A1423', 
               borderRadius: '14px', 
               padding: '10px 14px', 
               border: isMij ? '3px solid #FFF' : `2px solid ${theme.hex}`, 
-              boxShadow: isMij ? '0 0 15px rgba(255,255,255,0.4)' : `0 4px 10px ${theme.hex}30`, 
+              boxShadow: isMij ? '0 0 25px rgba(255,255,255,0.3), inset 0 0 10px rgba(255,255,255,0.2)' : `0 4px 10px ${theme.hex}30`, 
               cursor: modus === 'eindstand' ? 'pointer' : 'default',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              transform: isMij ? 'scale(1.02)' : 'scale(1)', // Maakt jouw blokje een fractie groter
+              position: 'relative',
+              zIndex: isMij ? 10 : 1
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ fontSize: '1.3rem', width: '30px', textAlign: 'center', fontWeight: 900 }}>{rankIcon}</div>
               
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 900, fontSize: '1.05rem', color: '#FFF', letterSpacing: '0.5px' }}>{speler.naam}</div>
+                <div style={{ fontWeight: 900, fontSize: '1.05rem', color: '#FFF', letterSpacing: '0.5px' }}>
+                  {speler.naam}
+                  {/* EXTRA BADGE OM JOUW NAAM TE ACCENTUEREN */}
+                  {isMij && (
+                    <span style={{ fontSize: '0.65rem', background: '#FFF', color: '#111827', padding: '2px 6px', borderRadius: '6px', marginLeft: '8px', verticalAlign: 'middle', fontWeight: 900 }}>
+                      JIJ
+                    </span>
+                  )}
+                </div>
                 
-                <div style={{ fontSize: '0.7rem', marginTop: '2px', fontWeight: 800, color: '#ADB5BD' }}>
+                <div style={{ fontSize: '0.7rem', marginTop: '2px', fontWeight: 800, color: isMij ? '#E9ECEF' : '#ADB5BD' }}>
                   🎯 {speler.exact} &nbsp; 🟢 {speler.winnaarCorrect} &nbsp; ❌ {speler.fout}
                   {modus === 'eindstand' && (
-                    <div style={{ marginTop: '4px', color: theme.hex }}>
+                    <div style={{ marginTop: '4px', color: isMij ? '#FFF' : theme.hex }}>
                       Bekijk bonusdetails {isExpanded ? '▲' : '▼'}
                     </div>
                   )}
@@ -139,10 +166,10 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
                 )}
 
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', lineHeight: 0.9, color: theme.hex }}>
+                  <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', lineHeight: 0.9, color: isMij ? '#FFF' : theme.hex }}>
                     {modus === 'tussenstand' ? speler.prono_score : speler.totaal_score}
                   </div>
-                  <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', color: '#ADB5BD', marginTop: '2px' }}>Punten</div>
+                  <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', color: isMij ? '#E9ECEF' : '#ADB5BD', marginTop: '2px' }}>Punten</div>
                 </div>
               </div>
             </div>
@@ -159,7 +186,7 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
                     {speler.bonus_breakdown.map((b: any, i: number) => (
                       <div key={i} style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9 }}>
                         <span>• {b.label}</span>
-                        <span style={{ fontWeight: 900, color: theme.hex }}>+{b.pt} pt</span>
+                        <span style={{ fontWeight: 900, color: isMij ? '#FFF' : theme.hex }}>+{b.pt} pt</span>
                       </div>
                     ))}
                   </div>
