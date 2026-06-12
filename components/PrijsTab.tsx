@@ -7,11 +7,12 @@ export default function PrijsTab({
   alleToernooiV = [] 
 }: any) {
 
-  // --- HOOFDPRIJZEN (EXACT DEZELFDE SORTERING ALS DE ZUIVERE TUSSENSTAND) ---
+  // --- HOOFDPRIJZEN (VOLGT DE EINDSTAND: MATCHEN + BONUS) ---
   const top5 = useMemo(() => {
     if (!klassement || klassement.length === 0) return [];
     return [...klassement].sort((a: any, b: any) => {
-      if (b.prono_score !== a.prono_score) return b.prono_score - a.prono_score;
+      // Sorteer op de TOTALE score (matchen + bonus)
+      if (b.totaal_score !== a.totaal_score) return b.totaal_score - a.totaal_score;
       if (b.exact !== a.exact) return b.exact - a.exact;
       if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect;
       return (a.naam || '').localeCompare(b.naam || '');
