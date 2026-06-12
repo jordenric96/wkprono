@@ -151,18 +151,18 @@ export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaa
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                   
-                  {/* ADMIN KNOP */}
-                  {isJorden && toggleBetaald && (
+                  {/* ADMIN KNOP (Enkel nog zichtbaar als er NIET betaald is) */}
+                  {isJorden && toggleBetaald && !speler.betaald && (
                     <button
                       onClick={(e) => { e.stopPropagation(); toggleBetaald(speler.id, speler.betaald); }}
                       style={{
-                        background: speler.betaald ? 'rgba(255,255,255,0.05)' : '#E30022',
-                        border: speler.betaald ? '1px solid rgba(255,255,255,0.1)' : 'none',
-                        color: speler.betaald ? '#6C757D' : '#FFF',
+                        background: '#E30022',
+                        border: 'none',
+                        color: '#FFF',
                         padding: '4px 8px', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer',
                       }}
                     >
-                      {speler.betaald ? '✅ OK' : '💰 BETALEN'}
+                      💰 BETALEN
                     </button>
                   )}
 
