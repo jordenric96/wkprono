@@ -1,7 +1,7 @@
 // src/components/TellersTab.tsx
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 
-// Robuust filter (gekopieerd uit MatchenTab) om dubbele emoji's weg te halen en Engelse namen te vertalen
+// Robuust filter om dubbele emoji's weg te halen en Engelse namen te vertalen
 const parseTeam = (teamString: string) => {
   if (!teamString) return { name: '', emoji: '🏳️' };
   let cleanString = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
@@ -69,19 +69,9 @@ const parseTeam = (teamString: string) => {
   const defaultEmojis: Record<string, string> = {
     'belgië': '🇧🇪', 'nederland': '🇳🇱', 'frankrijk': '🇫🇷', 'duitsland': '🇩🇪', 'spanje': '🇪🇸',
     'brazilië': '🇧🇷', 'argentinië': '🇦🇷', 'portugal': '🇵🇹', 'italië': '🇮🇹', 'engeland': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-    'mexico': '🇲🇽', 'verenigde staten': '🇺🇸', 'canada': '🇨🇦', 'marokko': '🇲🇦',
-    'chili': '🇨🇱', 'kameroen': '🇨🇲', 'colombia': '🇨🇴', 'costa rica': '🇨🇷', 'zwitserland': '🇨🇭',
-    'ivoorkust': '🇨🇮', 'oostenrijk': '🇦🇹', 'australië': '🇦🇺', 'japan': '🇯🇵', 'zuid-korea': '🇰🇷',
-    'kroatië': '🇭🇷', 'uruguay': '🇺🇾', 'senegal': '🇸🇳', 'ghana': '🇬🇭', 'nigeria': '🇳🇬', 
-    'ecuador': '🇪🇨', 'zweden': '🇸🇪', 'denemarken': '🇩🇰', 'schotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'polen': '🇵🇱', 
-    'servië': '🇷🇸', 'iran': '🇮🇷', 'saudi-arabië': '🇸🇦', 'wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'oekraïne': '🇺🇦', 
-    'peru': '🇵🇪', 'panama': '🇵🇦', 'egypte': '🇪🇬', 'tunesië': '🇹🇳', 'nieuw-zeeland': '🇳🇿', 
-    'qatar': '🇶🇦', 'ierland': '🇮🇪', 'turkije': '🇹🇷', 'zuid-afrika': '🇿🇦', 'tsjechië': '🇨🇿', 
-    'roemenië': '🇷🇴', 'hongarije': '🇭🇺', 'noorwegen': '🇳🇴', 'ijsland': '🇮🇸', 'slowakije': '🇸🇰', 
-    'irak': '🇮🇶', 'paraguay': '🇵🇾', 'venezuela': '🇻🇪', 'mali': '🇲🇱', 'algerije': '🇩🇿', 
-    'zambia': '🇿🇲', 'honduras': '🇭🇳', 'el salvador': '🇸🇻', 'bosnië': '🇧🇦',
-    'kaapverdië': '🇨🇻', 'haïti': '🇭🇹', 'curaçao': '🇨🇼', 'jordanië': '🇯🇴', 
-    'congo': '🇨🇩', 'oezbekistan': '🇺🇿'
+    'mexico': '🇲🇽', 'verenigde staten': '🇺🇸', 'canada': '🇨🇦', 'marokko': '🇲🇦', 'kroatië': '🇭🇷',
+    'japan': '🇯🇵', 'senegal': '🇸🇳', 'zwitserland': '🇨🇭', 'uruguay': '🇺🇾', 'colombia': '🇨🇴',
+    'zuid-afrika': '🇿🇦', 'tsjechië': '🇨🇿', 'zuid-korea': '🇰🇷', 'bosnië': '🇧🇦'
   };
 
   let emoji = defaultEmojis[searchFinalKey] || '🏳️';
@@ -89,8 +79,9 @@ const parseTeam = (teamString: string) => {
   return { name: nameNL, emoji };
 };
 
-export default function TellersTab({ matchen = [] }: any) {
-  
+export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
+  const [openSection, setOpenSection] = useState<string | null>(null);
+
   const stats = useMemo(() => {
     let totaleGoals = 0;
     let totaleGeel = 0;
@@ -120,14 +111,16 @@ export default function TellersTab({ matchen = [] }: any) {
       }
     });
 
+    // TOP 3 AANVAL
     const topAanval = Object.entries(teamGoalsVoor)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5); // Veranderd naar Top 5
+      .slice(0, 3); 
 
+    // TOP 3 VERDEDIGING
     const topVerdediging = Object.entries(teamGoalsTegen)
       .filter(([team]) => teamGespeeld[team] > 0)
       .sort((a, b) => a[1] - b[1])
-      .slice(0, 5); // Veranderd naar Top 5
+      .slice(0, 3); 
 
     return { 
       totaleGoals, totaleGeel, totaleRood, topAanval, topVerdediging, 
@@ -135,27 +128,219 @@ export default function TellersTab({ matchen = [] }: any) {
     };
   }, [matchen]);
 
+  // --- RENDERING VAN DE DYNAMISCHE TIJDLIJN ---
+  const renderTimeline = (title: string, emoji: string, themeHex: string, actualValue: number, field: string) => {
+    // 1. Haal de geldige voorspellingen op en sorteer van laag naar hoog
+    const validPreds = alleToernooiV
+      .filter((v: any) => v[field] !== null && v[field] !== undefined)
+      .map((v: any) => ({
+        id: v.speler_id || Math.random(),
+        naam: v.spelers?.naam?.split(' ')[0] || 'Onbekend',
+        value: Number(v[field]),
+        diff: Math.abs(Number(v[field]) - actualValue)
+      }))
+      .sort((a: any, b: any) => a.value - b.value);
+
+    if (validPreds.length === 0) {
+      return <div style={{ textAlign: 'center', color: '#ADB5BD', fontSize: '0.8rem', padding: '20px' }}>Nog geen voorspellingen ingevuld...</div>;
+    }
+
+    // 2. Bepaal waar de "Huidige Stand" (Marker) tussen moet komen
+    let markerInserted = false;
+    const combinedList: any[] = [];
+
+    validPreds.forEach((pred: any) => {
+      // Zodra we een gok bereiken die groter of gelijk is aan de realiteit, 
+      // plaatsen we de "Huidige Stand" marker er net voor.
+      if (!markerInserted && actualValue <= pred.value) {
+        combinedList.push({ type: 'marker', value: actualValue });
+        markerInserted = true;
+      }
+      combinedList.push({ type: 'player', ...pred });
+    });
+
+    // Als iedereen te laag heeft gegokt (Marker zit helemaal op het einde)
+    if (!markerInserted) {
+      combinedList.push({ type: 'marker', value: actualValue });
+    }
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {combinedList.map((item, index) => {
+          const isPassed = item.value < actualValue; // Waarde is al voorbij gestoken door de realiteit
+          const isMarker = item.type === 'marker';
+          const isFirst = index === 0;
+          const isLast = index === combinedList.length - 1;
+
+          return (
+            <div key={index} style={{ display: 'flex', alignItems: 'stretch' }}>
+              
+              {/* KOLOM 1: DE VERTICALE LIJN & PUNTEN */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '40px', flexShrink: 0 }}>
+                {/* Lijn Boven */}
+                <div style={{ 
+                    width: '4px', flex: 1, 
+                    background: (isPassed || isMarker) ? themeHex : `${themeHex}25`,
+                    opacity: isFirst ? 0 : 1 // Geen lijn boven het eerste element
+                }} />
+                
+                {/* De Knoop of Emoji */}
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '30px', margin: '4px 0' }}>
+                  {isMarker ? (
+                     <div style={{ fontSize: '1.8rem', zIndex: 2, filter: `drop-shadow(0 0 10px ${themeHex})` }}>{emoji}</div>
+                  ) : (
+                     <div style={{ 
+                         width: '12px', height: '12px', borderRadius: '50%', 
+                         background: isPassed ? themeHex : '#1A1423', 
+                         border: `3px solid ${isPassed ? themeHex : `${themeHex}50`}`,
+                         zIndex: 2,
+                         boxShadow: isPassed ? `0 0 10px ${themeHex}` : 'none'
+                     }} />
+                  )}
+                </div>
+                
+                {/* Lijn Onder */}
+                <div style={{ 
+                    width: '4px', flex: 1, 
+                    background: (!isMarker && isPassed) ? themeHex : `${themeHex}25`,
+                    opacity: isLast ? 0 : 1 // Geen lijn onder het laatste element
+                }} />
+              </div>
+
+              {/* KOLOM 2: DE CONTENT KAARTJES */}
+              <div style={{ flex: 1, padding: '4px 0', display: 'flex', alignItems: 'center' }}>
+                {isMarker ? (
+                   <div style={{ 
+                       background: `linear-gradient(90deg, ${themeHex} 0%, transparent 100%)`, 
+                       color: '#000', padding: '6px 12px', borderRadius: '8px', 
+                       fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px',
+                       display: 'inline-block', borderLeft: `4px solid #FFF`, fontSize: '0.8rem',
+                       boxShadow: `0 4px 15px ${themeHex}40`
+                   }}>
+                     HUIDIGE STAND: {actualValue}
+                   </div>
+                ) : (
+                   <div style={{ 
+                       width: '100%',
+                       background: isPassed ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.05)', 
+                       borderRadius: '12px', padding: '10px 15px', display: 'flex', 
+                       justifyContent: 'space-between', alignItems: 'center', 
+                       border: `1px solid ${isPassed ? 'transparent' : `${themeHex}30`}`, 
+                       opacity: isPassed ? 0.4 : 1, // Maakt spelers die gepasseerd zijn dof
+                       transition: 'all 0.3s'
+                   }}>
+                      <div>
+                         <div style={{ fontWeight: 900, color: isPassed ? '#ADB5BD' : '#FFF', fontSize: '1rem', textDecoration: isPassed ? 'line-through' : 'none' }}>
+                           {item.naam}
+                         </div>
+                         <div style={{ fontSize: '0.7rem', color: isPassed ? '#6C757D' : themeHex, fontWeight: 800 }}>
+                            {item.diff === 0 ? 'Spot on! 🔥' : `Verschil: ${item.diff} ${title.split(' ')[1]}`}
+                         </div>
+                      </div>
+                      <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: isPassed ? '#6C757D' : themeHex }}>
+                         {item.value}
+                      </div>
+                   </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    );
+  };
+
+  // Hulpfunctie om de Headers de juiste stijl te geven (afhankelijk van of ze openstaan of niet)
+  const getHeaderStyle = (section: string, themeHex: string) => {
+    const isOpen = openSection === section;
+    return {
+      background: isOpen ? themeHex : '#1A1423',
+      color: isOpen ? '#000' : '#FFF',
+      borderRadius: isOpen ? '16px 16px 0 0' : '16px',
+      padding: '15px 20px',
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      border: `2px solid ${isOpen ? themeHex : `${themeHex}40`}`,
+      cursor: 'pointer',
+      boxShadow: isOpen ? `0 4px 15px ${themeHex}30` : 'none',
+      transition: 'all 0.2s',
+      position: 'relative' as any,
+      zIndex: 2
+    };
+  };
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+      {/* DE 3 INTERACTIEVE UITKLAP-TELLERS */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         
-        <div style={{ background: '#1A1423', borderRadius: '16px', padding: '15px 10px', textAlign: 'center', border: '2px solid #CCFF00', boxShadow: '0 4px 15px rgba(204, 255, 0, 0.2)' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '5px' }}>⚽</div>
-          <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: '#CCFF00', lineHeight: 1 }}>{stats.totaleGoals}</div>
-          <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginTop: '4px' }}>Goals</div>
+        {/* TOTALE GOALS */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div onClick={() => setOpenSection(openSection === 'goals' ? null : 'goals')} style={getHeaderStyle('goals', '#CCFF00')}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <div style={{ fontSize: '2rem' }}>⚽</div>
+              <div>
+                <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', lineHeight: 1, color: openSection === 'goals' ? '#000' : '#CCFF00' }}>
+                  {stats.totaleGoals}
+                </div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', opacity: openSection === 'goals' ? 0.8 : 0.6 }}>
+                  Totale Goals
+                </div>
+              </div>
+            </div>
+            <div style={{ fontWeight: 900, fontSize: '1.2rem' }}>{openSection === 'goals' ? '▲' : '▼'}</div>
+          </div>
+          {openSection === 'goals' && (
+            <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '0 0 16px 16px', marginTop: '-10px', paddingTop: '20px', paddingBottom: '10px', paddingLeft: '10px', paddingRight: '15px', border: '1px solid rgba(204, 255, 0, 0.2)', borderTop: 'none' }}>
+              {renderTimeline('Totale Goals', '⚽', '#CCFF00', stats.totaleGoals, 'totaal_goals')}
+            </div>
+          )}
         </div>
 
-        <div style={{ background: '#1A1423', borderRadius: '16px', padding: '15px 10px', textAlign: 'center', border: '2px solid #00E5FF', boxShadow: '0 4px 15px rgba(0, 229, 255, 0.2)' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '5px' }}>🟨</div>
-          <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: '#00E5FF', lineHeight: 1 }}>{stats.totaleGeel}</div>
-          <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginTop: '4px' }}>Gele Kaarten</div>
+        {/* GELE KAARTEN */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div onClick={() => setOpenSection(openSection === 'geel' ? null : 'geel')} style={getHeaderStyle('geel', '#00E5FF')}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <div style={{ fontSize: '2rem' }}>🟨</div>
+              <div>
+                <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', lineHeight: 1, color: openSection === 'geel' ? '#000' : '#00E5FF' }}>
+                  {stats.totaleGeel}
+                </div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', opacity: openSection === 'geel' ? 0.8 : 0.6 }}>
+                  Gele Kaarten
+                </div>
+              </div>
+            </div>
+            <div style={{ fontWeight: 900, fontSize: '1.2rem' }}>{openSection === 'geel' ? '▲' : '▼'}</div>
+          </div>
+          {openSection === 'geel' && (
+            <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '0 0 16px 16px', marginTop: '-10px', paddingTop: '20px', paddingBottom: '10px', paddingLeft: '10px', paddingRight: '15px', border: '1px solid rgba(0, 229, 255, 0.2)', borderTop: 'none' }}>
+              {renderTimeline('Gele Kaarten', '🟨', '#00E5FF', stats.totaleGeel, 'totaal_gele_kaarten')}
+            </div>
+          )}
         </div>
 
-        <div style={{ background: '#1A1423', borderRadius: '16px', padding: '15px 10px', textAlign: 'center', border: '2px solid #E30022', boxShadow: '0 4px 15px rgba(227, 0, 34, 0.2)' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '5px' }}>🟥</div>
-          <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: '#E30022', lineHeight: 1 }}>{stats.totaleRood}</div>
-          <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginTop: '4px' }}>Rode Kaarten</div>
+        {/* RODE KAARTEN */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <div onClick={() => setOpenSection(openSection === 'rood' ? null : 'rood')} style={getHeaderStyle('rood', '#E30022')}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <div style={{ fontSize: '2rem' }}>🟥</div>
+              <div>
+                <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', lineHeight: 1, color: openSection === 'rood' ? '#000' : '#E30022' }}>
+                  {stats.totaleRood}
+                </div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', opacity: openSection === 'rood' ? 0.8 : 0.6 }}>
+                  Rode Kaarten
+                </div>
+              </div>
+            </div>
+            <div style={{ fontWeight: 900, fontSize: '1.2rem' }}>{openSection === 'rood' ? '▲' : '▼'}</div>
+          </div>
+          {openSection === 'rood' && (
+            <div style={{ background: 'rgba(0,0,0,0.2)', borderRadius: '0 0 16px 16px', marginTop: '-10px', paddingTop: '20px', paddingBottom: '10px', paddingLeft: '10px', paddingRight: '15px', border: '1px solid rgba(227, 0, 34, 0.2)', borderTop: 'none' }}>
+              {renderTimeline('Rode Kaarten', '🟥', '#E30022', stats.totaleRood, 'totaal_rode_kaarten')}
+            </div>
+          )}
         </div>
       </div>
 
@@ -165,6 +350,7 @@ export default function TellersTab({ matchen = [] }: any) {
         </div>
       )}
 
+      {/* TOP 3 LIJSTEN */}
       {stats.matchenGespeeld && (
         <div style={{ background: '#1A1423', borderRadius: '16px', padding: '20px', border: '2px solid #2B00FF', boxShadow: '0 4px 15px rgba(43, 0, 255, 0.2)' }}>
           <h3 style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: '#2B00FF', margin: '0 0 15px 0', textAlign: 'center', letterSpacing: '1px' }}>
@@ -203,15 +389,4 @@ export default function TellersTab({ matchen = [] }: any) {
                   <span style={{ flex: 1, fontWeight: 900, color: '#FFF', fontSize: '1.1rem' }}>{team.name}</span>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                     <span style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: '#7A00E6', lineHeight: 1 }}>{goalsTegen}</span>
-                    <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>Tegen</span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-    </div>
-  );
-}
+                    <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>
