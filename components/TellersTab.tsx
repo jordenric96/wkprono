@@ -79,13 +79,13 @@ const parseTeam = (teamString: string) => {
   return { name: nameNL, emoji };
 };
 
-// Verwijdert accenten en maakt lowercase voor foutloze vergelijking (België = belgie)
+// DE FIX: Strip emoji's via parseTeam en haal dan pas accenten weg
 const normalizeString = (str: string) => {
   if (!str) return '';
-  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const cleanName = parseTeam(str).name;
+  return cleanName.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 };
 
-// Slimme functie om gemiddelden logisch weer te geven
 const formatGemiddelde = (waarde: number, aantalMatchen: number) => {
   if (waarde === 0 || aantalMatchen === 0) return '0.0 /m';
   const gem = waarde / aantalMatchen;
@@ -98,7 +98,6 @@ const formatGemiddelde = (waarde: number, aantalMatchen: number) => {
   return `${gem.toFixed(1)} /m`;
 };
 
-// Slimme functie om Kristof M. en Kristof V. te onderscheiden
 const formateerNaam = (volledigeNaam: string) => {
   if (!volledigeNaam) return 'Onbekend';
   const delen = volledigeNaam.trim().split(' ');
@@ -146,12 +145,10 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
 
     const totaleMatchenToernooi = matchen.length > 0 ? matchen.length : 104;
 
-    // TOP 5 AANVAL
     const topAanval = Object.entries(teamGoalsVoor)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5); 
 
-    // TOP 5 VERDEDIGING
     const topVerdediging = Object.entries(teamGoalsTegen)
       .filter(([team]) => teamGespeeld[team] > 0)
       .sort((a, b) => a[1] - b[1])
@@ -169,7 +166,6 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
   const actueelGemiddeldeGeel = formatGemiddelde(stats.totaleGeel, stats.gespeeldeMatchenCount);
   const actueelGemiddeldeRood = formatGemiddelde(stats.totaleRood, stats.gespeeldeMatchenCount);
 
-  // --- RENDERING VAN DE DYNAMISCHE TIJDLIJN MET GEMIDDELDEN ---
   const renderTimeline = (title: string, emoji: string, themeHex: string, actualValue: number, field: string) => {
     const validPreds = alleToernooiV
       .filter((v: any) => v[field] !== null && v[field] !== undefined)
@@ -312,7 +308,6 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-      {/* DE 3 INTERACTIEVE UITKLAP-TELLERS */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         
         {/* TOTALE GOALS */}
@@ -412,7 +407,6 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
         </div>
       )}
 
-      {/* TOP 5 LIJSTEN */}
       {stats.matchenGespeeld && (
         <div style={{ background: '#1A1423', borderRadius: '16px', padding: '20px', border: '2px solid #2B00FF', boxShadow: '0 4px 15px rgba(43, 0, 255, 0.2)' }}>
           <h3 style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: '#2B00FF', margin: '0 0 15px 0', textAlign: 'center', letterSpacing: '1px' }}>
