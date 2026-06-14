@@ -29,8 +29,13 @@ export default function Home() {
   
   const [toast, setToast] = useState<{naam: string, bericht: string} | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
+  
+  // POP-UP STATES
   const [showInstallPopup, setShowInstallPopup] = useState(true);
   const [ontbrekendeBonus, setOntbrekendeBonus] = useState<string[]>([]); 
+  
+  const [showUrgentPopup, setShowUrgentPopup] = useState(true);
+  const [urgenteMatchen, setUrgenteMatchen] = useState<{matchNaam: string, datum: string, ontbrekend: string[]}[]>([]);
 
   const actieveTabRef = useRef(actieveTab);
   const actieveSpelerRef = useRef(actieveSpeler);
@@ -64,7 +69,6 @@ export default function Home() {
   const [klassement, setKlassement] = useState<any[]>([]);
   const [chatBerichten, setChatBerichten] = useState<any[]>([]);
   const [nieuwBericht, setNieuwBericht] = useState('');
-  const chatEindeRef = useRef<HTMLDivElement>(null);
 
   const [nu, setNu] = useState(new Date().getTime());
   const [tijdOver, setTijdOver] = useState({ dagen: 0, uren: 0, minuten: 0, seconden: 0 });
@@ -86,6 +90,7 @@ export default function Home() {
     const opgeslagenId = localStorage.getItem('wk_speler_id');
     haalSpelersOp(opgeslagenId);
     haalDataVoorPopupOp(); 
+    haalUrgentieDataOp(); // Haalt de data op voor matchen die binnen de 36 uur starten
     
     const updateKlok = () => {
       const nuTijd = new Date().getTime();
@@ -110,6 +115,7 @@ export default function Home() {
     return () => { clearInterval(klokInterval); };
   }, []);
 
+  // Berekent wie zijn bonus nog moet invullen
   const haalDataVoorPopupOp = async () => {
     const { data: spelers } = await supabase.from('spelers').select('id, naam, betaald');
     const { data: bonus } = await supabase.from('toernooi_voorspellingen').select('speler_id, winnaar');
@@ -124,6 +130,44 @@ export default function Home() {
         .map(s => s.naam.split(' ')[0]); 
       setOntbrekendeBonus(ontbrekend);
     }
+  };
+
+  // --- NIEUW: Berekent welke matchen binnen de 36 uur starten én wie nog niet heeft ingevuld ---
+  const haalUrgentieDataOp = async () => {
+    const nuTijd = new Date().getTime();
+    const tijd36u = nuTijd + (36 * 60 * 60 * 1000); // Huidige tijd + 36 uur
+
+    const { data: mData } = await supabase.from('matchen').select('*').order('datum', { ascending: true });
+    const { data: sData } = await supabase.from('spelers').select('id, naam, betaald').eq('betaald', true);
+    const { data: vData } = await supabase.from('match_voorspellingen').select('match_id, speler_id, thuis_score, uit_score');
+
+    if (!mData || !sData || !vData) return;
+
+    const urgentList: any[] = [];
+
+    mData.forEach(match => {
+      const matchTijd = new Date(match.datum).getTime();
+      
+      // Controleer of de wedstrijd in de toekomst ligt, én binnen de komende 36 uur
+      if (matchTijd > nuTijd && matchTijd <= tijd36u) {
+        
+        // Zoek alle betaalde spelers die nog GEEN of een LEGE score hebben voor deze match
+        const ontbrekend = sData.filter(speler => {
+          const prono = vData.find(v => v.match_id === match.id && v.speler_id === speler.id);
+          return !prono || prono.thuis_score === null || prono.uit_score === null || prono.thuis_score === '' || prono.uit_score === '';
+        }).map(s => s.naam.split(' ')[0]);
+
+        if (ontbrekend.length > 0) {
+          urgentList.push({
+            matchNaam: `${match.thuisploeg} - ${match.uitploeg}`,
+            datum: match.datum,
+            ontbrekend
+          });
+        }
+      }
+    });
+
+    setUrgenteMatchen(urgentList);
   };
 
   useEffect(() => {
@@ -149,33 +193,17 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [actieveSpeler?.id]); 
 
-  // --- HIER ZAT DE FOUT! ---
-  // De app haalde de matchen enkel op als je op de Matchen-tab zat. 
-  // Nu forceert hij het inladen van de data op élk tabblad dat dit nodig heeft!
   useEffect(() => {
     if (actieveSpeler && (actieveSpeler.betaald || isJorden)) {
-      
-      if (actieveTab === 'matchen' || actieveTab === 'tellers') {
-        haalMatchenOp();
-      }
-      
-      if (actieveTab === 'bonus') {
-        haalToernooiVoorspellingOp();
-      }
-      
-      if (actieveTab === 'ranking' || actieveTab === 'prijs') {
-        haalKlassementOp();
-      }
-      
+      if (actieveTab === 'matchen' || actieveTab === 'tellers') haalMatchenOp();
+      if (actieveTab === 'bonus') haalToernooiVoorspellingOp();
+      if (actieveTab === 'ranking' || actieveTab === 'prijs') haalKlassementOp();
       if (actieveTab === 'kleedkamer') {
         haalChatOp();
-        haalMatchenOp(); // Nodig voor het genereren van de stats in de chat!
-        haalKlassementOp(); // Nodig voor het genereren van de stats in de chat!
+        haalMatchenOp(); 
+        haalKlassementOp(); 
       }
-      
-      if (actieveTab === 'antwoorden') {
-        haalAlleAntwoordenOp();
-      }
+      if (actieveTab === 'antwoorden') haalAlleAntwoordenOp();
     }
   }, [actieveSpeler, actieveTab, isJorden]);
 
@@ -200,22 +228,16 @@ export default function Home() {
 
     const chatKanaal = supabase.channel('popup_notifications')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'kleedkamer' }, (payload) => {
-        
         haalChatOp(); 
-        
         if (actieveTabRef.current !== 'kleedkamer' && payload.new.speler_id !== actieveSpeler.id) {
           setOngelezenBerichten(true);
-          
           const afzender = alleSpelersRef.current.find(s => s.id === payload.new.speler_id);
           const afzenderNaam = afzender ? afzender.naam.split(' ')[0] : 'Bericht';
-          
           setToast({ naam: afzenderNaam, bericht: payload.new.bericht });
-          
           try {
             const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
             audio.play().catch(() => {}); 
           } catch(e) {} 
-          
           setTimeout(() => setToast(null), 5000); 
         }
       }).subscribe();
@@ -486,12 +508,6 @@ export default function Home() {
           --wk-lime: #CCFF00;    
           --wk-aqua: #00E5FF;    
           --wk-purple: #7A00E6;  
-          
-          --crayola: var(--wk-blue); 
-          --magenta: var(--wk-purple); 
-          --rose: var(--wk-orange); 
-          --lime: var(--wk-lime); 
-          --aqua: var(--wk-aqua); 
         }
         
         *, *::before, *::after { box-sizing: border-box; }
@@ -540,12 +556,63 @@ export default function Home() {
         .btn-primary:active { transform: scale(0.98); }
       `}</style>
 
-      {/* 🚨 INSTALLATIE POP-UP & BONUS WAARSCHUWING 🚨 */}
-      {toonInstallPopup && (
+      {/* 🚨 NIEUW: URGENTE MATCHEN POP-UP (36h waarschuwing) 🚨 */}
+      {showUrgentPopup && urgenteMatchen.length > 0 && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
           background: 'rgba(9, 5, 20, 0.85)', backdropFilter: 'blur(10px)',
           zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+        }}>
+          <div style={{
+            background: '#1A1423', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '380px',
+            position: 'relative', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid var(--wk-orange)',
+            maxHeight: '90vh', overflowY: 'auto'
+          }}>
+            <button 
+              onClick={() => setShowUrgentPopup(false)}
+              style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.1)', border: 'none', width: '30px', height: '30px', borderRadius: '50%', fontWeight: 900, color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >✕</button>
+            
+            <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+              <div style={{ fontSize: '3rem', lineHeight: 1, marginBottom: '10px' }}>⏰</div>
+              <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: 'var(--wk-orange)', margin: '0 0 5px 0', lineHeight: 1, letterSpacing: '1px' }}>VERGEET JE PRONO NIET!</h2>
+              <p style={{ fontSize: '0.85rem', color: '#ADB5BD', fontWeight: 800, margin: '0 0 20px 0' }}>Deze matchen starten binnen de 36 uur en missen nog voorspellingen:</p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', textAlign: 'left' }}>
+                {urgenteMatchen.map((u, i) => {
+                  const matchDate = new Date(u.datum);
+                  const isVandaag = new Date().toDateString() === matchDate.toDateString();
+                  const dagStr = isVandaag ? 'Vandaag' : matchDate.toLocaleDateString('nl-BE', { weekday: 'short' });
+                  const tijdStr = matchDate.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
+
+                  return (
+                    <div key={i} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px', borderLeft: '4px solid var(--wk-orange)' }}>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#FFF', marginBottom: '4px' }}>{u.matchNaam}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--wk-orange)', fontWeight: 900, textTransform: 'uppercase', marginBottom: '8px' }}>
+                        ⏳ {dagStr} om {tijdStr}
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {u.ontbrekend.map((naam, j) => (
+                          <span key={j} style={{ background: 'rgba(255, 107, 0, 0.15)', color: '#FFF', border: '1px solid var(--wk-orange)', padding: '2px 8px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 800 }}>
+                            {naam}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🚨 INSTALLATIE POP-UP & BONUS WAARSCHUWING 🚨 */}
+      {!showUrgentPopup && toonInstallPopup && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(9, 5, 20, 0.85)', backdropFilter: 'blur(10px)',
+          zIndex: 99998, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
         }}>
           <div style={{
             background: '#1A1423', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '380px',
