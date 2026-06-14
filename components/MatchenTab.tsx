@@ -212,7 +212,7 @@ export default function MatchenTab({
       }, 300); 
       return () => clearTimeout(timer);
     }
-  }, [filterRonde, gefilterdeMatchen?.length]); 
+  }, [filterRonde, gefilterdeMatchen?.length, nu]); 
 
   const genereerGroepsStand = (rawNaam: string) => {
     const groepsMatchenVanDitTeam = gefilterdeMatchen.filter((m: any) => 
@@ -275,6 +275,13 @@ export default function MatchenTab({
         .stand-table td { padding: 6px 2px; text-align: center; font-weight: 900; color: #495057; border-bottom: 1px solid #F1F3F5; }
         .stand-table td:first-child { text-align: left; color: #111827; }
         .stand-table tr.highlight td { background: rgba(55, 114, 255, 0.08); font-weight: 900; color: #2B00FF; }
+
+        @keyframes pulse-red {
+          0% { text-shadow: 0 0 5px #E30022; }
+          50% { text-shadow: 0 0 15px #E30022, 0 0 25px #E30022; }
+          100% { text-shadow: 0 0 5px #E30022; }
+        }
+        .live-pulse { animation: pulse-red 2s infinite; }
       `}</style>
 
       {/* FILTER KNOPPEN */}
@@ -304,7 +311,13 @@ export default function MatchenTab({
         <div style={{ textAlign: 'center', padding: '30px', color: '#ADB5BD', fontWeight: 900 }}>Geen matchen gevonden in deze ronde.</div>
       ) : (
         gefilterdeMatchen.map((match: any, index: number) => {
-          const isMatchGesloten = nu >= new Date(match.datum).getTime();
+          
+          // LIVE BEREKENING
+          const matchTijd = new Date(match.datum).getTime();
+          const isMatchGesloten = nu >= matchTijd;
+          // Match is "Live" zolang we tussen de starttijd en starttijd + 117 minuten zitten
+          const isMatchLive = isMatchGesloten && nu < (matchTijd + (117 * 60 * 1000));
+          
           const voorspelling = matchVoorspellingen[match.id] || { thuis: '', uit: '' };
           const saveStatus = matchSaveStatus[match.id] || 'idle';
           
@@ -326,7 +339,9 @@ export default function MatchenTab({
           return (
             <div id={`match-${match.id}`} key={match.id} style={{ 
               background: theme.bg, color: theme.color, borderRadius: '20px', 
-              boxShadow: '0 8px 20px rgba(0,0,0,0.3)', position: 'relative', overflow: 'hidden', marginBottom: '10px'
+              boxShadow: isMatchLive ? '0 0 25px rgba(227, 0, 34, 0.6)' : '0 8px 20px rgba(0,0,0,0.3)', 
+              position: 'relative', overflow: 'hidden', marginBottom: '10px',
+              border: isMatchLive ? '2px solid #E30022' : 'none'
             }}>
               
               {/* MATCH HEADER */}
@@ -335,7 +350,8 @@ export default function MatchenTab({
                 <span>
                   {saveStatus === 'saving' && '⏳'}
                   {saveStatus === 'saved' && '✅'}
-                  {isMatchGesloten && '🔒'}
+                  {isMatchGesloten && !isMatchLive && '🔒'}
+                  {isMatchLive && <span className="live-pulse" style={{ color: '#E30022', fontSize: '0.8rem' }}>🔴 LIVE</span>}
                 </span>
               </div>
 
@@ -381,11 +397,11 @@ export default function MatchenTab({
                 </div>
               </div>
 
-              {/* EVENTUELE EINDSTAND & KAARTEN */}
+              {/* EVENTUELE TUSSENSTAND / EINDSTAND & KAARTEN */}
               {isMatchGesloten && match.thuis_score !== null && (
                 <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ textAlign: 'center', fontSize: '0.85rem', fontWeight: 900, color: theme.color, textTransform: 'uppercase', letterSpacing: '1px' }}>
-                    EINDSTAND: {match.thuis_score} - {match.uit_score}
+                  <div style={{ textAlign: 'center', fontSize: '0.85rem', fontWeight: 900, color: isMatchLive ? '#E30022' : theme.color, textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    {isMatchLive ? '🔴 TUSSENSTAND:' : 'EINDSTAND:'} {match.thuis_score} - {match.uit_score}
                   </div>
                   
                   {/* KAARTEN WEERGAVE */}
@@ -559,24 +575,28 @@ export default function MatchenTab({
               {gefilterdeMatchen
                 .filter((m: any) => m.thuisploeg === geselecteerdTeamRaw || m.uitploeg === geselecteerdTeamRaw)
                 .map((m: any) => {
-                  const isGespeeld = m.thuis_score !== null;
+                  const dossierMatchTijd = new Date(m.datum).getTime();
+                  const isDossierGespeeld = m.thuis_score !== null;
+                  const isDossierLive = nu >= dossierMatchTijd && nu < (dossierMatchTijd + (117 * 60 * 1000));
+                  
                   const isThuis = m.thuisploeg === geselecteerdTeamRaw;
                   const tegenstanderRaw = isThuis ? m.uitploeg : m.thuisploeg;
                   const tegenstanderInfo = parseTeam(tegenstanderRaw);
                   
                   let uitslagKleur = '#FFF';
                   let statusIcoon = '⏳';
-                  if (isGespeeld) {
+                  if (isDossierGespeeld) {
                     if ((isThuis && Number(m.thuis_score) > Number(m.uit_score)) || (!isThuis && Number(m.uit_score) > Number(m.thuis_score))) { uitslagKleur = '#CCFF00'; statusIcoon = '🟢'; } 
                     else if (Number(m.thuis_score) === Number(m.uit_score)) { uitslagKleur = '#00E5FF'; statusIcoon = '➖'; } 
                     else { uitslagKleur = '#E30022'; statusIcoon = '🔴'; } 
                   }
 
                   return (
-                    <div key={m.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 12px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <div key={m.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 12px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: isDossierLive ? '1px solid #E30022' : '1px solid rgba(255,255,255,0.1)' }}>
                       <div>
                         <div style={{ fontSize: '0.6rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '2px' }}>
                           {new Date(m.datum).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' })} • {m.ronde}
+                          {isDossierLive && <span style={{color: '#E30022', marginLeft: '5px'}}>🔴 LIVE</span>}
                         </div>
                         <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '5px' }}>
                           <span style={{ fontSize: '0.65rem', color: '#6C757D' }}>vs</span> {tegenstanderInfo.name} <span style={{fontSize: '1rem'}}>{tegenstanderInfo.emoji}</span>
@@ -584,7 +604,7 @@ export default function MatchenTab({
                       </div>
 
                       <div style={{ textAlign: 'right' }}>
-                        {isGespeeld ? (
+                        {isDossierGespeeld ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                             <span style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem', color: uitslagKleur }}>
                               {isThuis ? `${m.thuis_score} - ${m.uit_score}` : `${m.uit_score} - ${m.thuis_score}`}
