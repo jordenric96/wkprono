@@ -79,6 +79,21 @@ const parseTeam = (teamString: string) => {
   return { name: nameNL, emoji };
 };
 
+// Slimme functie om gemiddelden logisch weer te geven
+const formatGemiddelde = (waarde: number, aantalMatchen: number) => {
+  if (waarde === 0 || aantalMatchen === 0) return '0.0 /m';
+  const gem = waarde / aantalMatchen;
+  
+  // Als het gemiddelde erg laag is (minder dan 0.4 per match), spreken we in termen van "1 per X matchen"
+  if (gem < 0.4) {
+    const perMatch = Math.round(aantalMatchen / waarde);
+    return `1 per ${perMatch}m`;
+  }
+  
+  // Anders gewoon het standaard gemiddelde met 1 decimaal (bijv. 2.5 /m)
+  return `${gem.toFixed(1)} /m`;
+};
+
 export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
   const [openSection, setOpenSection] = useState<string | null>(null);
 
@@ -135,6 +150,11 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
     };
   }, [matchen]);
 
+  // Bereken de gemiddelden voor in de headers met de slimme formatGemiddelde functie
+  const actueelGemiddeldeGoals = formatGemiddelde(stats.totaleGoals, stats.gespeeldeMatchenCount);
+  const actueelGemiddeldeGeel = formatGemiddelde(stats.totaleGeel, stats.gespeeldeMatchenCount);
+  const actueelGemiddeldeRood = formatGemiddelde(stats.totaleRood, stats.gespeeldeMatchenCount);
+
   // --- RENDERING VAN DE DYNAMISCHE TIJDLIJN MET GEMIDDELDEN ---
   const renderTimeline = (title: string, emoji: string, themeHex: string, actualValue: number, field: string) => {
     // 1. Haal de geldige voorspellingen op en sorteer van laag naar hoog
@@ -154,8 +174,8 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
 
     // Bereken het actuele gemiddelde van het toernooi (tot nu toe)
     const actueelGemiddelde = stats.gespeeldeMatchenCount > 0 
-        ? (actualValue / stats.gespeeldeMatchenCount).toFixed(1) 
-        : '0.0';
+        ? formatGemiddelde(actualValue, stats.gespeeldeMatchenCount)
+        : '0.0 /m';
 
     // 2. Bepaal waar de "Huidige Stand" (Marker) tussen moet komen
     let markerInserted = false;
@@ -190,7 +210,7 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
           const bottomLineColor = isPassed ? darkColor : brightColor;
 
           // Bereken het "Gok Gemiddelde" per match van de speler
-          const spelerGemiddelde = (item.value / stats.totaleMatchenToernooi).toFixed(1);
+          const spelerGemiddelde = formatGemiddelde(item.value, stats.totaleMatchenToernooi);
 
           return (
             <div key={index} style={{ display: 'flex', alignItems: 'stretch' }}>
@@ -230,7 +250,7 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
                      </span>
                      {stats.gespeeldeMatchenCount > 0 && (
                        <span style={{ fontSize: '0.65rem', fontWeight: 800, opacity: 0.8, marginTop: '2px' }}>
-                         ≈ {actueelGemiddelde} per match
+                         ≈ {actueelGemiddelde}
                        </span>
                      )}
                    </div>
@@ -251,7 +271,7 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
                          <div style={{ fontSize: '0.7rem', color: isPassed ? '#6C757D' : themeHex, fontWeight: 800, marginTop: '2px', display: 'flex', gap: '8px' }}>
                             <span>{item.diff === 0 ? 'Spot on! 🔥' : `Afstand: ${item.diff}`}</span>
                             <span style={{ opacity: 0.5 }}>|</span>
-                            <span style={{ color: '#ADB5BD' }}>Gok: {spelerGemiddelde} / m</span>
+                            <span style={{ color: '#ADB5BD' }}>Gok: {spelerGemiddelde}</span>
                          </div>
                       </div>
                       <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', color: isPassed ? '#6C757D' : themeHex }}>
@@ -297,8 +317,15 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               <div style={{ fontSize: '2rem' }}>⚽</div>
               <div>
-                <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', lineHeight: 1, color: openSection === 'goals' ? '#000' : '#CCFF00' }}>
-                  {stats.totaleGoals}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <span style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', lineHeight: 1, color: openSection === 'goals' ? '#000' : '#CCFF00' }}>
+                    {stats.totaleGoals}
+                  </span>
+                  {stats.gespeeldeMatchenCount > 0 && (
+                    <span style={{ fontSize: '0.8rem', fontWeight: 800, opacity: openSection === 'goals' ? 0.8 : 0.6, color: openSection === 'goals' ? '#000' : '#FFF' }}>
+                      (≈ {actueelGemiddeldeGoals})
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', opacity: openSection === 'goals' ? 0.8 : 0.6 }}>
                   Totale Goals
@@ -320,8 +347,15 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               <div style={{ fontSize: '2rem' }}>🟨</div>
               <div>
-                <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', lineHeight: 1, color: openSection === 'geel' ? '#000' : '#00E5FF' }}>
-                  {stats.totaleGeel}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <span style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', lineHeight: 1, color: openSection === 'geel' ? '#000' : '#00E5FF' }}>
+                    {stats.totaleGeel}
+                  </span>
+                  {stats.gespeeldeMatchenCount > 0 && (
+                    <span style={{ fontSize: '0.8rem', fontWeight: 800, opacity: openSection === 'geel' ? 0.8 : 0.6, color: openSection === 'geel' ? '#000' : '#FFF' }}>
+                      (≈ {actueelGemiddeldeGeel})
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', opacity: openSection === 'geel' ? 0.8 : 0.6 }}>
                   Gele Kaarten
@@ -343,8 +377,15 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               <div style={{ fontSize: '2rem' }}>🟥</div>
               <div>
-                <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', lineHeight: 1, color: openSection === 'rood' ? '#000' : '#E30022' }}>
-                  {stats.totaleRood}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <span style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', lineHeight: 1, color: openSection === 'rood' ? '#000' : '#E30022' }}>
+                    {stats.totaleRood}
+                  </span>
+                  {stats.gespeeldeMatchenCount > 0 && (
+                    <span style={{ fontSize: '0.8rem', fontWeight: 800, opacity: openSection === 'rood' ? 0.8 : 0.6, color: openSection === 'rood' ? '#000' : '#FFF' }}>
+                      (≈ {actueelGemiddeldeRood})
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', opacity: openSection === 'rood' ? 0.8 : 0.6 }}>
                   Rode Kaarten
