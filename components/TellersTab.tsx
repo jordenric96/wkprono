@@ -86,6 +86,7 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
     let totaleGoals = 0;
     let totaleGeel = 0;
     let totaleRood = 0;
+    let gespeeldeMatchenCount = 0;
 
     const teamGoalsVoor: Record<string, number> = {};
     const teamGoalsTegen: Record<string, number> = {};
@@ -93,6 +94,8 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
 
     matchen.forEach((m: any) => {
       if (m.thuis_score !== null && m.thuis_score !== '' && m.uit_score !== null && m.uit_score !== '') {
+        gespeeldeMatchenCount++;
+        
         const thuisScore = Number(m.thuis_score);
         const uitScore = Number(m.uit_score);
 
@@ -111,22 +114,28 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
       }
     });
 
+    const totaleMatchenToernooi = matchen.length > 0 ? matchen.length : 104;
+
+    // TOP 3 AANVAL
     const topAanval = Object.entries(teamGoalsVoor)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3); 
 
+    // TOP 3 VERDEDIGING
     const topVerdediging = Object.entries(teamGoalsTegen)
       .filter(([team]) => teamGespeeld[team] > 0)
       .sort((a, b) => a[1] - b[1])
       .slice(0, 3); 
 
     return { 
-      totaleGoals, totaleGeel, totaleRood, topAanval, topVerdediging, 
+      totaleGoals, totaleGeel, totaleRood, 
+      gespeeldeMatchenCount, totaleMatchenToernooi,
+      topAanval, topVerdediging, 
       matchenGespeeld: Object.keys(teamGespeeld).length > 0 
     };
   }, [matchen]);
 
-  // --- RENDERING VAN DE DYNAMISCHE TIJDLIJN ---
+  // --- RENDERING VAN DE DYNAMISCHE TIJDLIJN MET GEMIDDELDEN ---
   const renderTimeline = (title: string, emoji: string, themeHex: string, actualValue: number, field: string) => {
     // 1. Haal de geldige voorspellingen op en sorteer van laag naar hoog
     const validPreds = alleToernooiV
@@ -143,13 +152,17 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
       return <div style={{ textAlign: 'center', color: '#ADB5BD', fontSize: '0.8rem', padding: '20px' }}>Nog geen voorspellingen ingevuld...</div>;
     }
 
+    // Bereken het actuele gemiddelde van het toernooi (tot nu toe)
+    const actueelGemiddelde = stats.gespeeldeMatchenCount > 0 
+        ? (actualValue / stats.gespeeldeMatchenCount).toFixed(1) 
+        : '0.0';
+
     // 2. Bepaal waar de "Huidige Stand" (Marker) tussen moet komen
     let markerInserted = false;
     const combinedList: any[] = [];
 
     validPreds.forEach((pred: any) => {
-      // Zodra we een gok bereiken die groter of gelijk is aan de realiteit, 
-      // plaatsen we de "Huidige Stand" marker er net voor.
+      // Zodra we een gok bereiken die groter of gelijk is aan de realiteit, marker plaatsen.
       if (!markerInserted && actualValue <= pred.value) {
         combinedList.push({ type: 'marker', value: actualValue });
         markerInserted = true;
@@ -157,7 +170,7 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
       combinedList.push({ type: 'player', ...pred });
     });
 
-    // Als iedereen te laag heeft gegokt (Marker zit helemaal op het einde)
+    // Als iedereen te laag heeft gegokt
     if (!markerInserted) {
       combinedList.push({ type: 'marker', value: actualValue });
     }
@@ -165,7 +178,6 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {combinedList.map((item, index) => {
-          // Check of de speler al is "ingehaald" door de realiteit
           const isPassed = item.type === 'player' && item.value < actualValue;
           const isMarker = item.type === 'marker';
           const isFirst = index === 0;
@@ -174,19 +186,19 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
           const darkColor = 'rgba(255,255,255,0.15)';
           const brightColor = themeHex;
 
-          // De lijn is donker tot aan de marker. Vanaf daar is de lijn helder.
           const topLineColor = (isPassed || isMarker) ? darkColor : brightColor;
           const bottomLineColor = isPassed ? darkColor : brightColor;
+
+          // Bereken het "Gok Gemiddelde" per match van de speler
+          const spelerGemiddelde = (item.value / stats.totaleMatchenToernooi).toFixed(1);
 
           return (
             <div key={index} style={{ display: 'flex', alignItems: 'stretch' }}>
               
-              {/* KOLOM 1: DE VERTICALE LIJN & PUNTEN */}
+              {/* KOLOM 1: DE VERTICALE LIJN & KNOTS */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '40px', flexShrink: 0 }}>
-                {/* Lijn Boven */}
                 <div style={{ width: '4px', flex: 1, background: topLineColor, opacity: isFirst ? 0 : 1 }} />
                 
-                {/* De Knoop of Emoji */}
                 <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '30px', margin: '4px 0' }}>
                   {isMarker ? (
                      <div style={{ fontSize: '1.8rem', zIndex: 2, filter: `drop-shadow(0 0 10px ${themeHex})` }}>{emoji}</div>
@@ -201,21 +213,26 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
                   )}
                 </div>
                 
-                {/* Lijn Onder */}
                 <div style={{ width: '4px', flex: 1, background: bottomLineColor, opacity: isLast ? 0 : 1 }} />
               </div>
 
-              {/* KOLOM 2: DE CONTENT KAARTJES */}
+              {/* KOLOM 2: CONTENT KAARTJES */}
               <div style={{ flex: 1, padding: '4px 0', paddingLeft: '10px', display: 'flex', alignItems: 'center' }}>
                 {isMarker ? (
                    <div style={{ 
                        background: `linear-gradient(90deg, ${themeHex} 0%, transparent 100%)`, 
                        color: '#000', padding: '6px 12px', borderRadius: '8px', 
-                       fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px',
-                       display: 'inline-block', borderLeft: `4px solid #FFF`, fontSize: '0.8rem',
+                       display: 'flex', flexDirection: 'column', borderLeft: `4px solid #FFF`,
                        boxShadow: `0 4px 15px ${themeHex}40`
                    }}>
-                     HUIDIGE STAND: {actualValue}
+                     <span style={{ fontWeight: 900, textTransform: 'uppercase', letterSpacing: '1px', fontSize: '0.8rem' }}>
+                       HUIDIGE STAND: {actualValue}
+                     </span>
+                     {stats.gespeeldeMatchenCount > 0 && (
+                       <span style={{ fontSize: '0.65rem', fontWeight: 800, opacity: 0.8, marginTop: '2px' }}>
+                         ≈ {actueelGemiddelde} per match
+                       </span>
+                     )}
                    </div>
                 ) : (
                    <div style={{ 
@@ -224,15 +241,17 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
                        borderRadius: '12px', padding: '10px 15px', display: 'flex', 
                        justifyContent: 'space-between', alignItems: 'center', 
                        border: `1px solid ${isPassed ? 'transparent' : `${themeHex}40`}`, 
-                       opacity: isPassed ? 0.4 : 1, // Maakt afgevallen spelers dof
+                       opacity: isPassed ? 0.4 : 1, 
                        transition: 'all 0.3s'
                    }}>
                       <div>
                          <div style={{ fontWeight: 900, color: isPassed ? '#ADB5BD' : '#FFF', fontSize: '1.1rem', textDecoration: isPassed ? 'line-through' : 'none' }}>
                            {item.naam}
                          </div>
-                         <div style={{ fontSize: '0.75rem', color: isPassed ? '#6C757D' : themeHex, fontWeight: 800 }}>
-                            {item.diff === 0 ? 'Spot on! 🔥' : `Verschil: ${item.diff} ${title.split(' ')[1]}`}
+                         <div style={{ fontSize: '0.7rem', color: isPassed ? '#6C757D' : themeHex, fontWeight: 800, marginTop: '2px', display: 'flex', gap: '8px' }}>
+                            <span>{item.diff === 0 ? 'Spot on! 🔥' : `Afstand: ${item.diff}`}</span>
+                            <span style={{ opacity: 0.5 }}>|</span>
+                            <span style={{ color: '#ADB5BD' }}>Gok: {spelerGemiddelde} / m</span>
                          </div>
                       </div>
                       <div style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', color: isPassed ? '#6C757D' : themeHex }}>
