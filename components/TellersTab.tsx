@@ -94,6 +94,17 @@ const formatGemiddelde = (waarde: number, aantalMatchen: number) => {
   return `${gem.toFixed(1)} /m`;
 };
 
+// Slimme functie om Kristof M. en Kristof V. te onderscheiden
+const formateerNaam = (volledigeNaam: string) => {
+  if (!volledigeNaam) return 'Onbekend';
+  const delen = volledigeNaam.trim().split(' ');
+  const voornaam = delen[0];
+  if (voornaam.toLowerCase() === 'kristof' && delen.length > 1) {
+    return `${voornaam} ${delen[1].charAt(0)}.`;
+  }
+  return voornaam;
+};
+
 export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
   const [openSection, setOpenSection] = useState<string | null>(null);
 
@@ -162,7 +173,7 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
       .filter((v: any) => v[field] !== null && v[field] !== undefined)
       .map((v: any) => ({
         id: v.speler_id || Math.random(),
-        naam: v.spelers?.naam?.split(' ')[0] || 'Onbekend',
+        naam: formateerNaam(v.spelers?.naam), // HIER ZIT DE UPDATE VOOR DE NAMEN!
         value: Number(v[field]),
         diff: Math.abs(Number(v[field]) - actualValue)
       }))
