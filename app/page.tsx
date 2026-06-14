@@ -90,7 +90,7 @@ export default function Home() {
     const opgeslagenId = localStorage.getItem('wk_speler_id');
     haalSpelersOp(opgeslagenId);
     haalDataVoorPopupOp(); 
-    haalUrgentieDataOp(); // Haalt de data op voor matchen die binnen de 36 uur starten
+    haalUrgentieDataOp(); 
     
     const updateKlok = () => {
       const nuTijd = new Date().getTime();
@@ -115,7 +115,7 @@ export default function Home() {
     return () => { clearInterval(klokInterval); };
   }, []);
 
-  // Berekent wie zijn bonus nog moet invullen
+  // Berekent wie zijn bonus nog moet invullen (met Kristof-check)
   const haalDataVoorPopupOp = async () => {
     const { data: spelers } = await supabase.from('spelers').select('id, naam, betaald');
     const { data: bonus } = await supabase.from('toernooi_voorspellingen').select('speler_id, winnaar');
@@ -127,15 +127,24 @@ export default function Home() {
            const v = bonus.find(b => b.speler_id === s.id);
            return !v || !v.winnaar || v.winnaar.trim() === '';
         })
-        .map(s => s.naam.split(' ')[0]); 
+        .map(s => {
+          const volledigeNaam = s.naam.trim();
+          const delen = volledigeNaam.split(' ');
+          const voornaam = delen[0];
+          
+          if (voornaam.toLowerCase() === 'kristof' && delen.length > 1) {
+            return `${voornaam} ${delen[1].charAt(0)}.`;
+          }
+          return voornaam;
+        }); 
       setOntbrekendeBonus(ontbrekend);
     }
   };
 
-  // --- NIEUW: Berekent welke matchen binnen de 36 uur starten én wie nog niet heeft ingevuld ---
+  // Berekent welke matchen binnen de 36 uur starten (met Kristof-check)
   const haalUrgentieDataOp = async () => {
     const nuTijd = new Date().getTime();
-    const tijd36u = nuTijd + (36 * 60 * 60 * 1000); // Huidige tijd + 36 uur
+    const tijd36u = nuTijd + (36 * 60 * 60 * 1000);
 
     const { data: mData } = await supabase.from('matchen').select('*').order('datum', { ascending: true });
     const { data: sData } = await supabase.from('spelers').select('id, naam, betaald').eq('betaald', true);
@@ -148,14 +157,21 @@ export default function Home() {
     mData.forEach(match => {
       const matchTijd = new Date(match.datum).getTime();
       
-      // Controleer of de wedstrijd in de toekomst ligt, én binnen de komende 36 uur
       if (matchTijd > nuTijd && matchTijd <= tijd36u) {
         
-        // Zoek alle betaalde spelers die nog GEEN of een LEGE score hebben voor deze match
         const ontbrekend = sData.filter(speler => {
           const prono = vData.find(v => v.match_id === match.id && v.speler_id === speler.id);
           return !prono || prono.thuis_score === null || prono.uit_score === null || prono.thuis_score === '' || prono.uit_score === '';
-        }).map(s => s.naam.split(' ')[0]);
+        }).map(s => {
+          const volledigeNaam = s.naam.trim();
+          const delen = volledigeNaam.split(' ');
+          const voornaam = delen[0];
+          
+          if (voornaam.toLowerCase() === 'kristof' && delen.length > 1) {
+            return `${voornaam} ${delen[1].charAt(0)}.`;
+          }
+          return voornaam;
+        });
 
         if (ontbrekend.length > 0) {
           urgentList.push({
