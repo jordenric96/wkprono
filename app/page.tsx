@@ -209,6 +209,7 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [actieveSpeler?.id]); 
 
+  // HIER ZIT DE FIX VOOR DE TELLERS TAB
   useEffect(() => {
     if (actieveSpeler && (actieveSpeler.betaald || isJorden)) {
       if (actieveTab === 'matchen' || actieveTab === 'tellers') haalMatchenOp();
@@ -219,7 +220,8 @@ export default function Home() {
         haalMatchenOp(); 
         haalKlassementOp(); 
       }
-      if (actieveTab === 'antwoorden') haalAlleAntwoordenOp();
+      // Fix: Nu haalt hij ook op als de actieveTab 'tellers' (Data) is!
+      if (actieveTab === 'antwoorden' || actieveTab === 'tellers') haalAlleAntwoordenOp();
     }
   }, [actieveSpeler, actieveTab, isJorden]);
 
