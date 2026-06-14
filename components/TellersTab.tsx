@@ -79,18 +79,22 @@ const parseTeam = (teamString: string) => {
   return { name: nameNL, emoji };
 };
 
+// Verwijdert accenten en maakt lowercase voor foutloze vergelijking (België = belgie)
+const normalizeString = (str: string) => {
+  if (!str) return '';
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+};
+
 // Slimme functie om gemiddelden logisch weer te geven
 const formatGemiddelde = (waarde: number, aantalMatchen: number) => {
   if (waarde === 0 || aantalMatchen === 0) return '0.0 /m';
   const gem = waarde / aantalMatchen;
   
-  // Als het gemiddelde erg laag is (minder dan 0.4 per match), spreken we in termen van "1 per X matchen"
   if (gem < 0.4) {
     const perMatch = Math.round(aantalMatchen / waarde);
     return `1 per ${perMatch}m`;
   }
   
-  // Anders gewoon het standaard gemiddelde met 1 decimaal (bijv. 2.5 /m)
   return `${gem.toFixed(1)} /m`;
 };
 
@@ -142,16 +146,16 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
 
     const totaleMatchenToernooi = matchen.length > 0 ? matchen.length : 104;
 
-    // TOP 3 AANVAL
+    // TOP 5 AANVAL
     const topAanval = Object.entries(teamGoalsVoor)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 3); 
+      .slice(0, 5); 
 
-    // TOP 3 VERDEDIGING
+    // TOP 5 VERDEDIGING
     const topVerdediging = Object.entries(teamGoalsTegen)
       .filter(([team]) => teamGespeeld[team] > 0)
       .sort((a, b) => a[1] - b[1])
-      .slice(0, 3); 
+      .slice(0, 5); 
 
     return { 
       totaleGoals, totaleGeel, totaleRood, 
@@ -161,19 +165,17 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
     };
   }, [matchen]);
 
-  // Bereken de gemiddelden voor in de headers met de slimme formatGemiddelde functie
   const actueelGemiddeldeGoals = formatGemiddelde(stats.totaleGoals, stats.gespeeldeMatchenCount);
   const actueelGemiddeldeGeel = formatGemiddelde(stats.totaleGeel, stats.gespeeldeMatchenCount);
   const actueelGemiddeldeRood = formatGemiddelde(stats.totaleRood, stats.gespeeldeMatchenCount);
 
   // --- RENDERING VAN DE DYNAMISCHE TIJDLIJN MET GEMIDDELDEN ---
   const renderTimeline = (title: string, emoji: string, themeHex: string, actualValue: number, field: string) => {
-    // 1. Haal de geldige voorspellingen op en sorteer van laag naar hoog
     const validPreds = alleToernooiV
       .filter((v: any) => v[field] !== null && v[field] !== undefined)
       .map((v: any) => ({
         id: v.speler_id || Math.random(),
-        naam: formateerNaam(v.spelers?.naam), // HIER ZIT DE UPDATE VOOR DE NAMEN!
+        naam: formateerNaam(v.spelers?.naam),
         value: Number(v[field]),
         diff: Math.abs(Number(v[field]) - actualValue)
       }))
@@ -183,17 +185,14 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
       return <div style={{ textAlign: 'center', color: '#ADB5BD', fontSize: '0.8rem', padding: '20px' }}>Nog geen voorspellingen ingevuld...</div>;
     }
 
-    // Bereken het actuele gemiddelde van het toernooi (tot nu toe)
     const actueelGemiddelde = stats.gespeeldeMatchenCount > 0 
         ? formatGemiddelde(actualValue, stats.gespeeldeMatchenCount)
         : '0.0 /m';
 
-    // 2. Bepaal waar de "Huidige Stand" (Marker) tussen moet komen
     let markerInserted = false;
     const combinedList: any[] = [];
 
     validPreds.forEach((pred: any) => {
-      // Zodra we een gok bereiken die groter of gelijk is aan de realiteit, marker plaatsen.
       if (!markerInserted && actualValue <= pred.value) {
         combinedList.push({ type: 'marker', value: actualValue });
         markerInserted = true;
@@ -201,7 +200,6 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
       combinedList.push({ type: 'player', ...pred });
     });
 
-    // Als iedereen te laag heeft gegokt
     if (!markerInserted) {
       combinedList.push({ type: 'marker', value: actualValue });
     }
@@ -220,13 +218,10 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
           const topLineColor = (isPassed || isMarker) ? darkColor : brightColor;
           const bottomLineColor = isPassed ? darkColor : brightColor;
 
-          // Bereken het "Gok Gemiddelde" per match van de speler
           const spelerGemiddelde = formatGemiddelde(item.value, stats.totaleMatchenToernooi);
 
           return (
             <div key={index} style={{ display: 'flex', alignItems: 'stretch' }}>
-              
-              {/* KOLOM 1: DE VERTICALE LIJN & KNOTS */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '40px', flexShrink: 0 }}>
                 <div style={{ width: '4px', flex: 1, background: topLineColor, opacity: isFirst ? 0 : 1 }} />
                 
@@ -247,7 +242,6 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
                 <div style={{ width: '4px', flex: 1, background: bottomLineColor, opacity: isLast ? 0 : 1 }} />
               </div>
 
-              {/* KOLOM 2: CONTENT KAARTJES */}
               <div style={{ flex: 1, padding: '4px 0', paddingLeft: '10px', display: 'flex', alignItems: 'center' }}>
                 {isMarker ? (
                    <div style={{ 
@@ -298,7 +292,6 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
     );
   };
 
-  // Hulpfunctie om de Headers de juiste stijl te geven (afhankelijk van of ze openstaan of niet)
   const getHeaderStyle = (section: string, themeHex: string) => {
     const isOpen = openSection === section;
     return {
@@ -419,22 +412,36 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
         </div>
       )}
 
-      {/* TOP 3 LIJSTEN */}
+      {/* TOP 5 LIJSTEN */}
       {stats.matchenGespeeld && (
         <div style={{ background: '#1A1423', borderRadius: '16px', padding: '20px', border: '2px solid #2B00FF', boxShadow: '0 4px 15px rgba(43, 0, 255, 0.2)' }}>
           <h3 style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: '#2B00FF', margin: '0 0 15px 0', textAlign: 'center', letterSpacing: '1px' }}>
-            ⚔️ MEEST SCORENDE TEAMS
+            ⚔️ MEEST SCORENDE TEAMS (TOP 5)
           </h3>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {stats.topAanval.map(([teamRaw, goals], index) => {
               const team = parseTeam(teamRaw);
+              const teamNorm = normalizeString(teamRaw);
+              const gokkers = alleToernooiV.filter((v: any) => normalizeString(v.topschutter) === teamNorm);
+
               return (
-                <div key={teamRaw} style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.3)', padding: '12px 15px', borderRadius: '12px', borderLeft: index === 0 ? '4px solid #2B00FF' : 'none' }}>
-                  <span style={{ fontSize: '1.2rem', marginRight: '15px', opacity: index === 0 ? 1 : 0.6 }}>{index + 1}.</span>
-                  <span style={{ fontSize: '1.4rem', marginRight: '10px' }}>{team.emoji}</span>
-                  <span style={{ flex: 1, fontWeight: 900, color: '#FFF', fontSize: '1.1rem' }}>{team.name}</span>
-                  <span style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: '#2B00FF' }}>{goals}</span>
+                <div key={teamRaw} style={{ display: 'flex', flexDirection: 'column', background: 'rgba(0,0,0,0.3)', padding: '12px 15px', borderRadius: '12px', borderLeft: index === 0 ? '4px solid #2B00FF' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={{ fontSize: '1.2rem', marginRight: '15px', opacity: index === 0 ? 1 : 0.6 }}>{index + 1}.</span>
+                    <span style={{ fontSize: '1.4rem', marginRight: '10px' }}>{team.emoji}</span>
+                    <span style={{ flex: 1, fontWeight: 900, color: '#FFF', fontSize: '1.1rem' }}>{team.name}</span>
+                    <span style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: '#2B00FF' }}>{goals}</span>
+                  </div>
+                  {gokkers.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px', paddingLeft: '45px' }}>
+                      {gokkers.map((g: any) => (
+                        <span key={g.id} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #2B00FF', color: '#FFF', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '8px', fontWeight: 900 }}>
+                          {formateerNaam(g.spelers?.naam)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -445,21 +452,35 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
       {stats.matchenGespeeld && (
         <div style={{ background: '#1A1423', borderRadius: '16px', padding: '20px', border: '2px solid #7A00E6', boxShadow: '0 4px 15px rgba(122, 0, 230, 0.2)' }}>
           <h3 style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: '#7A00E6', margin: '0 0 15px 0', textAlign: 'center', letterSpacing: '1px' }}>
-            🛡️ BESTE VERDEDIGING
+            🛡️ BESTE VERDEDIGING (TOP 5)
           </h3>
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {stats.topVerdediging.map(([teamRaw, goalsTegen], index) => {
               const team = parseTeam(teamRaw);
+              const teamNorm = normalizeString(teamRaw);
+              const gokkers = alleToernooiV.filter((v: any) => normalizeString(v.beste_keeper) === teamNorm);
+
               return (
-                <div key={teamRaw} style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.3)', padding: '12px 15px', borderRadius: '12px', borderLeft: index === 0 ? '4px solid #7A00E6' : 'none' }}>
-                  <span style={{ fontSize: '1.2rem', marginRight: '15px', opacity: index === 0 ? 1 : 0.6 }}>{index + 1}.</span>
-                  <span style={{ fontSize: '1.4rem', marginRight: '10px' }}>{team.emoji}</span>
-                  <span style={{ flex: 1, fontWeight: 900, color: '#FFF', fontSize: '1.1rem' }}>{team.name}</span>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                    <span style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: '#7A00E6', lineHeight: 1 }}>{goalsTegen}</span>
-                    <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>Tegen</span>
+                <div key={teamRaw} style={{ display: 'flex', flexDirection: 'column', background: 'rgba(0,0,0,0.3)', padding: '12px 15px', borderRadius: '12px', borderLeft: index === 0 ? '4px solid #7A00E6' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={{ fontSize: '1.2rem', marginRight: '15px', opacity: index === 0 ? 1 : 0.6 }}>{index + 1}.</span>
+                    <span style={{ fontSize: '1.4rem', marginRight: '10px' }}>{team.emoji}</span>
+                    <span style={{ flex: 1, fontWeight: 900, color: '#FFF', fontSize: '1.1rem' }}>{team.name}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                      <span style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: '#7A00E6', lineHeight: 1 }}>{goalsTegen}</span>
+                      <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase' }}>Tegen</span>
+                    </div>
                   </div>
+                  {gokkers.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px', paddingLeft: '45px' }}>
+                      {gokkers.map((g: any) => (
+                        <span key={g.id} style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid #7A00E6', color: '#FFF', fontSize: '0.65rem', padding: '2px 8px', borderRadius: '8px', fontWeight: 900 }}>
+                          {formateerNaam(g.spelers?.naam)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )
             })}
