@@ -15,10 +15,33 @@ import PrijsTab from '../components/PrijsTab';
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
 const POPUP_DEADLINE = new Date('2026-06-11T19:00:00+02:00').getTime();
 
-// Verwijdert accenten en maakt lowercase voor foutloze vergelijking
-const normalizeString = (str: string) => {
-  if (!str) return '';
-  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+// DE FIX: Emoji's strippen, vertalen, en dan pas accenten verwijderen
+const normalizeString = (teamString: string) => {
+  if (!teamString) return '';
+  
+  let cleanString = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
+  let searchKey = cleanString.toLowerCase();
+
+  const vertalingen: Record<string, string> = {
+    'brazil': 'Brazilië', 'brazilië': 'Brazilië',
+    'morocco': 'Marokko', 'marokko': 'Marokko',
+    'switzerland': 'Zwitserland', 'zwitserland': 'Zwitserland',
+    'south korea': 'Zuid-Korea', 'zuid-korea': 'Zuid-Korea',
+    'germany': 'Duitsland', 'duitsland': 'Duitsland',
+    'spain': 'Spanje', 'spanje': 'Spanje',
+    'france': 'Frankrijk', 'frankrijk': 'Frankrijk',
+    'netherlands': 'Nederland', 'nederland': 'Nederland',
+    'belgium': 'België', 'belgië': 'België',
+    'italy': 'Italië', 'italië': 'Italië',
+    'argentina': 'Argentinië', 'argentinië': 'Argentinië',
+    'england': 'Engeland', 'usa': 'Verenigde Staten', 'united states': 'Verenigde Staten',
+    'croatia': 'Kroatië', 'kroatië': 'Kroatië',
+    'uruguay': 'Uruguay', 'senegal': 'Senegal', 'ghana': 'Ghana', 'nigeria': 'Nigeria',
+    'mexico': 'Mexico', 'japan': 'Japan'
+  };
+
+  let nameNL = vertalingen[searchKey] || cleanString;
+  return nameNL.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 };
 
 const formateerNaam = (volledigeNaam: string) => {
@@ -397,7 +420,6 @@ export default function Home() {
       winnaarsRood = diffR.filter(x => x.d === Math.min(...diffR.map(y => y.d))).map(x => x.id);
     }
 
-    // SLIMME VERGELIJKER VOOR WATERDICHTE PUNTEN
     const topScorersNorm = topScorers.map(normalizeString);
     const bestDefensesNorm = bestDefenses.map(normalizeString);
     const halveFinalistenNorm = halveFinalisten.map(normalizeString);
