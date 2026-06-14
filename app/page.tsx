@@ -15,6 +15,17 @@ import PrijsTab from '../components/PrijsTab';
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
 const POPUP_DEADLINE = new Date('2026-06-11T19:00:00+02:00').getTime();
 
+// Slimme functie om Kristof M. en Kristof V. te onderscheiden
+const formateerNaam = (volledigeNaam: string) => {
+  if (!volledigeNaam) return '';
+  const delen = volledigeNaam.trim().split(' ');
+  const voornaam = delen[0];
+  if (voornaam.toLowerCase() === 'kristof' && delen.length > 1) {
+    return `${voornaam} ${delen[1].charAt(0)}.`;
+  }
+  return voornaam;
+};
+
 export default function Home() {
   const [ontgrendelNaam, setOntgrendelNaam] = useState('');
   const [invoerCode, setInvoerCode] = useState('');
@@ -33,9 +44,10 @@ export default function Home() {
   // POP-UP STATES
   const [showInstallPopup, setShowInstallPopup] = useState(true);
   const [ontbrekendeBonus, setOntbrekendeBonus] = useState<string[]>([]); 
+  const [ontbrekendeBonusIds, setOntbrekendeBonusIds] = useState<number[]>([]); 
   
   const [showUrgentPopup, setShowUrgentPopup] = useState(true);
-  const [urgenteMatchen, setUrgenteMatchen] = useState<{matchNaam: string, datum: string, ontbrekend: string[]}[]>([]);
+  const [urgenteMatchen, setUrgenteMatchen] = useState<{matchNaam: string, datum: string, ontbrekend: string[], ontbrekendIds: number[]}[]>([]);
 
   const actieveTabRef = useRef(actieveTab);
   const actieveSpelerRef = useRef(actieveSpeler);
@@ -115,33 +127,25 @@ export default function Home() {
     return () => { clearInterval(klokInterval); };
   }, []);
 
-  // Berekent wie zijn bonus nog moet invullen (met Kristof-check)
+  // Berekent wie zijn bonus nog moet invullen
   const haalDataVoorPopupOp = async () => {
     const { data: spelers } = await supabase.from('spelers').select('id, naam, betaald');
     const { data: bonus } = await supabase.from('toernooi_voorspellingen').select('speler_id, winnaar');
     
     if (spelers && bonus) {
-      const ontbrekend = spelers
+      const ontbrekendSpelers = spelers
         .filter(s => s.betaald) 
         .filter(s => {
            const v = bonus.find(b => b.speler_id === s.id);
            return !v || !v.winnaar || v.winnaar.trim() === '';
-        })
-        .map(s => {
-          const volledigeNaam = s.naam.trim();
-          const delen = volledigeNaam.split(' ');
-          const voornaam = delen[0];
-          
-          if (voornaam.toLowerCase() === 'kristof' && delen.length > 1) {
-            return `${voornaam} ${delen[1].charAt(0)}.`;
-          }
-          return voornaam;
-        }); 
-      setOntbrekendeBonus(ontbrekend);
+        });
+        
+      setOntbrekendeBonusIds(ontbrekendSpelers.map(s => s.id));
+      setOntbrekendeBonus(ontbrekendSpelers.map(s => formateerNaam(s.naam)));
     }
   };
 
-  // Berekent welke matchen binnen de 36 uur starten (met Kristof-check)
+  // Berekent welke matchen binnen de 36 uur starten
   const haalUrgentieDataOp = async () => {
     const nuTijd = new Date().getTime();
     const tijd36u = nuTijd + (36 * 60 * 60 * 1000);
@@ -159,25 +163,17 @@ export default function Home() {
       
       if (matchTijd > nuTijd && matchTijd <= tijd36u) {
         
-        const ontbrekend = sData.filter(speler => {
+        const ontbrekendSpelers = sData.filter(speler => {
           const prono = vData.find(v => v.match_id === match.id && v.speler_id === speler.id);
           return !prono || prono.thuis_score === null || prono.uit_score === null || prono.thuis_score === '' || prono.uit_score === '';
-        }).map(s => {
-          const volledigeNaam = s.naam.trim();
-          const delen = volledigeNaam.split(' ');
-          const voornaam = delen[0];
-          
-          if (voornaam.toLowerCase() === 'kristof' && delen.length > 1) {
-            return `${voornaam} ${delen[1].charAt(0)}.`;
-          }
-          return voornaam;
         });
 
-        if (ontbrekend.length > 0) {
+        if (ontbrekendSpelers.length > 0) {
           urgentList.push({
             matchNaam: `${match.thuisploeg} - ${match.uitploeg}`,
             datum: match.datum,
-            ontbrekend
+            ontbrekend: ontbrekendSpelers.map(s => formateerNaam(s.naam)),
+            ontbrekendIds: ontbrekendSpelers.map(s => s.id)
           });
         }
       }
@@ -209,7 +205,6 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [actieveSpeler?.id]); 
 
-  // HIER ZIT DE FIX VOOR DE TELLERS TAB
   useEffect(() => {
     if (actieveSpeler && (actieveSpeler.betaald || isJorden)) {
       if (actieveTab === 'matchen' || actieveTab === 'tellers') haalMatchenOp();
@@ -220,7 +215,6 @@ export default function Home() {
         haalMatchenOp(); 
         haalKlassementOp(); 
       }
-      // Fix: Nu haalt hij ook op als de actieveTab 'tellers' (Data) is!
       if (actieveTab === 'antwoorden' || actieveTab === 'tellers') haalAlleAntwoordenOp();
     }
   }, [actieveSpeler, actieveTab, isJorden]);
@@ -514,6 +508,13 @@ export default function Home() {
     return basis;
   }, [matchen, filterRonde, matchVoorspellingen, nu]);
 
+  // --- RENDERING CONDITIES VOOR POP-UPS ---
+  const moetUrgentInvullen = actieveSpeler && urgenteMatchen.some(u => u.ontbrekendIds.includes(actieveSpeler.id));
+  const toonUrgentPopup = showUrgentPopup && moetUrgentInvullen && urgenteMatchen.length > 0;
+  
+  const moetBonusInvullen = actieveSpeler && ontbrekendeBonusIds.includes(actieveSpeler.id);
+  const toonBonusPopup = !toonUrgentPopup && toonInstallPopup && moetBonusInvullen;
+
   return (
     <main className="main-container">
       <style>{`
@@ -574,8 +575,8 @@ export default function Home() {
         .btn-primary:active { transform: scale(0.98); }
       `}</style>
 
-      {/* 🚨 NIEUW: URGENTE MATCHEN POP-UP (36h waarschuwing) 🚨 */}
-      {showUrgentPopup && urgenteMatchen.length > 0 && (
+      {/* 🚨 NIEUW: URGENTE MATCHEN POP-UP (Enkel voor wie nog moet invullen!) 🚨 */}
+      {toonUrgentPopup && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
           background: 'rgba(9, 5, 20, 0.85)', backdropFilter: 'blur(10px)',
@@ -625,8 +626,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* 🚨 INSTALLATIE POP-UP & BONUS WAARSCHUWING 🚨 */}
-      {!showUrgentPopup && toonInstallPopup && (
+      {/* 🚨 BONUS WAARSCHUWING (Enkel voor wie nog moet invullen!) 🚨 */}
+      {toonBonusPopup && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
           background: 'rgba(9, 5, 20, 0.85)', backdropFilter: 'blur(10px)',
@@ -652,17 +653,11 @@ export default function Home() {
               <p style={{ fontSize: '0.85rem', color: '#ADB5BD', fontWeight: 800, margin: '0 0 10px 0' }}>Deze spelers moeten hun bonusvragen nog invullen:</p>
               
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
-                {ontbrekendeBonus.length === 0 ? (
-                  <span style={{ background: 'var(--wk-lime)', color: '#111827', padding: '6px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 900 }}>
-                    🎉 Iedereen heeft de bonus ingevuld!
+                {ontbrekendeBonus.map((naam, i) => (
+                  <span key={i} style={{ background: 'rgba(227, 0, 34, 0.15)', color: '#FFF', border: '1px solid var(--wk-red)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900 }}>
+                    {naam}
                   </span>
-                ) : (
-                  ontbrekendeBonus.map((naam, i) => (
-                    <span key={i} style={{ background: 'rgba(227, 0, 34, 0.15)', color: '#FFF', border: '1px solid var(--wk-red)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900 }}>
-                      {naam}
-                    </span>
-                  ))
-                )}
+                ))}
               </div>
             </div>
 
