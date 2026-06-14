@@ -15,7 +15,12 @@ import PrijsTab from '../components/PrijsTab';
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
 const POPUP_DEADLINE = new Date('2026-06-11T19:00:00+02:00').getTime();
 
-// Slimme functie om Kristof M. en Kristof V. te onderscheiden
+// Verwijdert accenten en maakt lowercase voor foutloze vergelijking
+const normalizeString = (str: string) => {
+  if (!str) return '';
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+};
+
 const formateerNaam = (volledigeNaam: string) => {
   if (!volledigeNaam) return '';
   const delen = volledigeNaam.trim().split(' ');
@@ -41,7 +46,6 @@ export default function Home() {
   const [toast, setToast] = useState<{naam: string, bericht: string} | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
   
-  // POP-UP STATES
   const [showInstallPopup, setShowInstallPopup] = useState(true);
   const [ontbrekendeBonus, setOntbrekendeBonus] = useState<string[]>([]); 
   const [ontbrekendeBonusIds, setOntbrekendeBonusIds] = useState<number[]>([]); 
@@ -127,7 +131,6 @@ export default function Home() {
     return () => { clearInterval(klokInterval); };
   }, []);
 
-  // Berekent wie zijn bonus nog moet invullen
   const haalDataVoorPopupOp = async () => {
     const { data: spelers } = await supabase.from('spelers').select('id, naam, betaald');
     const { data: bonus } = await supabase.from('toernooi_voorspellingen').select('speler_id, winnaar');
@@ -145,7 +148,6 @@ export default function Home() {
     }
   };
 
-  // Berekent welke matchen binnen de 36 uur starten
   const haalUrgentieDataOp = async () => {
     const nuTijd = new Date().getTime();
     const tijd36u = nuTijd + (36 * 60 * 60 * 1000);
@@ -395,6 +397,12 @@ export default function Home() {
       winnaarsRood = diffR.filter(x => x.d === Math.min(...diffR.map(y => y.d))).map(x => x.id);
     }
 
+    // SLIMME VERGELIJKER VOOR WATERDICHTE PUNTEN
+    const topScorersNorm = topScorers.map(normalizeString);
+    const bestDefensesNorm = bestDefenses.map(normalizeString);
+    const halveFinalistenNorm = halveFinalisten.map(normalizeString);
+    const wkWinnaarNorm = normalizeString(wkWinnaar);
+
     const stats = s.map(sp => {
       let pronoP = 0, bonusP = 0, ex = 0, wc = 0, f = 0;
       
@@ -416,11 +424,18 @@ export default function Home() {
         if (winnaarsGoals.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Totaal Goals', pt: 5}); }
         if (winnaarsGeel.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Gele Kaarten', pt: 5}); }
         if (winnaarsRood.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Rode Kaarten', pt: 5}); }
-        if (wkWinnaar && bv.winnaar === wkWinnaar) { bonusP += 5; breakdown.push({label: 'Wereldkampioen Juist', pt: 5}); }
-        if (topScorers.includes(bv.topschutter)) { bonusP += 3; breakdown.push({label: 'Beste Aanval', pt: 3}); }
-        if (bestDefenses.includes(bv.beste_keeper)) { bonusP += 3; breakdown.push({label: 'Beste Verdediging', pt: 3}); }
+        
+        if (wkWinnaarNorm && normalizeString(bv.winnaar) === wkWinnaarNorm) { bonusP += 5; breakdown.push({label: 'Wereldkampioen Juist', pt: 5}); }
+        
+        const myAanval = normalizeString(bv.topschutter);
+        if (myAanval && topScorersNorm.includes(myAanval)) { bonusP += 3; breakdown.push({label: 'Beste Aanval', pt: 3}); }
+        
+        const myDef = normalizeString(bv.beste_keeper);
+        if (myDef && bestDefensesNorm.includes(myDef)) { bonusP += 3; breakdown.push({label: 'Beste Verdediging', pt: 3}); }
+        
         [bv.halve_finalist_1, bv.halve_finalist_2, bv.halve_finalist_3, bv.halve_finalist_4].forEach(land => {
-          if (land && halveFinalisten.includes(land)) { bonusP += 3; breakdown.push({label: `Halve Finalist (${land})`, pt: 3}); }
+          const lNorm = normalizeString(land);
+          if (lNorm && halveFinalistenNorm.includes(lNorm)) { bonusP += 3; breakdown.push({label: `Halve Finalist (${land})`, pt: 3}); }
         });
       }
       
@@ -508,7 +523,6 @@ export default function Home() {
     return basis;
   }, [matchen, filterRonde, matchVoorspellingen, nu]);
 
-  // --- RENDERING CONDITIES VOOR POP-UPS ---
   const moetUrgentInvullen = actieveSpeler && urgenteMatchen.some(u => u.ontbrekendIds.includes(actieveSpeler.id));
   const toonUrgentPopup = showUrgentPopup && moetUrgentInvullen && urgenteMatchen.length > 0;
   
