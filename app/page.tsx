@@ -15,45 +15,6 @@ import PrijsTab from '../components/PrijsTab';
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
 const POPUP_DEADLINE = new Date('2026-06-11T19:00:00+02:00').getTime();
 
-// Emoji's strippen, vertalen, en dan pas accenten verwijderen
-const normalizeString = (teamString: string) => {
-  if (!teamString) return '';
-  
-  let cleanString = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
-  let searchKey = cleanString.toLowerCase();
-
-  const vertalingen: Record<string, string> = {
-    'brazil': 'Brazilië', 'brazilië': 'Brazilië',
-    'morocco': 'Marokko', 'marokko': 'Marokko',
-    'switzerland': 'Zwitserland', 'zwitserland': 'Zwitserland',
-    'south korea': 'Zuid-Korea', 'zuid-korea': 'Zuid-Korea',
-    'germany': 'Duitsland', 'duitsland': 'Duitsland',
-    'spain': 'Spanje', 'spanje': 'Spanje',
-    'france': 'Frankrijk', 'frankrijk': 'Frankrijk',
-    'netherlands': 'Nederland', 'nederland': 'Nederland',
-    'belgium': 'België', 'belgië': 'België',
-    'italy': 'Italië', 'italië': 'Italië',
-    'argentina': 'Argentinië', 'argentinië': 'Argentinië',
-    'england': 'Engeland', 'usa': 'Verenigde Staten', 'united states': 'Verenigde Staten',
-    'croatia': 'Kroatië', 'kroatië': 'Kroatië',
-    'uruguay': 'Uruguay', 'senegal': 'Senegal', 'ghana': 'Ghana', 'nigeria': 'Nigeria',
-    'mexico': 'Mexico', 'japan': 'Japan'
-  };
-
-  let nameNL = vertalingen[searchKey] || cleanString;
-  return nameNL.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-};
-
-const formateerNaam = (volledigeNaam: string) => {
-  if (!volledigeNaam) return '';
-  const delen = volledigeNaam.trim().split(' ');
-  const voornaam = delen[0];
-  if (voornaam.toLowerCase() === 'kristof' && delen.length > 1) {
-    return `${voornaam} ${delen[1].charAt(0)}.`;
-  }
-  return voornaam;
-};
-
 export default function Home() {
   const [ontgrendelNaam, setOntgrendelNaam] = useState('');
   const [invoerCode, setInvoerCode] = useState('');
@@ -69,12 +30,12 @@ export default function Home() {
   const [toast, setToast] = useState<{naam: string, bericht: string} | null>(null);
   const [infoOpen, setInfoOpen] = useState(false);
   
+  // POP-UP STATES
   const [showInstallPopup, setShowInstallPopup] = useState(true);
   const [ontbrekendeBonus, setOntbrekendeBonus] = useState<string[]>([]); 
-  const [ontbrekendeBonusIds, setOntbrekendeBonusIds] = useState<number[]>([]); 
   
   const [showUrgentPopup, setShowUrgentPopup] = useState(true);
-  const [urgenteMatchen, setUrgenteMatchen] = useState<{matchNaam: string, datum: string, ontbrekend: string[], ontbrekendIds: number[]}[]>([]);
+  const [urgenteMatchen, setUrgenteMatchen] = useState<{matchNaam: string, datum: string, ontbrekend: string[]}[]>([]);
 
   const actieveTabRef = useRef(actieveTab);
   const actieveSpelerRef = useRef(actieveSpeler);
@@ -154,23 +115,33 @@ export default function Home() {
     return () => { clearInterval(klokInterval); };
   }, []);
 
+  // Berekent wie zijn bonus nog moet invullen (met Kristof-check)
   const haalDataVoorPopupOp = async () => {
     const { data: spelers } = await supabase.from('spelers').select('id, naam, betaald');
     const { data: bonus } = await supabase.from('toernooi_voorspellingen').select('speler_id, winnaar');
     
     if (spelers && bonus) {
-      const ontbrekendSpelers = spelers
+      const ontbrekend = spelers
         .filter(s => s.betaald) 
         .filter(s => {
            const v = bonus.find(b => b.speler_id === s.id);
            return !v || !v.winnaar || v.winnaar.trim() === '';
-        });
-        
-      setOntbrekendeBonusIds(ontbrekendSpelers.map(s => s.id));
-      setOntbrekendeBonus(ontbrekendSpelers.map(s => formateerNaam(s.naam)));
+        })
+        .map(s => {
+          const volledigeNaam = s.naam.trim();
+          const delen = volledigeNaam.split(' ');
+          const voornaam = delen[0];
+          
+          if (voornaam.toLowerCase() === 'kristof' && delen.length > 1) {
+            return `${voornaam} ${delen[1].charAt(0)}.`;
+          }
+          return voornaam;
+        }); 
+      setOntbrekendeBonus(ontbrekend);
     }
   };
 
+  // Berekent welke matchen binnen de 36 uur starten (met Kristof-check)
   const haalUrgentieDataOp = async () => {
     const nuTijd = new Date().getTime();
     const tijd36u = nuTijd + (36 * 60 * 60 * 1000);
@@ -188,17 +159,25 @@ export default function Home() {
       
       if (matchTijd > nuTijd && matchTijd <= tijd36u) {
         
-        const ontbrekendSpelers = sData.filter(speler => {
+        const ontbrekend = sData.filter(speler => {
           const prono = vData.find(v => v.match_id === match.id && v.speler_id === speler.id);
           return !prono || prono.thuis_score === null || prono.uit_score === null || prono.thuis_score === '' || prono.uit_score === '';
+        }).map(s => {
+          const volledigeNaam = s.naam.trim();
+          const delen = volledigeNaam.split(' ');
+          const voornaam = delen[0];
+          
+          if (voornaam.toLowerCase() === 'kristof' && delen.length > 1) {
+            return `${voornaam} ${delen[1].charAt(0)}.`;
+          }
+          return voornaam;
         });
 
-        if (ontbrekendSpelers.length > 0) {
+        if (ontbrekend.length > 0) {
           urgentList.push({
             matchNaam: `${match.thuisploeg} - ${match.uitploeg}`,
             datum: match.datum,
-            ontbrekend: ontbrekendSpelers.map(s => formateerNaam(s.naam)),
-            ontbrekendIds: ontbrekendSpelers.map(s => s.id)
+            ontbrekend
           });
         }
       }
@@ -230,6 +209,7 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [actieveSpeler?.id]); 
 
+  // HIER ZIT DE FIX VOOR DE TELLERS TAB
   useEffect(() => {
     if (actieveSpeler && (actieveSpeler.betaald || isJorden)) {
       if (actieveTab === 'matchen' || actieveTab === 'tellers') haalMatchenOp();
@@ -240,6 +220,7 @@ export default function Home() {
         haalMatchenOp(); 
         haalKlassementOp(); 
       }
+      // Fix: Nu haalt hij ook op als de actieveTab 'tellers' (Data) is!
       if (actieveTab === 'antwoorden' || actieveTab === 'tellers') haalAlleAntwoordenOp();
     }
   }, [actieveSpeler, actieveTab, isJorden]);
@@ -310,69 +291,25 @@ export default function Home() {
     }
   };
 
-  // KOGELVRIJE SAVE FUNCTIE (Zonder upsert of database constraints)
   const triggerAutoSave = (mId: number, data: { thuis: string, uit: string }) => {
     const m = matchen.find(x => x.id === mId);
-    const actueleTijd = new Date().getTime(); 
-    
-    // Als de match al gestart is, mag je niet meer opslaan
-    if (m && actueleTijd >= new Date(m.datum).getTime()) return;
-    
-    // Enkel saven als beide velden getallen zijn
+    if (m && nu >= new Date(m.datum).getTime()) return;
     if (data.thuis === '' || data.uit === '') return;
-    const thuisScore = parseInt(data.thuis);
-    const uitScore = parseInt(data.uit);
-    if (isNaN(thuisScore) || isNaN(uitScore)) return;
-
     if (saveTimeoutRef.current[mId]) clearTimeout(saveTimeoutRef.current[mId]);
     setMatchSaveStatus(prev => ({ ...prev, [mId]: 'saving' }));
-    
     saveTimeoutRef.current[mId] = setTimeout(async () => {
-      try {
-        // STAP 1: Probeer de bestaande voorspelling te UPDATEN
-        const { data: updateData, error: updateError } = await supabase
-          .from('match_voorspellingen')
-          .update({ thuis_score: thuisScore, uit_score: uitScore })
-          .eq('speler_id', actieveSpeler.id)
-          .eq('match_id', mId)
-          .select();
-
-        // STAP 2: Als de update mislukt (omdat er nog geen rij bestond), voeg dan een NIEUWE rij toe (INSERT)
-        if (updateError || !updateData || updateData.length === 0) {
-          const { error: insertError } = await supabase
-            .from('match_voorspellingen')
-            .insert([{
-              speler_id: actieveSpeler.id, 
-              match_id: mId, 
-              thuis_score: thuisScore, 
-              uit_score: uitScore
-            }]);
-            
-          if (insertError) {
-            console.error("Insert fout:", insertError);
-            setMatchSaveStatus(prev => ({ ...prev, [mId]: 'idle' }));
-            return;
-          }
-        }
-
-        // STAP 3: Succes!
-        setMatchSaveStatus(prev => ({ ...prev, [mId]: 'saved' }));
-        haalMatchenOp(); 
-      } catch (error) {
-        console.error("Fatale fout bij opslaan:", error);
-        setMatchSaveStatus(prev => ({ ...prev, [mId]: 'idle' }));
-      }
+      const { error } = await supabase.from('match_voorspellingen').upsert({
+        speler_id: actieveSpeler.id, match_id: mId, thuis_score: parseInt(data.thuis), uit_score: parseInt(data.uit)
+      }, { onConflict: 'speler_id, match_id' });
+      setMatchSaveStatus(prev => ({ ...prev, [mId]: error ? 'idle' : 'saved' }));
+      if (!error) haalMatchenOp(); 
     }, 800); 
   };
 
   const handleScore = (mId: number, veld: 'thuis'|'uit', waarde: string) => {
     const v = matchVoorspellingen[mId] || { thuis: '', uit: '' };
     const newData = { ...v, [veld]: waarde };
-    
-    // 1. Update direct het scherm
     setMatchVoorspellingen(prev => ({ ...prev, [mId]: newData }));
-    
-    // 2. Roep de veilige save-actie aan (los van de setState updater)
     triggerAutoSave(mId, newData);
   };
 
@@ -464,11 +401,6 @@ export default function Home() {
       winnaarsRood = diffR.filter(x => x.d === Math.min(...diffR.map(y => y.d))).map(x => x.id);
     }
 
-    const topScorersNorm = topScorers.map(normalizeString);
-    const bestDefensesNorm = bestDefenses.map(normalizeString);
-    const halveFinalistenNorm = halveFinalisten.map(normalizeString);
-    const wkWinnaarNorm = normalizeString(wkWinnaar);
-
     const stats = s.map(sp => {
       let pronoP = 0, bonusP = 0, ex = 0, wc = 0, f = 0;
       
@@ -490,18 +422,11 @@ export default function Home() {
         if (winnaarsGoals.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Totaal Goals', pt: 5}); }
         if (winnaarsGeel.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Gele Kaarten', pt: 5}); }
         if (winnaarsRood.includes(sp.id)) { bonusP += 5; breakdown.push({label: 'Dichtste bij Rode Kaarten', pt: 5}); }
-        
-        if (wkWinnaarNorm && normalizeString(bv.winnaar) === wkWinnaarNorm) { bonusP += 5; breakdown.push({label: 'Wereldkampioen Juist', pt: 5}); }
-        
-        const myAanval = normalizeString(bv.topschutter);
-        if (myAanval && topScorersNorm.includes(myAanval)) { bonusP += 3; breakdown.push({label: 'Beste Aanval', pt: 3}); }
-        
-        const myDef = normalizeString(bv.beste_keeper);
-        if (myDef && bestDefensesNorm.includes(myDef)) { bonusP += 3; breakdown.push({label: 'Beste Verdediging', pt: 3}); }
-        
+        if (wkWinnaar && bv.winnaar === wkWinnaar) { bonusP += 5; breakdown.push({label: 'Wereldkampioen Juist', pt: 5}); }
+        if (topScorers.includes(bv.topschutter)) { bonusP += 3; breakdown.push({label: 'Beste Aanval', pt: 3}); }
+        if (bestDefenses.includes(bv.beste_keeper)) { bonusP += 3; breakdown.push({label: 'Beste Verdediging', pt: 3}); }
         [bv.halve_finalist_1, bv.halve_finalist_2, bv.halve_finalist_3, bv.halve_finalist_4].forEach(land => {
-          const lNorm = normalizeString(land);
-          if (lNorm && halveFinalistenNorm.includes(lNorm)) { bonusP += 3; breakdown.push({label: `Halve Finalist (${land})`, pt: 3}); }
+          if (land && halveFinalisten.includes(land)) { bonusP += 3; breakdown.push({label: `Halve Finalist (${land})`, pt: 3}); }
         });
       }
       
@@ -589,12 +514,6 @@ export default function Home() {
     return basis;
   }, [matchen, filterRonde, matchVoorspellingen, nu]);
 
-  const moetUrgentInvullen = actieveSpeler && urgenteMatchen.some(u => u.ontbrekendIds.includes(actieveSpeler.id));
-  const toonUrgentPopup = showUrgentPopup && moetUrgentInvullen && urgenteMatchen.length > 0;
-  
-  const moetBonusInvullen = actieveSpeler && ontbrekendeBonusIds.includes(actieveSpeler.id);
-  const toonBonusPopup = !toonUrgentPopup && toonInstallPopup && moetBonusInvullen;
-
   return (
     <main className="main-container">
       <style>{`
@@ -655,8 +574,8 @@ export default function Home() {
         .btn-primary:active { transform: scale(0.98); }
       `}</style>
 
-      {/* 🚨 URGENTE MATCHEN POP-UP (Enkel voor wie nog moet invullen!) 🚨 */}
-      {toonUrgentPopup && (
+      {/* 🚨 NIEUW: URGENTE MATCHEN POP-UP (36h waarschuwing) 🚨 */}
+      {showUrgentPopup && urgenteMatchen.length > 0 && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
           background: 'rgba(9, 5, 20, 0.85)', backdropFilter: 'blur(10px)',
@@ -706,8 +625,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* 🚨 BONUS WAARSCHUWING (Enkel voor wie nog moet invullen!) 🚨 */}
-      {toonBonusPopup && (
+      {/* 🚨 INSTALLATIE POP-UP & BONUS WAARSCHUWING 🚨 */}
+      {!showUrgentPopup && toonInstallPopup && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
           background: 'rgba(9, 5, 20, 0.85)', backdropFilter: 'blur(10px)',
@@ -733,11 +652,17 @@ export default function Home() {
               <p style={{ fontSize: '0.85rem', color: '#ADB5BD', fontWeight: 800, margin: '0 0 10px 0' }}>Deze spelers moeten hun bonusvragen nog invullen:</p>
               
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
-                {ontbrekendeBonus.map((naam, i) => (
-                  <span key={i} style={{ background: 'rgba(227, 0, 34, 0.15)', color: '#FFF', border: '1px solid var(--wk-red)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900 }}>
-                    {naam}
+                {ontbrekendeBonus.length === 0 ? (
+                  <span style={{ background: 'var(--wk-lime)', color: '#111827', padding: '6px 12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 900 }}>
+                    🎉 Iedereen heeft de bonus ingevuld!
                   </span>
-                ))}
+                ) : (
+                  ontbrekendeBonus.map((naam, i) => (
+                    <span key={i} style={{ background: 'rgba(227, 0, 34, 0.15)', color: '#FFF', border: '1px solid var(--wk-red)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900 }}>
+                      {naam}
+                    </span>
+                  ))
+                )}
               </div>
             </div>
 
