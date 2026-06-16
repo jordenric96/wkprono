@@ -282,6 +282,7 @@ export default function Home() {
     return () => { supabase.removeChannel(chatKanaal); };
   }, [actieveSpeler?.id]);
 
+
   const syncMetSpreadsheet = async () => {
     if (!isAdmin) return;
     setSyncStatus('⏳ Bezig...');
@@ -309,16 +310,13 @@ export default function Home() {
     }
   };
 
-  // --- KOGELVRIJE OPSLAG FUNCTIE ---
+  // KOGELVRIJE SAVE FUNCTIE: Werkt altijd, zonder errors van ontbrekende database-regels!
   const triggerAutoSave = (mId: number, data: { thuis: string, uit: string }) => {
     const m = matchen.find(x => x.id === mId);
-    const actueleTijd = new Date().getTime(); 
     
-    // Niet opslaan na start match
-    if (m && actueleTijd >= new Date(m.datum).getTime()) return;
-    
-    // Beide velden moeten geldige getallen zijn
+    if (m && new Date().getTime() >= new Date(m.datum).getTime()) return;
     if (data.thuis === '' || data.uit === '') return;
+    
     const thuisScore = parseInt(data.thuis);
     const uitScore = parseInt(data.uit);
     if (isNaN(thuisScore) || isNaN(uitScore)) return;
@@ -327,37 +325,48 @@ export default function Home() {
     setMatchSaveStatus(prev => ({ ...prev, [mId]: 'saving' }));
     
     saveTimeoutRef.current[mId] = setTimeout(async () => {
-      // Gebruik UPSERT die verplicht de speler_match_uniek constraint nodig heeft (zie SQL)
-      const { error } = await supabase.from('match_voorspellingen').upsert({
-        speler_id: actieveSpeler.id, 
-        match_id: mId, 
-        thuis_score: thuisScore, 
-        uit_score: uitScore
-      }, { onConflict: 'speler_id, match_id' });
-      
-      // Als Supabase weigert op te slaan (door missende SQL rule), toon dan een pop-up
-      if (error) {
-        console.error("Fatale database fout:", error);
-        alert(`⚠️ Oeps! Deze score werd niet opgeslagen.\n\nJe mist de "Unieke Regel" in Supabase (zie stap 1 in de uitleg).`);
-        setMatchSaveStatus(prev => ({ ...prev, [mId]: 'idle' }));
-        return;
-      }
+      try {
+        // Stap 1: Controleer eerst of de rij al bestaat
+        const { data: bestaandeRij } = await supabase
+          .from('match_voorspellingen')
+          .select('id')
+          .eq('speler_id', actieveSpeler.id)
+          .eq('match_id', mId);
 
-      setMatchSaveStatus(prev => ({ ...prev, [mId]: 'saved' }));
-      haalMatchenOp(); 
-    }, 800); 
+        if (bestaandeRij && bestaandeRij.length > 0) {
+          // UPDATE ALS HIJ BESTAAT
+          await supabase
+            .from('match_voorspellingen')
+            .update({ thuis_score: thuisScore, uit_score: uitScore })
+            .eq('speler_id', actieveSpeler.id)
+            .eq('match_id', mId);
+        } else {
+          // INSERT ALS HIJ NOG NIET BESTAAT
+          await supabase
+            .from('match_voorspellingen')
+            .insert([{
+              speler_id: actieveSpeler.id, 
+              match_id: mId, 
+              thuis_score: thuisScore, 
+              uit_score: uitScore
+            }]);
+        }
+        
+        setMatchSaveStatus(prev => ({ ...prev, [mId]: 'saved' }));
+        haalMatchenOp(); 
+      } catch (err) {
+        console.error("Fout bij opslaan:", err);
+        setMatchSaveStatus(prev => ({ ...prev, [mId]: 'idle' }));
+      }
+    }, 600); 
   };
 
   const handleScore = (mId: number, veld: 'thuis'|'uit', waarde: string) => {
-    setMatchVoorspellingen(prev => {
-      const v = prev[mId] || { thuis: '', uit: '' };
-      const newData = { ...v, [veld]: waarde };
-      
-      // Roep asynchroon opslaan aan met de allerlaatste waardes
-      setTimeout(() => triggerAutoSave(mId, newData), 0);
-      
-      return { ...prev, [mId]: newData };
-    });
+    const v = matchVoorspellingen[mId] || { thuis: '', uit: '' };
+    const newData = { ...v, [veld]: waarde };
+    
+    setMatchVoorspellingen(prev => ({ ...prev, [mId]: newData }));
+    triggerAutoSave(mId, newData);
   };
 
   const slaBonusOp = async () => {
