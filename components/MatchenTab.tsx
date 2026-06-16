@@ -200,12 +200,12 @@ const cardThemes = [
 export default function MatchenTab({
   gefilterdeMatchen, nu, matchVoorspellingen, matchSaveStatus,
   alleMatchVoorspellingen, alleSpelers, expandedMatchId, setExpandedMatchId,
-  handleScore, filterRonde, setFilterRonde
+  handleScore, filterRonde, setFilterRonde, weergavePeriode, setWeergavePeriode
 }: any) {
   
   const [geselecteerdTeamRaw, setGeselecteerdTeamRaw] = useState<string | null>(null);
   
-  // Geheugensteuntje: onthoud voor welke ronde we al automatisch gescrolld hebben
+  // Geheugensteuntje: onthoud voor welke view/ronde we al automatisch gescrolld hebben
   const hasScrolled = useRef<string | null>(null);
 
   const rondes = ['Alle', 'Nog in te vullen', 'Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale'];
@@ -214,14 +214,21 @@ export default function MatchenTab({
   useEffect(() => {
     if (!gefilterdeMatchen || gefilterdeMatchen.length === 0) return;
     
-    // Als we voor deze specifieke ronde (filter) al gescrolld hebben, doe niets.
-    if (hasScrolled.current === filterRonde) return;
+    // Als we voor deze tab/ronde al gescrolld hebben, doe niets.
+    if (hasScrolled.current === `${weergavePeriode}-${filterRonde}`) return;
 
-    let targetMatch = [...gefilterdeMatchen].reverse().find(m => nu >= new Date(m.datum).getTime());
-    if (!targetMatch) targetMatch = gefilterdeMatchen[0];
+    let targetMatch;
+    if (weergavePeriode === 'Actueel') {
+      // Actueel: scroll naar de éérstvolgende match
+      targetMatch = [...gefilterdeMatchen].reverse().find(m => nu >= new Date(m.datum).getTime());
+      if (!targetMatch) targetMatch = gefilterdeMatchen[0];
+    } else {
+      // Historie: scroll naar de allerlaatste (recentst gespeelde)
+      targetMatch = gefilterdeMatchen[gefilterdeMatchen.length - 1]; 
+    }
 
     if (targetMatch) {
-      hasScrolled.current = filterRonde; // Zet een vinkje dat we voor deze ronde gescrolld hebben
+      hasScrolled.current = `${weergavePeriode}-${filterRonde}`; 
       
       const timer = setTimeout(() => {
         const element = document.getElementById(`match-${targetMatch.id}`);
@@ -231,7 +238,7 @@ export default function MatchenTab({
       }, 300); 
       return () => clearTimeout(timer);
     }
-  }, [filterRonde, gefilterdeMatchen, nu]); 
+  }, [filterRonde, gefilterdeMatchen, nu, weergavePeriode]); 
 
   const genereerGroepsStand = (rawNaam: string) => {
     const groepsMatchenVanDitTeam = gefilterdeMatchen.filter((m: any) => 
@@ -303,6 +310,22 @@ export default function MatchenTab({
         .live-pulse { animation: pulse-red 2s infinite; }
       `}</style>
 
+      {/* ACTUEEL / HISTORIE TOGGLE */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '5px' }}>
+        <button 
+           onClick={() => { setWeergavePeriode('Actueel'); setFilterRonde('Alle'); }}
+           style={{ flex: 1, padding: '12px', borderRadius: '16px', background: weergavePeriode === 'Actueel' ? 'var(--wk-blue)' : 'rgba(255,255,255,0.05)', color: weergavePeriode === 'Actueel' ? '#FFF' : '#ADB5BD', fontWeight: 900, border: weergavePeriode === 'Actueel' ? '2px solid var(--wk-blue)' : '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.2s' }}
+        >
+           🔥 ACTUEEL
+        </button>
+        <button 
+           onClick={() => { setWeergavePeriode('Historie'); setFilterRonde('Alle'); }}
+           style={{ flex: 1, padding: '12px', borderRadius: '16px', background: weergavePeriode === 'Historie' ? 'var(--wk-purple)' : 'rgba(255,255,255,0.05)', color: weergavePeriode === 'Historie' ? '#FFF' : '#ADB5BD', fontWeight: 900, border: weergavePeriode === 'Historie' ? '2px solid var(--wk-purple)' : '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.2s' }}
+        >
+           ⏪ HISTORIE
+        </button>
+      </div>
+
       {/* FILTER KNOPPEN */}
       <div className="hide-scrollbar" style={{ display: 'flex', overflowX: 'auto', gap: '8px', paddingBottom: '5px' }}>
         {rondes.map(r => (
@@ -322,12 +345,16 @@ export default function MatchenTab({
         ))}
       </div>
 
-      <div style={{ background: 'rgba(255,255,255,0.05)', color: '#00E5FF', padding: '10px 15px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900, textAlign: 'center', border: '1px solid rgba(0, 229, 255, 0.3)' }}>
-        💡 Tip: Tik op de vlaggetjes van een land voor de actuele groepsstand!
-      </div>
+      {weergavePeriode === 'Actueel' && (
+        <div style={{ background: 'rgba(255,255,255,0.05)', color: '#00E5FF', padding: '10px 15px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900, textAlign: 'center', border: '1px solid rgba(0, 229, 255, 0.3)' }}>
+          💡 Tip: Tik op de vlaggetjes van een land voor de actuele groepsstand!
+        </div>
+      )}
 
       {gefilterdeMatchen.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '30px', color: '#ADB5BD', fontWeight: 900 }}>Geen matchen gevonden in deze ronde.</div>
+        <div style={{ textAlign: 'center', padding: '30px', color: '#ADB5BD', fontWeight: 900 }}>
+           {weergavePeriode === 'Historie' ? 'Geen gespeelde matchen in de historie.' : 'Geen matchen gevonden in deze ronde.'}
+        </div>
       ) : (
         gefilterdeMatchen.map((match: any, index: number) => {
           
