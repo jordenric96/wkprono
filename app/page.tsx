@@ -310,11 +310,16 @@ export default function Home() {
     }
   };
 
+  // KOGELVRIJE SAVE FUNCTIE (Zonder upsert of database constraints)
   const triggerAutoSave = (mId: number, data: { thuis: string, uit: string }) => {
     const m = matchen.find(x => x.id === mId);
-    if (m && nu >= new Date(m.datum).getTime()) return; 
-    if (data.thuis === '' || data.uit === '') return; 
+    const actueleTijd = new Date().getTime(); 
     
+    // Als de match al gestart is, mag je niet meer opslaan
+    if (m && actueleTijd >= new Date(m.datum).getTime()) return;
+    
+    // Enkel saven als beide velden getallen zijn
+    if (data.thuis === '' || data.uit === '') return;
     const thuisScore = parseInt(data.thuis);
     const uitScore = parseInt(data.uit);
     if (isNaN(thuisScore) || isNaN(uitScore)) return;
@@ -323,15 +328,40 @@ export default function Home() {
     setMatchSaveStatus(prev => ({ ...prev, [mId]: 'saving' }));
     
     saveTimeoutRef.current[mId] = setTimeout(async () => {
-      const { error } = await supabase.from('match_voorspellingen').upsert({
-        speler_id: actieveSpeler.id, 
-        match_id: mId, 
-        thuis_score: thuisScore, 
-        uit_score: uitScore
-      }, { onConflict: 'speler_id, match_id' });
-      
-      setMatchSaveStatus(prev => ({ ...prev, [mId]: error ? 'idle' : 'saved' }));
-      if (!error) haalMatchenOp(); 
+      try {
+        // STAP 1: Probeer de bestaande voorspelling te UPDATEN
+        const { data: updateData, error: updateError } = await supabase
+          .from('match_voorspellingen')
+          .update({ thuis_score: thuisScore, uit_score: uitScore })
+          .eq('speler_id', actieveSpeler.id)
+          .eq('match_id', mId)
+          .select();
+
+        // STAP 2: Als de update mislukt (omdat er nog geen rij bestond), voeg dan een NIEUWE rij toe (INSERT)
+        if (updateError || !updateData || updateData.length === 0) {
+          const { error: insertError } = await supabase
+            .from('match_voorspellingen')
+            .insert([{
+              speler_id: actieveSpeler.id, 
+              match_id: mId, 
+              thuis_score: thuisScore, 
+              uit_score: uitScore
+            }]);
+            
+          if (insertError) {
+            console.error("Insert fout:", insertError);
+            setMatchSaveStatus(prev => ({ ...prev, [mId]: 'idle' }));
+            return;
+          }
+        }
+
+        // STAP 3: Succes!
+        setMatchSaveStatus(prev => ({ ...prev, [mId]: 'saved' }));
+        haalMatchenOp(); 
+      } catch (error) {
+        console.error("Fatale fout bij opslaan:", error);
+        setMatchSaveStatus(prev => ({ ...prev, [mId]: 'idle' }));
+      }
     }, 800); 
   };
 
@@ -339,7 +369,10 @@ export default function Home() {
     const v = matchVoorspellingen[mId] || { thuis: '', uit: '' };
     const newData = { ...v, [veld]: waarde };
     
+    // 1. Update direct het scherm
     setMatchVoorspellingen(prev => ({ ...prev, [mId]: newData }));
+    
+    // 2. Roep de veilige save-actie aan (los van de setState updater)
     triggerAutoSave(mId, newData);
   };
 
@@ -622,7 +655,7 @@ export default function Home() {
         .btn-primary:active { transform: scale(0.98); }
       `}</style>
 
-      {/* 🚨 NIEUW: URGENTE MATCHEN POP-UP (Enkel voor wie nog moet invullen!) 🚨 */}
+      {/* 🚨 URGENTE MATCHEN POP-UP (Enkel voor wie nog moet invullen!) 🚨 */}
       {toonUrgentPopup && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
