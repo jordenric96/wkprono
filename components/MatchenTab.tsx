@@ -179,6 +179,7 @@ const parseTeam = (teamString: string) => {
 
 // Slimme functie om Kristof M. en Kristof V. te onderscheiden
 const formateerNaam = (volledigeNaam: string) => {
+  if (!volledigeNaam) return 'Onbekend';
   const delen = volledigeNaam.trim().split(' ');
   const voornaam = delen[0];
   if (voornaam.toLowerCase() === 'kristof' && delen.length > 1) {
@@ -206,8 +207,7 @@ export default function MatchenTab({
 
   const rondes = ['Alle', 'Nog in te vullen', 'Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale'];
 
-  // --- AUTO-SCROLL FUNCTIE ---
-  // Aangepast: triggert NU ENKEL wanneer de filterRonde verandert, zodat je vrij kunt scrollen!
+  // --- AUTO-SCROLL FUNCTIE (Gefixt!) ---
   useEffect(() => {
     if (!gefilterdeMatchen || gefilterdeMatchen.length === 0) return;
 
@@ -223,7 +223,7 @@ export default function MatchenTab({
       }, 300); 
       return () => clearTimeout(timer);
     }
-  }, [filterRonde]); // Verwijderd: 'nu' uit dependencies
+  }, [filterRonde, gefilterdeMatchen?.length]); 
 
   const genereerGroepsStand = (rawNaam: string) => {
     const groepsMatchenVanDitTeam = gefilterdeMatchen.filter((m: any) => 
@@ -326,7 +326,6 @@ export default function MatchenTab({
           // LIVE BEREKENING
           const matchTijd = new Date(match.datum).getTime();
           const isMatchGesloten = nu >= matchTijd;
-          // Match is "Live" zolang we tussen de starttijd en starttijd + 117 minuten zitten
           const isMatchLive = isMatchGesloten && nu < (matchTijd + (117 * 60 * 1000));
           
           const voorspelling = matchVoorspellingen[match.id] || { thuis: '', uit: '' };
