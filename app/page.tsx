@@ -64,6 +64,7 @@ export default function Home() {
   const [alleSpelers, setAlleSpelers] = useState<any[]>([]); 
   const [actieveTab, setActieveTab] = useState('ranking');
   const [filterRonde, setFilterRonde] = useState('Alle');
+  const [weergavePeriode, setWeergavePeriode] = useState<'Actueel' | 'Historie'>('Actueel'); // NIEUWE STATE
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
   
   const [toast, setToast] = useState<{naam: string, bericht: string} | null>(null);
@@ -300,7 +301,6 @@ export default function Home() {
     const { data: matchenData } = await supabase.from('matchen').select('*').order('datum', { ascending: true });
     if (matchenData) setMatchen(matchenData);
     
-    // VRAAG TOT 10.000 RIJEN OP ZODAT WE NIET BEPERKT ZIJN TOT 1000
     const { data: vData } = await supabase.from('match_voorspellingen').select('*, spelers(naam)').limit(10000);
     if (vData) {
       setAlleMatchVoorspellingen(vData); 
@@ -317,11 +317,9 @@ export default function Home() {
     const m = matchen.find(x => x.id === mId);
     const actueleTijd = new Date().getTime(); 
     
-    // Niet opslaan na start match
     if (m && actueleTijd >= new Date(m.datum).getTime()) return;
-    
-    // Beide velden moeten getallen zijn
     if (data.thuis === '' || data.uit === '') return;
+    
     const thuisScore = parseInt(data.thuis);
     const uitScore = parseInt(data.uit);
     if (isNaN(thuisScore) || isNaN(uitScore)) return;
@@ -368,9 +366,7 @@ export default function Home() {
       const v = prev[mId] || { thuis: '', uit: '' };
       const newData = { ...v, [veld]: waarde };
       
-      // Roep asynchroon opslaan aan met de allerlaatste waardes
       setTimeout(() => triggerAutoSave(mId, newData), 0);
-      
       return { ...prev, [mId]: newData };
     });
   };
@@ -380,7 +376,7 @@ export default function Home() {
     setOpslaanStatus('Bezig...');
     await supabase.from('toernooi_voorspellingen').upsert({
       speler_id: actieveSpeler.id, winnaar, halve_finalist_1: hf[0], halve_finalist_2: hf[1], halve_finalist_3: hf[2], halve_finalist_4: hf[3],
-      topschutter: meesteGoalsLand, beste_keeper: besteVerdedigingLand, eindstation_belgie: eindstation,
+      topschutter: meesteGoalsLand, warme_bakker: besteVerdedigingLand, eindstation_belgie: eindstation,
       totaal_goals: parseInt(totaalGoals) || 0,
       totaal_gele_kaarten: parseInt(totaalGeel) || 0, totaal_rode_kaarten: parseInt(totaalRood) || 0
     }, { onConflict: 'speler_id' });
@@ -411,7 +407,6 @@ export default function Home() {
   const haalKlassementOp = async () => {
     const { data: s, error: sErr } = await supabase.from('spelers').select('*');
     const { data: m, error: mErr } = await supabase.from('matchen').select('*');
-    // VRAAG TOT 10.000 RIJEN OP ZODAT WE NIET BEPERKT ZIJN TOT 1000
     const { data: v, error: vErr } = await supabase.from('match_voorspellingen').select('*').limit(10000);
     const { data: bonusV, error: bonusErr } = await supabase.from('toernooi_voorspellingen').select('*');
 
@@ -582,12 +577,24 @@ export default function Home() {
     else if (data) { setAlleSpelers(prev => [...prev, data]); setActieveSpeler(data); localStorage.setItem('wk_speler_id', data.id.toString()); setStatus(''); }
   };
 
+  // --- FILTERS: SCHEIDING TUSSEN ACTUEEL EN HISTORIE ---
   const gefilterdeMatchen = useMemo(() => {
     let basis = matchen;
+    const EEN_DAG = 24 * 60 * 60 * 1000;
+
+    // Filter eerst op Actueel of Historie
+    if (weergavePeriode === 'Actueel') {
+      // Actueel: matchen die in de toekomst liggen OF in de afgelopen 24u zijn gespeeld
+      basis = basis.filter(m => nu < new Date(m.datum).getTime() + EEN_DAG);
+    } else {
+      // Historie: matchen die méér dan 24u geleden zijn gespeeld
+      basis = basis.filter(m => nu >= new Date(m.datum).getTime() + EEN_DAG);
+    }
+
     if (filterRonde === 'Nog in te vullen') return basis.filter(m => (!matchVoorspellingen[m.id] || matchVoorspellingen[m.id].thuis === '') && (nu < new Date(m.datum).getTime()));
     if (filterRonde !== 'Alle') basis = basis.filter(m => m.ronde === filterRonde);
     return basis;
-  }, [matchen, filterRonde, matchVoorspellingen, nu]);
+  }, [matchen, filterRonde, matchVoorspellingen, nu, weergavePeriode]);
 
   const moetUrgentInvullen = actieveSpeler && urgenteMatchen.some(u => u.ontbrekendIds.includes(actieveSpeler.id));
   const toonUrgentPopup = showUrgentPopup && moetUrgentInvullen && urgenteMatchen.length > 0;
@@ -886,7 +893,8 @@ export default function Home() {
             </div>
           ) : (
             <div style={{ width: '100%' }}>
-              {actieveTab === 'matchen' && <MatchenTab gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} />}
+              {/* DOORgeven weergavePeriode state */}
+              {actieveTab === 'matchen' && <MatchenTab gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} weergavePeriode={weergavePeriode} setWeergavePeriode={setWeergavePeriode} />}
             
               {actieveTab === 'prijs' && <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />}
               {actieveTab === 'bonus' && <BonusTab winnaar={winnaar} setWinnaar={setWinnaar} hf={hf} setHf={setHf} meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} eindstation={eindstation} setEindstation={setEindstation} totaalGoals={totaalGoals} setTotaalGoals={setTotaalGoals} totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} />}
