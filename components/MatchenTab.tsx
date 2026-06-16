@@ -177,17 +177,6 @@ const parseTeam = (teamString: string) => {
   return { name: nameNL, emoji, gradient };
 };
 
-// Slimme functie om Kristof M. en Kristof V. te onderscheiden
-const formateerNaam = (volledigeNaam: string) => {
-  if (!volledigeNaam) return 'Onbekend';
-  const delen = volledigeNaam.trim().split(' ');
-  const voornaam = delen[0];
-  if (voornaam.toLowerCase() === 'kristof' && delen.length > 1) {
-    return `${voornaam} ${delen[1].charAt(0)}.`;
-  }
-  return voornaam;
-};
-
 // Hardcoded Hex-kleuren voor de Neon effecten
 const cardThemes = [
   { bg: '#2B00FF', color: '#FFF' },
@@ -207,11 +196,11 @@ export default function MatchenTab({
 
   const rondes = ['Alle', 'Nog in te vullen', 'Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale'];
 
-  // --- AUTO-SCROLL FUNCTIE (Gefixt!) ---
+  // --- AUTO-SCROLL FUNCTIE ---
   useEffect(() => {
     if (!gefilterdeMatchen || gefilterdeMatchen.length === 0) return;
 
-    let targetMatch = [...gefilterdeMatchen].reverse().find(m => new Date().getTime() >= new Date(m.datum).getTime());
+    let targetMatch = [...gefilterdeMatchen].reverse().find(m => nu >= new Date(m.datum).getTime());
     if (!targetMatch) targetMatch = gefilterdeMatchen[0];
 
     if (targetMatch) {
@@ -223,7 +212,7 @@ export default function MatchenTab({
       }, 300); 
       return () => clearTimeout(timer);
     }
-  }, [filterRonde, gefilterdeMatchen?.length]); 
+  }, [filterRonde, gefilterdeMatchen?.length, nu]); 
 
   const genereerGroepsStand = (rawNaam: string) => {
     const groepsMatchenVanDitTeam = gefilterdeMatchen.filter((m: any) => 
@@ -326,6 +315,7 @@ export default function MatchenTab({
           // LIVE BEREKENING
           const matchTijd = new Date(match.datum).getTime();
           const isMatchGesloten = nu >= matchTijd;
+          // Match is "Live" zolang we tussen de starttijd en starttijd + 117 minuten zitten
           const isMatchLive = isMatchGesloten && nu < (matchTijd + (117 * 60 * 1000));
           
           const voorspelling = matchVoorspellingen[match.id] || { thuis: '', uit: '' };
@@ -418,12 +408,14 @@ export default function MatchenTab({
                   { ((match.gele_kaarten !== null && match.gele_kaarten !== undefined) || match.thuis_geel !== undefined) && (
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '0.7rem', fontWeight: 800, color: '#FFF', opacity: 0.9 }}>
                       {match.thuis_geel !== undefined ? (
+                        /* PER TEAM WEERGAVE (Als de kolommen 'thuis_geel', 'thuis_rood', 'uit_geel', 'uit_rood' in de DB bestaan) */
                         <div style={{ display: 'flex', width: '80%', justifyContent: 'space-between' }}>
                           <div style={{ flex: 1, textAlign: 'right', paddingRight: '10px' }}>🟨 {match.thuis_geel || 0} &nbsp;&nbsp; 🟥 {match.thuis_rood || 0}</div>
                           <div style={{ opacity: 0.3 }}>|</div>
                           <div style={{ flex: 1, textAlign: 'left', paddingLeft: '10px' }}>🟨 {match.uit_geel || 0} &nbsp;&nbsp; 🟥 {match.uit_rood || 0}</div>
                         </div>
                       ) : (
+                        /* FALLBACK: TOTAAL VAN DE MATCH TONEN (Huidige Database Structuur) */
                         <div style={{ display: 'flex', gap: '15px' }}>
                           <span title="Gele kaarten in deze match">🟨 Match Totaal: {match.gele_kaarten || 0}</span>
                           <span title="Rode kaarten in deze match">🟥 Match Totaal: {match.rode_kaarten || 0}</span>
@@ -445,7 +437,7 @@ export default function MatchenTab({
                     <span style={{ fontSize: '0.65rem', fontWeight: 900, opacity: 0.8, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Nog in te vullen:</span>
                     {nietIngevuldeSpelers.map((s: any) => (
                       <span key={s.id} style={{ background: 'rgba(0,0,0,0.3)', color: theme.color, padding: '4px 10px', borderRadius: '12px', fontSize: '0.65rem', fontWeight: 900, border: '1px solid rgba(255,255,255,0.1)', whiteSpace: 'nowrap' }}>
-                        {formateerNaam(s.naam)}
+                        {s.naam.split(' ')[0]}
                       </span>
                     ))}
                   </div>
@@ -456,7 +448,7 @@ export default function MatchenTab({
                   {alleSpelers.map((s: any) => {
                     const v = alleMatchVoorspellingen.find((x: any) => x.match_id === match.id && x.speler_id === s.id);
                     const heeftIngevuld = v && v.thuis_score !== null && v.uit_score !== null;
-                    const spelerNaam = formateerNaam(s.naam);
+                    const spelerNaam = s.naam.split(' ')[0];
 
                     let pillBg = 'rgba(0,0,0,0.2)';
                     let pillColor = theme.color;
