@@ -177,7 +177,8 @@ export default function Home() {
 
     const { data: mData } = await supabase.from('matchen').select('*').order('datum', { ascending: true });
     const { data: sData } = await supabase.from('spelers').select('id, naam, betaald').eq('betaald', true);
-    const { data: vData } = await supabase.from('match_voorspellingen').select('match_id, speler_id, thuis_score, uit_score');
+    // VRAAG TOT 10.000 RIJEN OP ZODAT WE NIET BEPERKT ZIJN TOT 1000
+    const { data: vData } = await supabase.from('match_voorspellingen').select('match_id, speler_id, thuis_score, uit_score').limit(10000);
 
     if (!mData || !sData || !vData) return;
 
@@ -256,7 +257,7 @@ export default function Home() {
   };
 
   const haalChatOp = async () => {
-    const { data } = await supabase.from('kleedkamer').select('*, spelers(naam)').order('created_at', { ascending: true });
+    const { data } = await supabase.from('kleedkamer').select('*, spelers(naam)').order('created_at', { ascending: true }).limit(5000);
     if (data) setChatBerichten(data);
   };
 
@@ -298,25 +299,29 @@ export default function Home() {
   const haalMatchenOp = async () => {
     const { data: matchenData } = await supabase.from('matchen').select('*').order('datum', { ascending: true });
     if (matchenData) setMatchen(matchenData);
-    const { data: vData } = await supabase.from('match_voorspellingen').select('*, spelers(naam)');
+    
+    // VRAAG TOT 10.000 RIJEN OP ZODAT WE NIET BEPERKT ZIJN TOT 1000
+    const { data: vData } = await supabase.from('match_voorspellingen').select('*, spelers(naam)').limit(10000);
     if (vData) {
       setAlleMatchVoorspellingen(vData); 
       const mijnV = vData.filter(v => v.speler_id === actieveSpeler.id);
       const obj: any = {};
       mijnV.forEach(v => {
-        obj[v.match_id] = { thuis: v.thuis_score?.toString() || '', uit: v.uit_score?.toString() || '' };
+        obj[v.match_id] = { thuis: v.thuis_score !== null ? v.thuis_score.toString() : '', uit: v.uit_score !== null ? v.uit_score.toString() : '' };
       });
       setMatchVoorspellingen(stateObj => ({...stateObj, ...obj}));
     }
   };
 
-  // KOGELVRIJE SAVE FUNCTIE: Werkt altijd, zonder errors van ontbrekende database-regels!
   const triggerAutoSave = (mId: number, data: { thuis: string, uit: string }) => {
     const m = matchen.find(x => x.id === mId);
+    const actueleTijd = new Date().getTime(); 
     
-    if (m && new Date().getTime() >= new Date(m.datum).getTime()) return;
+    // Niet opslaan na start match
+    if (m && actueleTijd >= new Date(m.datum).getTime()) return;
+    
+    // Beide velden moeten getallen zijn
     if (data.thuis === '' || data.uit === '') return;
-    
     const thuisScore = parseInt(data.thuis);
     const uitScore = parseInt(data.uit);
     if (isNaN(thuisScore) || isNaN(uitScore)) return;
@@ -326,7 +331,6 @@ export default function Home() {
     
     saveTimeoutRef.current[mId] = setTimeout(async () => {
       try {
-        // Stap 1: Controleer eerst of de rij al bestaat
         const { data: bestaandeRij } = await supabase
           .from('match_voorspellingen')
           .select('id')
@@ -334,14 +338,12 @@ export default function Home() {
           .eq('match_id', mId);
 
         if (bestaandeRij && bestaandeRij.length > 0) {
-          // UPDATE ALS HIJ BESTAAT
           await supabase
             .from('match_voorspellingen')
             .update({ thuis_score: thuisScore, uit_score: uitScore })
             .eq('speler_id', actieveSpeler.id)
             .eq('match_id', mId);
         } else {
-          // INSERT ALS HIJ NOG NIET BESTAAT
           await supabase
             .from('match_voorspellingen')
             .insert([{
@@ -362,11 +364,15 @@ export default function Home() {
   };
 
   const handleScore = (mId: number, veld: 'thuis'|'uit', waarde: string) => {
-    const v = matchVoorspellingen[mId] || { thuis: '', uit: '' };
-    const newData = { ...v, [veld]: waarde };
-    
-    setMatchVoorspellingen(prev => ({ ...prev, [mId]: newData }));
-    triggerAutoSave(mId, newData);
+    setMatchVoorspellingen(prev => {
+      const v = prev[mId] || { thuis: '', uit: '' };
+      const newData = { ...v, [veld]: waarde };
+      
+      // Roep asynchroon opslaan aan met de allerlaatste waardes
+      setTimeout(() => triggerAutoSave(mId, newData), 0);
+      
+      return { ...prev, [mId]: newData };
+    });
   };
 
   const slaBonusOp = async () => {
@@ -405,7 +411,8 @@ export default function Home() {
   const haalKlassementOp = async () => {
     const { data: s, error: sErr } = await supabase.from('spelers').select('*');
     const { data: m, error: mErr } = await supabase.from('matchen').select('*');
-    const { data: v, error: vErr } = await supabase.from('match_voorspellingen').select('*');
+    // VRAAG TOT 10.000 RIJEN OP ZODAT WE NIET BEPERKT ZIJN TOT 1000
+    const { data: v, error: vErr } = await supabase.from('match_voorspellingen').select('*').limit(10000);
     const { data: bonusV, error: bonusErr } = await supabase.from('toernooi_voorspellingen').select('*');
 
     if (sErr || mErr || vErr || bonusErr || !s || !m || !v || !bonusV) return;
@@ -648,7 +655,7 @@ export default function Home() {
         .btn-primary:active { transform: scale(0.98); }
       `}</style>
 
-      {/* 🚨 URGENTE MATCHEN POP-UP (Enkel voor wie nog moet invullen!) 🚨 */}
+      {/* 🚨 URGENTE MATCHEN POP-UP */}
       {toonUrgentPopup && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
@@ -699,7 +706,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* 🚨 BONUS WAARSCHUWING (Enkel voor wie nog moet invullen!) 🚨 */}
+      {/* 🚨 BONUS WAARSCHUWING */}
       {toonBonusPopup && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
@@ -834,7 +841,6 @@ export default function Home() {
           <button onClick={syncMetSpreadsheet} className="admin-btn">🔄 {syncStatus || 'SYNC MET GOOGLE SHEETS'}</button>
         )}
 
-        {/* TIMER WORDT PAS GETOOND ALS DE BEREKENING KLAAR IS OM FLITSEN TE VERMIJDEN */}
         {!isGesloten && actieveSpeler && isTimerLoaded && (
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '30px', width: '100%' }}>
             <div style={{ flex: 1, background: 'var(--wk-lime)', color: '#111827', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(204, 255, 0, 0.3)' }}>
