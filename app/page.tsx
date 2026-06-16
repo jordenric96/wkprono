@@ -15,7 +15,7 @@ import PrijsTab from '../components/PrijsTab';
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
 const POPUP_DEADLINE = new Date('2026-06-11T19:00:00+02:00').getTime();
 
-// DE FIX: Emoji's strippen, vertalen, en dan pas accenten verwijderen
+// Emoji's strippen, vertalen, en dan pas accenten verwijderen
 const normalizeString = (teamString: string) => {
   if (!teamString) return '';
   
@@ -312,14 +312,24 @@ export default function Home() {
 
   const triggerAutoSave = (mId: number, data: { thuis: string, uit: string }) => {
     const m = matchen.find(x => x.id === mId);
-    if (m && nu >= new Date(m.datum).getTime()) return;
-    if (data.thuis === '' || data.uit === '') return;
+    if (m && nu >= new Date(m.datum).getTime()) return; 
+    if (data.thuis === '' || data.uit === '') return; 
+    
+    const thuisScore = parseInt(data.thuis);
+    const uitScore = parseInt(data.uit);
+    if (isNaN(thuisScore) || isNaN(uitScore)) return;
+
     if (saveTimeoutRef.current[mId]) clearTimeout(saveTimeoutRef.current[mId]);
     setMatchSaveStatus(prev => ({ ...prev, [mId]: 'saving' }));
+    
     saveTimeoutRef.current[mId] = setTimeout(async () => {
       const { error } = await supabase.from('match_voorspellingen').upsert({
-        speler_id: actieveSpeler.id, match_id: mId, thuis_score: parseInt(data.thuis), uit_score: parseInt(data.uit)
+        speler_id: actieveSpeler.id, 
+        match_id: mId, 
+        thuis_score: thuisScore, 
+        uit_score: uitScore
       }, { onConflict: 'speler_id, match_id' });
+      
       setMatchSaveStatus(prev => ({ ...prev, [mId]: error ? 'idle' : 'saved' }));
       if (!error) haalMatchenOp(); 
     }, 800); 
@@ -328,6 +338,7 @@ export default function Home() {
   const handleScore = (mId: number, veld: 'thuis'|'uit', waarde: string) => {
     const v = matchVoorspellingen[mId] || { thuis: '', uit: '' };
     const newData = { ...v, [veld]: waarde };
+    
     setMatchVoorspellingen(prev => ({ ...prev, [mId]: newData }));
     triggerAutoSave(mId, newData);
   };
