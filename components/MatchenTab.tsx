@@ -78,9 +78,6 @@ const parseTeam = (teamString: string) => {
     'uzbekistan': 'Oezbekistan', 'oezbekistan': 'Oezbekistan'
   };
 
-  let nameNL = vertalingen[searchKey] || cleanString;
-  const searchFinalKey = nameNL.toLowerCase();
-
   const colors: Record<string, string> = {
     'belgië': 'linear-gradient(135deg, #000 33%, #FFD700 33%, #FFD700 66%, #ED2939 66%)',
     'nederland': 'linear-gradient(135deg, #AE1C28 33%, #FFF 33%, #FFF 66%, #21468B 66%)',
@@ -177,7 +174,6 @@ const parseTeam = (teamString: string) => {
   return { name: nameNL, emoji, gradient };
 };
 
-// Slimme functie om Kristof M. en Kristof V. te onderscheiden
 const formateerNaam = (volledigeNaam: string) => {
   if (!volledigeNaam) return 'Onbekend';
   const delen = volledigeNaam.trim().split(' ');
@@ -188,7 +184,6 @@ const formateerNaam = (volledigeNaam: string) => {
   return voornaam;
 };
 
-// Hardcoded Hex-kleuren voor de Neon effecten
 const cardThemes = [
   { bg: '#2B00FF', color: '#FFF' },
   { bg: '#7A00E6', color: '#FFF' },
@@ -204,8 +199,6 @@ export default function MatchenTab({
 }: any) {
   
   const [geselecteerdTeamRaw, setGeselecteerdTeamRaw] = useState<string | null>(null);
-  
-  // Geheugensteuntje: onthoud voor welke view/ronde we al automatisch gescrolld hebben
   const hasScrolled = useRef<string | null>(null);
 
   const rondes = ['Alle', 'Nog in te vullen', 'Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale'];
@@ -213,23 +206,18 @@ export default function MatchenTab({
   // --- AUTO-SCROLL FUNCTIE ---
   useEffect(() => {
     if (!gefilterdeMatchen || gefilterdeMatchen.length === 0) return;
-    
-    // Als we voor deze tab/ronde al gescrolld hebben, doe niets.
     if (hasScrolled.current === `${weergavePeriode}-${filterRonde}`) return;
 
     let targetMatch;
     if (weergavePeriode === 'Actueel') {
-      // Actueel: scroll naar de éérstvolgende match
       targetMatch = [...gefilterdeMatchen].reverse().find(m => nu >= new Date(m.datum).getTime());
       if (!targetMatch) targetMatch = gefilterdeMatchen[0];
     } else {
-      // Historie: scroll naar de allerlaatste (recentst gespeelde)
       targetMatch = gefilterdeMatchen[gefilterdeMatchen.length - 1]; 
     }
 
     if (targetMatch) {
       hasScrolled.current = `${weergavePeriode}-${filterRonde}`; 
-      
       const timer = setTimeout(() => {
         const element = document.getElementById(`match-${targetMatch.id}`);
         if (element) {
@@ -313,13 +301,13 @@ export default function MatchenTab({
       {/* ACTUEEL / HISTORIE TOGGLE */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '5px' }}>
         <button 
-           onClick={() => { setWeergavePeriode('Actueel'); setFilterRonde('Alle'); }}
+           onClick={() => { setWeergavePeriode('Actueel'); hasScrolled.current = null; }}
            style={{ flex: 1, padding: '12px', borderRadius: '16px', background: weergavePeriode === 'Actueel' ? 'var(--wk-blue)' : 'rgba(255,255,255,0.05)', color: weergavePeriode === 'Actueel' ? '#FFF' : '#ADB5BD', fontWeight: 900, border: weergavePeriode === 'Actueel' ? '2px solid var(--wk-blue)' : '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.2s' }}
         >
            🔥 ACTUEEL
         </button>
         <button 
-           onClick={() => { setWeergavePeriode('Historie'); setFilterRonde('Alle'); }}
+           onClick={() => { setWeergavePeriode('Historie'); hasScrolled.current = null; }}
            style={{ flex: 1, padding: '12px', borderRadius: '16px', background: weergavePeriode === 'Historie' ? 'var(--wk-purple)' : 'rgba(255,255,255,0.05)', color: weergavePeriode === 'Historie' ? '#FFF' : '#ADB5BD', fontWeight: 900, border: weergavePeriode === 'Historie' ? '2px solid var(--wk-purple)' : '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.2s' }}
         >
            ⏪ HISTORIE
@@ -358,10 +346,8 @@ export default function MatchenTab({
       ) : (
         gefilterdeMatchen.map((match: any, index: number) => {
           
-          // LIVE BEREKENING
           const matchTijd = new Date(match.datum).getTime();
           const isMatchGesloten = nu >= matchTijd;
-          // Match is "Live" zolang we tussen de starttijd en starttijd + 117 minuten zitten
           const isMatchLive = isMatchGesloten && nu < (matchTijd + (117 * 60 * 1000));
           
           const voorspelling = matchVoorspellingen[match.id] || { thuis: '', uit: '' };
@@ -376,7 +362,6 @@ export default function MatchenTab({
 
           const theme = cardThemes[index % cardThemes.length];
 
-          // --- LOGICA WIE INGEVULD HEEFT ---
           const nietIngevuldeSpelers = alleSpelers.filter((s: any) => {
             const v = alleMatchVoorspellingen.find((x: any) => x.match_id === match.id && x.speler_id === s.id);
             return !v || v.thuis_score === null || v.uit_score === null || v.thuis_score === '' || v.uit_score === '';
@@ -454,14 +439,12 @@ export default function MatchenTab({
                   { ((match.gele_kaarten !== null && match.gele_kaarten !== undefined) || match.thuis_geel !== undefined) && (
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '0.7rem', fontWeight: 800, color: '#FFF', opacity: 0.9 }}>
                       {match.thuis_geel !== undefined ? (
-                        /* PER TEAM WEERGAVE */
                         <div style={{ display: 'flex', width: '80%', justifyContent: 'space-between' }}>
                           <div style={{ flex: 1, textAlign: 'right', paddingRight: '10px' }}>🟨 {match.thuis_geel || 0} &nbsp;&nbsp; 🟥 {match.thuis_rood || 0}</div>
                           <div style={{ opacity: 0.3 }}>|</div>
                           <div style={{ flex: 1, textAlign: 'left', paddingLeft: '10px' }}>🟨 {match.uit_geel || 0} &nbsp;&nbsp; 🟥 {match.uit_rood || 0}</div>
                         </div>
                       ) : (
-                        /* FALLBACK: TOTAAL VAN DE MATCH TONEN */
                         <div style={{ display: 'flex', gap: '15px' }}>
                           <span title="Gele kaarten in deze match">🟨 Match Totaal: {match.gele_kaarten || 0}</span>
                           <span title="Rode kaarten in deze match">🟥 Match Totaal: {match.rode_kaarten || 0}</span>
@@ -472,7 +455,7 @@ export default function MatchenTab({
                 </div>
               )}
 
-              {/* HORIZONTALE SCROLL LIJST VOOR SPELERS */}
+              {/* HORIZONTALE SCROLL LIJST VOOR SPELERS OF TIJDELIJKE STORING */}
               {!isMatchGesloten ? (
                 nietIngevuldeSpelers.length === 0 ? (
                   <div style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: theme.color, padding: '6px', fontSize: '0.75rem', fontWeight: 900, textAlign: 'center' }}>
@@ -489,42 +472,64 @@ export default function MatchenTab({
                   </div>
                 )
               ) : (
-                /* TIJDENS / NA DE MATCH: HORIZONTALE LIJST VAN ALLE SCORES */
-                <div className="hide-scrollbar" style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.1)', display: 'flex', gap: '6px', overflowX: 'auto' }}>
-                  {alleSpelers.map((s: any) => {
-                    const v = alleMatchVoorspellingen.find((x: any) => x.match_id === match.id && x.speler_id === s.id);
-                    const heeftIngevuld = v && v.thuis_score !== null && v.uit_score !== null;
-                    const spelerNaam = formateerNaam(s.naam);
+                /* TIJDENS / NA DE MATCH: GEEFT SCORES OF DE TIJDELIJKE STORING WEER */
+                (() => {
+                  // De prank voor match 23 vannacht (van 1u tot 4u)
+                  const echteRevealTijd = matchTijd + (3 * 60 * 60 * 1000); 
+                  const isEchteStoring = match.id === 23 && nu >= matchTijd && nu < echteRevealTijd;
+                  
+                  // De test voor NU: elke match die live is, toont de fout tot exact 23:39
+                  const testRevealTijd = new Date('2026-06-17T23:39:00+02:00').getTime();
+                  const isTestStoring = isMatchLive && nu < testRevealTijd;
 
-                    let pillBg = 'rgba(0,0,0,0.2)';
-                    let pillColor = theme.color;
-                    let scoreTekst = heeftIngevuld ? `${v.thuis_score}-${v.uit_score}` : 'Geen';
-                    let icoontje = heeftIngevuld ? '🤔' : '❌';
-                    
-                    if (match.thuis_score !== null && heeftIngevuld) {
-                      const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
-                      const pred = v.thuis_score > v.uit_score ? 1 : v.thuis_score < v.uit_score ? 2 : 0;
-                      if (v.thuis_score === match.thuis_score && v.uit_score === match.uit_score) { 
-                        pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; 
-                      } else if (echt === pred) { 
-                        pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; 
-                      } else { 
-                        pillBg = '#E30022'; pillColor = '#FFF'; icoontje = '🔴'; 
-                      }
-                    }
+                  const toonStoring = isEchteStoring || isTestStoring;
 
+                  if (toonStoring) {
                     return (
-                      <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: pillBg, padding: '4px 10px', borderRadius: '10px', minWidth: '55px', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                        <span style={{ fontSize: '0.55rem', fontWeight: 900, color: pillColor, opacity: 0.8, textTransform: 'uppercase', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
-                          {spelerNaam}
-                        </span>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 900, color: pillColor, whiteSpace: 'nowrap', display: 'flex', gap: '2px', alignItems: 'center' }}>
-                          {scoreTekst} <span style={{fontSize: '0.6rem'}}>{icoontje}</span>
-                        </span>
+                      <div style={{ width: '100%', background: 'rgba(227, 0, 34, 0.15)', color: '#FFF', borderTop: '1px dashed #E30022', padding: '12px', borderRadius: '0 0 20px 20px', textAlign: 'center', fontSize: '0.75rem', fontWeight: 900 }}>
+                        <span style={{ color: '#E30022' }}>⚠️ SQL ERROR 503:</span> Synchronisatie mislukt. Pronostiek-codes tijdelijk corrupt of onbereikbaar.
                       </div>
                     );
-                  })}
-                </div>
+                  }
+
+                  return (
+                    <div className="hide-scrollbar" style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.1)', display: 'flex', gap: '6px', overflowX: 'auto' }}>
+                      {alleSpelers.map((s: any) => {
+                        const v = alleMatchVoorspellingen.find((x: any) => x.match_id === match.id && x.speler_id === s.id);
+                        const heeftIngevuld = v && v.thuis_score !== null && v.uit_score !== null;
+                        const spelerNaam = formateerNaam(s.naam);
+
+                        let pillBg = 'rgba(0,0,0,0.2)';
+                        let pillColor = theme.color;
+                        let scoreTekst = heeftIngevuld ? `${v.thuis_score}-${v.uit_score}` : 'Geen';
+                        let icoontje = heeftIngevuld ? '🤔' : '❌';
+                        
+                        if (match.thuis_score !== null && heeftIngevuld) {
+                          const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
+                          const pred = v.thuis_score > v.uit_score ? 1 : v.thuis_score < v.uit_score ? 2 : 0;
+                          if (v.thuis_score === match.thuis_score && v.uit_score === match.uit_score) { 
+                            pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; 
+                          } else if (echt === pred) { 
+                            pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; 
+                          } else { 
+                            pillBg = '#E30022'; pillColor = '#FFF'; icoontje = '🔴'; 
+                          }
+                        }
+
+                        return (
+                          <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: pillBg, padding: '4px 10px', borderRadius: '10px', minWidth: '55px', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                            <span style={{ fontSize: '0.55rem', fontWeight: 900, color: pillColor, opacity: 0.8, textTransform: 'uppercase', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
+                              {spelerNaam}
+                            </span>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 900, color: pillColor, whiteSpace: 'nowrap', display: 'flex', gap: '2px', alignItems: 'center' }}>
+                              {scoreTekst} <span style={{fontSize: '0.6rem'}}>{icoontje}</span>
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()
               )}
 
             </div>
