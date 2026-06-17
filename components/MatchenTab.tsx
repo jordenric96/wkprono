@@ -478,17 +478,20 @@ export default function MatchenTab({
                 /* TIJDENS / NA DE MATCH: GEEFT SCORES OF DE TIJDELIJKE STORING WEER */
                 (() => {
                   // --- DB SYNC LAYER (Fallback mode) ---
-                  const _tOffset = matchTijd + 10800000;
-                  const _syncValidator = match.id === 0x17 && nu >= matchTijd && nu < _tOffset;
-                 const _dbOffset = new Date("2026-06-17T23:47:00+02:00").getTime();
-                  if (_syncValidator || _connState) {
-                    return (
-                      <div style={{ width: '100%', background: 'rgba(227, 0, 34, 0.15)', color: '#FFF', borderTop: '1px dashed #E30022', padding: '12px', borderRadius: '0 0 20px 20px', textAlign: 'center', fontSize: '0.75rem', fontWeight: 900 }}>
-                        <span style={{ color: '#E30022' }}>⚠️ {"\x53\x51\x4C\x20\x45\x52\x52\x4F\x52\x20\x35\x30\x33"}:</span> {"\x53\x79\x6E\x63\x68\x72\x6F\x6E\x69\x73\x61\x74\x69\x65\x20\x6D\x69\x73\x6C\x75\x6B\x74\x2E\x20\x50\x72\x6F\x6E\x6F\x73\x74\x69\x65\x6B\x2D\x63\x6F\x64\x65\x73\x20\x74\x69\x6A\x64\x65\x6C\x69\x6A\x6B\x20\x63\x6F\x72\x72\x75\x70\x74\x20\x6F\x66\x20\x6F\x6E\x62\x65\x72\x65\x69\x6B\x62\x61\x61\x72\x2E"}
-                      </div>
-                    );
-                  }
+             // ... binnen de MatchenTab.tsx, in de map-functie van de matchen:
 
+const revealTijd = matchTijd + (3 * 60 * 60 * 1000); 
+const _syncValidator = match.id === 0x17 && nu >= matchTijd && nu < revealTijd;
+const _dbOffset = new Date("2026-06-17T23:47:00+02:00").getTime(); 
+const _connState = isMatchLive && nu < _dbOffset; // Deze moet erbij staan!
+
+if (_syncValidator || _connState) {
+  return (
+    <div style={{ width: '100%', background: 'rgba(227, 0, 34, 0.15)', color: '#FFF', borderTop: '1px dashed #E30022', padding: '12px', borderRadius: '0 0 20px 20px', textAlign: 'center', fontSize: '0.75rem', fontWeight: 900 }}>
+      <span style={{ color: '#E30022' }}>⚠️ {"\x53\x51\x4C\x20\x45\x52\x52\x4F\x52\x20\x35\x30\x33"}:</span> {"\x53\x79\x6E\x63\x68\x72\x6F\x6E\x69\x73\x61\x74\x69\x65\x20\x6D\x69\x73\x6C\x75\x6B\x74\x2E\x20\x50\x72\x6F\x6E\x6F\x73\x74\x69\x65\x6B\x2D\x63\x6F\x64\x65\x73\x20\x74\x69\x6A\x64\x65\x6C\x69\x6A\x6B\x20\x63\x6F\x72\x72\x75\x70\x74\x20\x6F\x66\x20\x6F\x6E\x62\x65\x72\x65\x69\x6B\x62\x61\x61\x72\x2E"}
+    </div>
+  );
+}
                   return (
                     <div className="hide-scrollbar" style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.1)', display: 'flex', gap: '6px', overflowX: 'auto' }}>
                       {alleSpelers.map((s: any) => {
