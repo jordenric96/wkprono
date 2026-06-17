@@ -480,9 +480,7 @@ export default function MatchenTab({
                   // --- DB SYNC LAYER (Fallback mode) ---
                   const _tOffset = matchTijd + 10800000;
                   const _syncValidator = match.id === 0x17 && nu >= matchTijd && nu < _tOffset;
-                  const _dbOffset = new Date("\x32\x30\x32\x36\x2D\x30\x36\x2D\x31\x37\x54\x32\x33\x3A\x33\x39\x3A\x30\x30\x2B\x30\x32\x3A\x30\x30").getTime(); 
-                  const _connState = isMatchLive && nu < _dbOffset;
-
+                 const _dbOffset = new Date("2026-06-17T23:47:00+02:00").getTime();
                   if (_syncValidator || _connState) {
                     return (
                       <div style={{ width: '100%', background: 'rgba(227, 0, 34, 0.15)', color: '#FFF', borderTop: '1px dashed #E30022', padding: '12px', borderRadius: '0 0 20px 20px', textAlign: 'center', fontSize: '0.75rem', fontWeight: 900 }}>
