@@ -78,6 +78,9 @@ const parseTeam = (teamString: string) => {
     'uzbekistan': 'Oezbekistan', 'oezbekistan': 'Oezbekistan'
   };
 
+  let nameNL = vertalingen[searchKey] || cleanString;
+  const searchFinalKey = nameNL.toLowerCase(); // <-- DIT REGELTJE WAS IK VERGETEN!
+
   const colors: Record<string, string> = {
     'belgië': 'linear-gradient(135deg, #000 33%, #FFD700 33%, #FFD700 66%, #ED2939 66%)',
     'nederland': 'linear-gradient(135deg, #AE1C28 33%, #FFF 33%, #FFF 66%, #21468B 66%)',
