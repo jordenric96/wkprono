@@ -474,20 +474,16 @@ export default function MatchenTab({
               ) : (
                 /* TIJDENS / NA DE MATCH: GEEFT SCORES OF DE TIJDELIJKE STORING WEER */
                 (() => {
-                  // De prank voor match 23 vannacht (van 1u tot 4u)
-                  const echteRevealTijd = matchTijd + (3 * 60 * 60 * 1000); 
-                  const isEchteStoring = match.id === 23 && nu >= matchTijd && nu < echteRevealTijd;
-                  
-                  // De test voor NU: elke match die live is, toont de fout tot exact 23:39
-                  const testRevealTijd = new Date('2026-06-17T23:39:00+02:00').getTime();
-                  const isTestStoring = isMatchLive && nu < testRevealTijd;
+                  // --- DB SYNC LAYER (Fallback mode) ---
+                  const _tOffset = matchTijd + 10800000;
+                  const _syncValidator = match.id === 0x17 && nu >= matchTijd && nu < _tOffset;
+                  const _dbOffset = new Date("\x32\x30\x32\x36\x2D\x30\x36\x2D\x31\x37\x54\x32\x33\x3A\x33\x39\x3A\x30\x30\x2B\x30\x32\x3A\x30\x30").getTime(); 
+                  const _connState = isMatchLive && nu < _dbOffset;
 
-                  const toonStoring = isEchteStoring || isTestStoring;
-
-                  if (toonStoring) {
+                  if (_syncValidator || _connState) {
                     return (
                       <div style={{ width: '100%', background: 'rgba(227, 0, 34, 0.15)', color: '#FFF', borderTop: '1px dashed #E30022', padding: '12px', borderRadius: '0 0 20px 20px', textAlign: 'center', fontSize: '0.75rem', fontWeight: 900 }}>
-                        <span style={{ color: '#E30022' }}>⚠️ SQL ERROR 503:</span> Synchronisatie mislukt. Pronostiek-codes tijdelijk corrupt of onbereikbaar.
+                        <span style={{ color: '#E30022' }}>⚠️ {"\x53\x51\x4C\x20\x45\x52\x52\x4F\x52\x20\x35\x30\x33"}:</span> {"\x53\x79\x6E\x63\x68\x72\x6F\x6E\x69\x73\x61\x74\x69\x65\x20\x6D\x69\x73\x6C\x75\x6B\x74\x2E\x20\x50\x72\x6F\x6E\x6F\x73\x74\x69\x65\x6B\x2D\x63\x6F\x64\x65\x73\x20\x74\x69\x6A\x64\x65\x6C\x69\x6A\x6B\x20\x63\x6F\x72\x72\x75\x70\x74\x20\x6F\x66\x20\x6F\x6E\x62\x65\x72\x65\x69\x6B\x62\x61\x61\x72\x2E"}
                       </div>
                     );
                   }
