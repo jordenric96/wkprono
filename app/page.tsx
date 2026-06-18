@@ -15,7 +15,6 @@ import PrijsTab from '../components/PrijsTab';
 const DEADLINE_DATE = new Date('2026-06-11T21:00:00+02:00').getTime();
 const POPUP_DEADLINE = new Date('2026-06-11T19:00:00+02:00').getTime();
 
-// Emoji's strippen, vertalen, en dan pas accenten verwijderen
 const normalizeString = (teamString: string) => {
   if (!teamString) return '';
   
@@ -64,7 +63,7 @@ export default function Home() {
   const [alleSpelers, setAlleSpelers] = useState<any[]>([]); 
   const [actieveTab, setActieveTab] = useState('ranking');
   const [filterRonde, setFilterRonde] = useState('Alle');
-  const [weergavePeriode, setWeergavePeriode] = useState<'Actueel' | 'Historie'>('Actueel'); // NIEUWE STATE
+  const [weergavePeriode, setWeergavePeriode] = useState<'Actueel' | 'Historie'>('Actueel');
   const [ongelezenBerichten, setOngelezenBerichten] = useState(false);
   
   const [toast, setToast] = useState<{naam: string, bericht: string} | null>(null);
@@ -178,7 +177,6 @@ export default function Home() {
 
     const { data: mData } = await supabase.from('matchen').select('*').order('datum', { ascending: true });
     const { data: sData } = await supabase.from('spelers').select('id, naam, betaald').eq('betaald', true);
-    // VRAAG TOT 10.000 RIJEN OP ZODAT WE NIET BEPERKT ZIJN TOT 1000
     const { data: vData } = await supabase.from('match_voorspellingen').select('match_id, speler_id, thuis_score, uit_score').limit(10000);
 
     if (!mData || !sData || !vData) return;
@@ -577,17 +575,13 @@ export default function Home() {
     else if (data) { setAlleSpelers(prev => [...prev, data]); setActieveSpeler(data); localStorage.setItem('wk_speler_id', data.id.toString()); setStatus(''); }
   };
 
-  // --- FILTERS: SCHEIDING TUSSEN ACTUEEL EN HISTORIE ---
   const gefilterdeMatchen = useMemo(() => {
     let basis = matchen;
     const EEN_DAG = 24 * 60 * 60 * 1000;
 
-    // Filter eerst op Actueel of Historie
     if (weergavePeriode === 'Actueel') {
-      // Actueel: matchen die in de toekomst liggen OF in de afgelopen 24u zijn gespeeld
       basis = basis.filter(m => nu < new Date(m.datum).getTime() + EEN_DAG);
     } else {
-      // Historie: matchen die méér dan 24u geleden zijn gespeeld
       basis = basis.filter(m => nu >= new Date(m.datum).getTime() + EEN_DAG);
     }
 
@@ -893,8 +887,8 @@ export default function Home() {
             </div>
           ) : (
             <div style={{ width: '100%' }}>
-              {/* DOORgeven weergavePeriode state */}
-              {actieveTab === 'matchen' && <MatchenTab gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} weergavePeriode={weergavePeriode} setWeergavePeriode={setWeergavePeriode} />}
+              {/* Geef hier matchen={matchen} mee */}
+              {actieveTab === 'matchen' && <MatchenTab matchen={matchen} gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} weergavePeriode={weergavePeriode} setWeergavePeriode={setWeergavePeriode} />}
             
               {actieveTab === 'prijs' && <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />}
               {actieveTab === 'bonus' && <BonusTab winnaar={winnaar} setWinnaar={setWinnaar} hf={hf} setHf={setHf} meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} eindstation={eindstation} setEindstation={setEindstation} totaalGoals={totaalGoals} setTotaalGoals={setTotaalGoals} totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} />}
