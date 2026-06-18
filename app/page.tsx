@@ -577,12 +577,14 @@ export default function Home() {
 
   const gefilterdeMatchen = useMemo(() => {
     let basis = matchen;
-    const EEN_DAG = 24 * 60 * 60 * 1000;
+    const SPEEL_DUUR = 140 * 60 * 1000; // 2 uur en 20 minuten in milliseconden
 
     if (weergavePeriode === 'Actueel') {
-      basis = basis.filter(m => nu < new Date(m.datum).getTime() + EEN_DAG);
+      // Actueel toont enkel matchen die nog niet gestart zijn, of bezig zijn (minder dan 2u20m oud)
+      basis = basis.filter(m => nu < new Date(m.datum).getTime() + SPEEL_DUUR);
     } else {
-      basis = basis.filter(m => nu >= new Date(m.datum).getTime() + EEN_DAG);
+      // Historie toont enkel matchen die al langer dan 2u20m bezig/voorbij zijn
+      basis = basis.filter(m => nu >= new Date(m.datum).getTime() + SPEEL_DUUR);
     }
 
     if (filterRonde === 'Nog in te vullen') return basis.filter(m => (!matchVoorspellingen[m.id] || matchVoorspellingen[m.id].thuis === '') && (nu < new Date(m.datum).getTime()));
@@ -887,7 +889,6 @@ export default function Home() {
             </div>
           ) : (
             <div style={{ width: '100%' }}>
-              {/* Geef hier matchen={matchen} mee */}
               {actieveTab === 'matchen' && <MatchenTab matchen={matchen} gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} weergavePeriode={weergavePeriode} setWeergavePeriode={setWeergavePeriode} />}
             
               {actieveTab === 'prijs' && <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />}
