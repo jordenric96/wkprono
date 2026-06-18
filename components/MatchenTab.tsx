@@ -1,6 +1,7 @@
 // src/components/MatchenTab.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
+import { supabase } from '../lib/supabase';
 
 const WK_GROEPEN: Record<string, string> = {
   'mexico': 'Groep A', 'zuid-afrika': 'Groep A', 'zuid-korea': 'Groep A', 'tsjechië': 'Groep A',
@@ -51,26 +52,21 @@ const parseTeam = (teamString: string) => {
     'ukraine': 'Oekraïne', 'oekraïne': 'Oekraïne',
     'peru': 'Peru', 'panama': 'Panama',
     'egypt': 'Egypte', 'egypte': 'Egypte',
-    'tunisia': 'Tunesië', 'tunesië': 'Tunesië',
-    'new zealand': 'Nieuw-Zeeland', 'nieuw-zeeland': 'Nieuw-Zeeland',
+    'tunesië': 'Tunesië', 'tunesië': 'Tunesië',
+    'nieuw-zeeland': 'Nieuw-Zeeland', 'nieuw-zeeland': 'Nieuw-Zeeland',
     'qatar': 'Qatar', 'ireland': 'Ierland', 'ierland': 'Ierland',
     'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije', 'turkije': 'Turkije',
     'romania': 'Roemenië', 'roemenië': 'Roemenië',
-    'hungary': 'Hongarije', 'hongarije': 'Hongarije',
+    'hongarije': 'Hongarije', 'hongarije': 'Hongarije',
     'norway': 'Noorwegen', 'noorwegen': 'Noorwegen',
     'iceland': 'IJsland', 'ijsland': 'IJsland',
-    'slovakia': 'Slowakije', 'slowakije': 'Slowakije',
+    'slowakije': 'Slowakije', 'slowakije': 'Slowakije',
     'iraq': 'Irak', 'irak': 'Irak',
     'paraguay': 'Paraguay', 'venezuela': 'Venezuela', 'mali': 'Mali',
     'algeria': 'Algerije', 'algerije': 'Algerije',
     'zambia': 'Zambia', 'honduras': 'Honduras', 'el salvador': 'El Salvador',
-    'ivory coast': 'Ivoorkust', 'cote d\'ivoire': 'Ivoorkust', 'côte d\'ivoire': 'Ivoorkust', 'cote divoire': 'Ivoorkust', 'cote d ivoire': 'Ivoorkust', 'core divoir': 'Ivoorkust', 'ivoorkust': 'Ivoorkust',
-    'cameroon': 'Kameroen', 'kameroen': 'Kameroen',
-    'chile': 'Chili', 'chili': 'Chili',
-    'colombia': 'Colombia', 'costa rica': 'Costa Rica',
-    'austria': 'Oostenrijk', 'oostenrijk': 'Oostenrijk',
-    'australia': 'Australië', 'australië': 'Australië',
-    'cabo verde': 'Kaapverdië', 'cape verde': 'Kaapverdië', 'kaapverdië': 'Kaapverdië',
+    'bosnië': 'Bosnië',
+    'kaapverdië': 'Kaapverdië', 'cape verde': 'Kaapverdië',
     'haiti': 'Haïti', 'haïti': 'Haïti',
     'curacao': 'Curaçao', 'curaçao': 'Curaçao',
     'jordan': 'Jordanië', 'jordanië': 'Jordanië',
@@ -198,11 +194,14 @@ const cardThemes = [
 export default function MatchenTab({
   matchen, gefilterdeMatchen, nu, matchVoorspellingen, matchSaveStatus,
   alleMatchVoorspellingen, alleSpelers, expandedMatchId, setExpandedMatchId,
-  handleScore, filterRonde, setFilterRonde, weergavePeriode, setWeergavePeriode
+  handleScore, filterRonde, setFilterRonde, weergavePeriode, setWeergavePeriode,
+  actieveSpeler, isJorden, matchViews // <-- NIEUWE PROPS ONTVANGEN
 }: any) {
   
   const [geselecteerdTeamRaw, setGeselecteerdTeamRaw] = useState<string | null>(null);
+  const [gluurPopUp, setGluurPopUp] = useState<number | null>(null); // Voor Jorden's pop-up
   const hasScrolled = useRef<string | null>(null);
+  const viewedMatches = useRef(new Set<number>()); // Om te voorkomen dat we de DB spammen per render
 
   const rondes = ['Alle', 'Nog in te vullen', 'Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale'];
 
@@ -348,9 +347,19 @@ export default function MatchenTab({
           
           const matchTijd = new Date(match.datum).getTime();
           const isMatchGesloten = nu >= matchTijd;
-          // De match is nu LIVE voor exact 140 minuten na start (2u20m)
           const isMatchLive = isMatchGesloten && nu < (matchTijd + (140 * 60 * 1000));
           
+          // DE SPION: Als een match gesloten/live is en het is een "gewone" speler, sla dit geruisloos op in de DB
+          if (isMatchGesloten && actieveSpeler && !isJorden) {
+            if (!viewedMatches.current.has(match.id)) {
+              viewedMatches.current.add(match.id);
+              supabase.from('match_views').upsert(
+                { speler_id: actieveSpeler.id, match_id: match.id, bekeken_op: new Date().toISOString() },
+                { onConflict: 'speler_id, match_id' }
+              ).then(); // Silent fire-and-forget
+            }
+          }
+
           const voorspelling = matchVoorspellingen[match.id] || { thuis: '', uit: '' };
           const saveStatus = matchSaveStatus[match.id] || 'idle';
           
@@ -360,7 +369,6 @@ export default function MatchenTab({
 
           const thuisInfo = parseTeam(match.thuisploeg);
           const uitInfo = parseTeam(match.uitploeg);
-
           const theme = cardThemes[index % cardThemes.length];
 
           const nietIngevuldeSpelers = alleSpelers.filter((s: any) => {
@@ -382,7 +390,18 @@ export default function MatchenTab({
                   {saveStatus === 'saving' && '⏳'}
                   {saveStatus === 'saved' && '✅'}
                   {isMatchGesloten && !isMatchLive && '🔒'}
-                  {isMatchLive && <span className="live-pulse" style={{ color: '#E30022', fontSize: '0.8rem' }}>🔴 LIVE</span>}
+                  
+                  {isMatchLive && <span className="live-pulse" style={{ color: '#E30022', fontSize: '0.8rem', marginLeft: '5px' }}>🔴 LIVE</span>}
+
+                  {/* DE SPION VOOR JORDEN: Toon hoeveel mensen er gluren! */}
+                  {isMatchGesloten && isJorden && (
+                    <span 
+                      onClick={(e) => { e.stopPropagation(); setGluurPopUp(match.id); }}
+                      style={{ cursor: 'pointer', marginLeft: '8px', padding: '2px 6px', background: 'rgba(0, 229, 255, 0.2)', borderRadius: '8px', color: '#00E5FF' }}
+                    >
+                      👁️ {matchViews?.filter((v: any) => v.match_id === match.id).length || 0}
+                    </span>
+                  )}
                 </span>
               </div>
 
@@ -510,6 +529,32 @@ export default function MatchenTab({
         })
       )}
 
+      {/* JORDEN'S GEHEIME GLUUR POP-UP */}
+      {gluurPopUp !== null && isJorden && typeof document !== 'undefined' && ReactDOM.createPortal(
+        <div onClick={() => setGluurPopUp(null)} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.8)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#1A1423', padding: '20px', borderRadius: '20px', width: '90%', maxWidth: '350px', border: '2px solid #00E5FF', animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
+             <h3 style={{color: '#00E5FF', marginTop: 0, fontFamily: 'Bebas Neue', fontSize: '1.8rem', letterSpacing: '1px'}}>👀 Wie gluurde mee?</h3>
+             <div style={{maxHeight: '400px', overflowY: 'auto'}}>
+               {matchViews?.filter((v: any) => v.match_id === gluurPopUp).length === 0 ? (
+                 <div style={{color: '#ADB5BD', fontSize: '0.8rem', fontStyle: 'italic'}}>Nog niemand heeft deze scores bekeken...</div>
+               ) : (
+                 matchViews?.filter((v: any) => v.match_id === gluurPopUp).map((v: any) => (
+                    <div key={v.speler_id} style={{color: '#FFF', padding: '8px 0', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                      <strong style={{fontSize: '0.9rem'}}>{v.spelers?.naam || 'Onbekend'}</strong>
+                      <span style={{fontSize: '0.7rem', color: '#ADB5BD', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '6px'}}>
+                        {new Date(v.bekeken_op).toLocaleTimeString('nl-BE', {hour: '2-digit', minute:'2-digit'})}
+                      </span>
+                    </div>
+                 ))
+               )}
+             </div>
+             <button onClick={() => setGluurPopUp(null)} style={{width: '100%', padding: '12px', background: 'rgba(0, 229, 255, 0.2)', color: '#00E5FF', border: '1px solid #00E5FF', borderRadius: '12px', marginTop: '15px', fontWeight: 900, cursor: 'pointer'}}>SLUITEN</button>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* TEAM DOSSIER POP-UP */}
       {geselecteerdTeamRaw && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div onClick={() => setGeselecteerdTeamRaw(null)} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px' }}>
           <div onClick={(e) => e.stopPropagation()} style={{ background: '#1A1423', width: '100%', maxWidth: '420px', maxHeight: '88vh', borderRadius: '24px', padding: '20px', boxShadow: '0 15px 50px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)', border: '2px solid #00E5FF', overflowY: 'auto', color: '#FFF' }}>
@@ -552,7 +597,6 @@ export default function MatchenTab({
               {matchen.filter((m: any) => m.thuisploeg === geselecteerdTeamRaw || m.uitploeg === geselecteerdTeamRaw).map((m: any) => {
                 const dossierMatchTijd = new Date(m.datum).getTime();
                 const isDossierGespeeld = m.thuis_score !== null;
-                // De match in het dossier is nu LIVE voor exact 140 minuten na start
                 const isDossierLive = nu >= dossierMatchTijd && nu < (dossierMatchTijd + (140 * 60 * 1000));
                 const isThuis = m.thuisploeg === geselecteerdTeamRaw;
                 const tegenstanderRaw = isThuis ? m.uitploeg : m.thuisploeg;
