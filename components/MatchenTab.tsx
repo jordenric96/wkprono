@@ -79,7 +79,7 @@ const parseTeam = (teamString: string) => {
   };
 
   let nameNL = vertalingen[searchKey] || cleanString;
-  const searchFinalKey = nameNL.toLowerCase(); // <-- DIT REGELTJE WAS IK VERGETEN!
+  const searchFinalKey = nameNL.toLowerCase();
 
   const colors: Record<string, string> = {
     'belgië': 'linear-gradient(135deg, #000 33%, #FFD700 33%, #FFD700 66%, #ED2939 66%)',
@@ -378,7 +378,6 @@ export default function MatchenTab({
               border: isMatchLive ? '2px solid #E30022' : 'none'
             }}>
               
-              {/* MATCH HEADER */}
               <div style={{ background: 'rgba(0,0,0,0.15)', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.65rem', fontWeight: 900, opacity: 0.9, textTransform: 'uppercase' }}>
                 <span>{dateStr} • {timeStr} • {match.ronde} {match.groep ? `(${match.groep})` : ''}</span>
                 <span>
@@ -389,7 +388,6 @@ export default function MatchenTab({
                 </span>
               </div>
 
-              {/* MATCH BODY */}
               <div style={{ padding: '12px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '5px' }}>
                 
                 <div 
@@ -431,14 +429,12 @@ export default function MatchenTab({
                 </div>
               </div>
 
-              {/* EVENTUELE TUSSENSTAND / EINDSTAND & KAARTEN */}
               {isMatchGesloten && match.thuis_score !== null && (
                 <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <div style={{ textAlign: 'center', fontSize: '0.85rem', fontWeight: 900, color: isMatchLive ? '#E30022' : theme.color, textTransform: 'uppercase', letterSpacing: '1px' }}>
                     {isMatchLive ? '🔴 TUSSENSTAND:' : 'EINDSTAND:'} {match.thuis_score} - {match.uit_score}
                   </div>
                   
-                  {/* KAARTEN WEERGAVE */}
                   { ((match.gele_kaarten !== null && match.gele_kaarten !== undefined) || match.thuis_geel !== undefined) && (
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '0.7rem', fontWeight: 800, color: '#FFF', opacity: 0.9 }}>
                       {match.thuis_geel !== undefined ? (
@@ -458,7 +454,6 @@ export default function MatchenTab({
                 </div>
               )}
 
-              {/* HORIZONTALE SCROLL LIJST VOOR SPELERS OF TIJDELIJKE STORING */}
               {!isMatchGesloten ? (
                 nietIngevuldeSpelers.length === 0 ? (
                   <div style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: theme.color, padding: '6px', fontSize: '0.75rem', fontWeight: 900, textAlign: 'center' }}>
@@ -475,61 +470,41 @@ export default function MatchenTab({
                   </div>
                 )
               ) : (
-                /* TIJDENS / NA DE MATCH: GEEFT SCORES OF DE TIJDELIJKE STORING WEER */
-                (() => {
-                  // --- DB SYNC LAYER (Fallback mode) ---
-             // ... binnen de MatchenTab.tsx, in de map-functie van de matchen:
+                <div className="hide-scrollbar" style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.1)', display: 'flex', gap: '6px', overflowX: 'auto' }}>
+                  {alleSpelers.map((s: any) => {
+                    const v = alleMatchVoorspellingen.find((x: any) => x.match_id === match.id && x.speler_id === s.id);
+                    const heeftIngevuld = v && v.thuis_score !== null && v.uit_score !== null;
+                    const spelerNaam = formateerNaam(s.naam);
 
-const revealTijd = matchTijd + (3 * 60 * 60 * 1000); 
-const _syncValidator = match.id === 0x17 && nu >= matchTijd && nu < revealTijd;
-const _dbOffset = new Date("2026-06-17T23:47:00+02:00").getTime(); 
-const _connState = isMatchLive && nu < _dbOffset; // Deze moet erbij staan!
+                    let pillBg = 'rgba(0,0,0,0.2)';
+                    let pillColor = theme.color;
+                    let scoreTekst = heeftIngevuld ? `${v.thuis_score}-${v.uit_score}` : 'Geen';
+                    let icoontje = heeftIngevuld ? '🤔' : '❌';
+                    
+                    if (match.thuis_score !== null && heeftIngevuld) {
+                      const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
+                      const pred = v.thuis_score > v.uit_score ? 1 : v.thuis_score < v.uit_score ? 2 : 0;
+                      if (v.thuis_score === match.thuis_score && v.uit_score === match.uit_score) { 
+                        pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; 
+                      } else if (echt === pred) { 
+                        pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; 
+                      } else { 
+                        pillBg = '#E30022'; pillColor = '#FFF'; icoontje = '🔴'; 
+                      }
+                    }
 
-if (_syncValidator || _connState) {
-  return (
-    <div style={{ width: '100%', background: 'rgba(227, 0, 34, 0.15)', color: '#FFF', borderTop: '1px dashed #E30022', padding: '12px', borderRadius: '0 0 20px 20px', textAlign: 'center', fontSize: '0.75rem', fontWeight: 900 }}>
-      <span style={{ color: '#E30022' }}>⚠️ {"\x53\x51\x4C\x20\x45\x52\x52\x4F\x52\x20\x35\x30\x33"}:</span> {"\x53\x79\x6E\x63\x68\x72\x6F\x6E\x69\x73\x61\x74\x69\x65\x20\x6D\x69\x73\x6C\x75\x6B\x74\x2E\x20\x50\x72\x6F\x6E\x6F\x73\x74\x69\x65\x6B\x2D\x63\x6F\x64\x65\x73\x20\x74\x69\x6A\x64\x65\x6C\x69\x6A\x6B\x20\x63\x6F\x72\x72\x75\x70\x74\x20\x6F\x66\x20\x6F\x6E\x62\x65\x72\x65\x69\x6B\x62\x61\x61\x72\x2E"}
-    </div>
-  );
-}
-                  return (
-                    <div className="hide-scrollbar" style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.1)', display: 'flex', gap: '6px', overflowX: 'auto' }}>
-                      {alleSpelers.map((s: any) => {
-                        const v = alleMatchVoorspellingen.find((x: any) => x.match_id === match.id && x.speler_id === s.id);
-                        const heeftIngevuld = v && v.thuis_score !== null && v.uit_score !== null;
-                        const spelerNaam = formateerNaam(s.naam);
-
-                        let pillBg = 'rgba(0,0,0,0.2)';
-                        let pillColor = theme.color;
-                        let scoreTekst = heeftIngevuld ? `${v.thuis_score}-${v.uit_score}` : 'Geen';
-                        let icoontje = heeftIngevuld ? '🤔' : '❌';
-                        
-                        if (match.thuis_score !== null && heeftIngevuld) {
-                          const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
-                          const pred = v.thuis_score > v.uit_score ? 1 : v.thuis_score < v.uit_score ? 2 : 0;
-                          if (v.thuis_score === match.thuis_score && v.uit_score === match.uit_score) { 
-                            pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; 
-                          } else if (echt === pred) { 
-                            pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; 
-                          } else { 
-                            pillBg = '#E30022'; pillColor = '#FFF'; icoontje = '🔴'; 
-                          }
-                        }
-
-                        return (
-                          <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: pillBg, padding: '4px 10px', borderRadius: '10px', minWidth: '55px', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                            <span style={{ fontSize: '0.55rem', fontWeight: 900, color: pillColor, opacity: 0.8, textTransform: 'uppercase', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
-                              {spelerNaam}
-                            </span>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 900, color: pillColor, whiteSpace: 'nowrap', display: 'flex', gap: '2px', alignItems: 'center' }}>
-                              {scoreTekst} <span style={{fontSize: '0.6rem'}}>{icoontje}</span>
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()
+                    return (
+                      <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: pillBg, padding: '4px 10px', borderRadius: '10px', minWidth: '55px', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                        <span style={{ fontSize: '0.55rem', fontWeight: 900, color: pillColor, opacity: 0.8, textTransform: 'uppercase', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
+                          {spelerNaam}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 900, color: pillColor, whiteSpace: 'nowrap', display: 'flex', gap: '2px', alignItems: 'center' }}>
+                          {scoreTekst} <span style={{fontSize: '0.6rem'}}>{icoontje}</span>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
 
             </div>
@@ -537,25 +512,9 @@ if (_syncValidator || _connState) {
         })
       )}
 
-      {/* TEAM DOSSIER POP-UP */}
       {geselecteerdTeamRaw && typeof document !== 'undefined' && ReactDOM.createPortal(
-        <div 
-          onClick={() => setGeselecteerdTeamRaw(null)} 
-          style={{
-            position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-            background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)', zIndex: 999999, 
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px'
-          }}
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()} 
-            style={{
-              background: '#1A1423', width: '100%', maxWidth: '420px', maxHeight: '88vh',
-              borderRadius: '24px', padding: '20px', boxShadow: '0 15px 50px rgba(0,0,0,0.5)',
-              display: 'flex', flexDirection: 'column', animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-              border: '2px solid #00E5FF', overflowY: 'auto', color: '#FFF'
-            }}
-          >
+        <div onClick={() => setGeselecteerdTeamRaw(null)} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px' }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: '#1A1423', width: '100%', maxWidth: '420px', maxHeight: '88vh', borderRadius: '24px', padding: '20px', boxShadow: '0 15px 50px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)', border: '2px solid #00E5FF', overflowY: 'auto', color: '#FFF' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {(() => {
@@ -563,9 +522,7 @@ if (_syncValidator || _connState) {
                   return (
                     <>
                       <div style={{ width: '45px', height: '45px', borderRadius: '50%', background: teamData.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #FFF', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}>
-                        <div style={{ width: '35px', height: '35px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
-                          {teamData.emoji}
-                        </div>
+                        <div style={{ width: '35px', height: '35px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>{teamData.emoji}</div>
                       </div>
                       <div>
                         <h2 style={{ margin: 0, fontFamily: 'Bebas Neue', fontSize: '2rem', color: '#00E5FF', lineHeight: 1 }}>{teamData.name}</h2>
@@ -577,107 +534,53 @@ if (_syncValidator || _connState) {
               </div>
               <button onClick={() => setGeselecteerdTeamRaw(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', width: '32px', height: '32px', borderRadius: '50%', fontSize: '0.9rem', fontWeight: 900, color: '#FFF', cursor: 'pointer' }}>✕</button>
             </div>
-
             {(() => {
               const groepData = genereerGroepsStand(geselecteerdTeamRaw);
               if (groepData) {
                 return (
                   <div style={{ marginBottom: '15px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', padding: '10px' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 900, color: '#CCFF00', textTransform: 'uppercase', marginBottom: '6px' }}>
-                      📊 Stand {groepData.groepsNaamTonen}
-                    </div>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 900, color: '#CCFF00', textTransform: 'uppercase', marginBottom: '6px' }}>📊 Stand {groepData.groepsNaamTonen}</div>
                     <table className="stand-table">
-                      <thead>
-                        <tr>
-                          <th>Land</th>
-                          <th title="Gespeeld">G</th>
-                          <th title="Doelsaldo">DS</th>
-                          <th title="Punten">PT</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {groepData.stand.map((s, idx) => {
-                          const sInfo = parseTeam(s.teamRaw);
-                          const isHuidigTeam = s.teamRaw === geselecteerdTeamRaw;
-                          return (
-                            <tr key={s.teamRaw} className={isHuidigTeam ? 'highlight' : ''}>
-                              <td style={{ color: '#FFF' }}>
-                                <span style={{ marginRight: '4px', opacity: 0.6 }}>{idx + 1}.</span> 
-                                {sInfo.emoji} <span style={{ fontWeight: isHuidigTeam ? 900 : 700 }}>{sInfo.name}</span>
-                              </td>
-                              <td style={{ color: '#ADB5BD' }}>{s.ges}</td>
-                              <td style={{ color: '#ADB5BD' }}>{s.dv - s.dt > 0 ? `+${s.dv - s.dt}` : s.dv - s.dt}</td>
-                              <td style={{ color: '#00E5FF' }}>{s.pt}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
+                      <thead><tr><th>Land</th><th title="Gespeeld">G</th><th title="Doelsaldo">DS</th><th title="Punten">PT</th></tr></thead>
+                      <tbody>{groepData.stand.map((s, idx) => { const sInfo = parseTeam(s.teamRaw); const isHuidigTeam = s.teamRaw === geselecteerdTeamRaw; return (<tr key={s.teamRaw} className={isHuidigTeam ? 'highlight' : ''}><td style={{ color: '#FFF' }}><span style={{ marginRight: '4px', opacity: 0.6 }}>{idx + 1}.</span> {sInfo.emoji} <span style={{ fontWeight: isHuidigTeam ? 900 : 700 }}>{sInfo.name}</span></td><td style={{ color: '#ADB5BD' }}>{s.ges}</td><td style={{ color: '#ADB5BD' }}>{s.dv - s.dt > 0 ? `+${s.dv - s.dt}` : s.dv - s.dt}</td><td style={{ color: '#00E5FF' }}>{s.pt}</td></tr>); })}</tbody>
                     </table>
                   </div>
                 );
               }
               return null;
             })()}
-
-            <div style={{ fontSize: '0.75rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '6px' }}>
-              ⚽ Matchen overzicht
-            </div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '6px' }}>⚽ Matchen overzicht</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {gefilterdeMatchen
-                .filter((m: any) => m.thuisploeg === geselecteerdTeamRaw || m.uitploeg === geselecteerdTeamRaw)
-                .map((m: any) => {
-                  const dossierMatchTijd = new Date(m.datum).getTime();
-                  const isDossierGespeeld = m.thuis_score !== null;
-                  const isDossierLive = nu >= dossierMatchTijd && nu < (dossierMatchTijd + (117 * 60 * 1000));
-                  
-                  const isThuis = m.thuisploeg === geselecteerdTeamRaw;
-                  const tegenstanderRaw = isThuis ? m.uitploeg : m.thuisploeg;
-                  const tegenstanderInfo = parseTeam(tegenstanderRaw);
-                  
-                  let uitslagKleur = '#FFF';
-                  let statusIcoon = '⏳';
-                  if (isDossierGespeeld) {
-                    if ((isThuis && Number(m.thuis_score) > Number(m.uit_score)) || (!isThuis && Number(m.uit_score) > Number(m.thuis_score))) { uitslagKleur = '#CCFF00'; statusIcoon = '🟢'; } 
-                    else if (Number(m.thuis_score) === Number(m.uit_score)) { uitslagKleur = '#00E5FF'; statusIcoon = '➖'; } 
-                    else { uitslagKleur = '#E30022'; statusIcoon = '🔴'; } 
-                  }
-
-                  return (
-                    <div key={m.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 12px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: isDossierLive ? '1px solid #E30022' : '1px solid rgba(255,255,255,0.1)' }}>
-                      <div>
-                        <div style={{ fontSize: '0.6rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '2px' }}>
-                          {new Date(m.datum).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' })} • {m.ronde}
-                          {isDossierLive && <span style={{color: '#E30022', marginLeft: '5px'}}>🔴 LIVE</span>}
-                        </div>
-                        <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <span style={{ fontSize: '0.65rem', color: '#6C757D' }}>vs</span> {tegenstanderInfo.name} <span style={{fontSize: '1rem'}}>{tegenstanderInfo.emoji}</span>
-                        </div>
-                      </div>
-
-                      <div style={{ textAlign: 'right' }}>
-                        {isDossierGespeeld ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <span style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem', color: uitslagKleur }}>
-                              {isThuis ? `${m.thuis_score} - ${m.uit_score}` : `${m.uit_score} - ${m.thuis_score}`}
-                            </span>
-                            <span style={{ fontSize: '0.7rem' }}>{statusIcoon}</span>
-                          </div>
-                        ) : (
-                          <div style={{ background: 'rgba(255,255,255,0.1)', color: '#ADB5BD', padding: '3px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase' }}>
-                            Te spelen
-                          </div>
-                        )}
-                      </div>
+              {gefilterdeMatchen.filter((m: any) => m.thuisploeg === geselecteerdTeamRaw || m.uitploeg === geselecteerdTeamRaw).map((m: any) => {
+                const dossierMatchTijd = new Date(m.datum).getTime();
+                const isDossierGespeeld = m.thuis_score !== null;
+                const isDossierLive = nu >= dossierMatchTijd && nu < (dossierMatchTijd + (117 * 60 * 1000));
+                const isThuis = m.thuisploeg === geselecteerdTeamRaw;
+                const tegenstanderRaw = isThuis ? m.uitploeg : m.thuisploeg;
+                const tegenstanderInfo = parseTeam(tegenstanderRaw);
+                let uitslagKleur = '#FFF'; let statusIcoon = '⏳';
+                if (isDossierGespeeld) {
+                  if ((isThuis && Number(m.thuis_score) > Number(m.uit_score)) || (!isThuis && Number(m.uit_score) > Number(m.thuis_score))) { uitslagKleur = '#CCFF00'; statusIcoon = '🟢'; } 
+                  else if (Number(m.thuis_score) === Number(m.uit_score)) { uitslagKleur = '#00E5FF'; statusIcoon = '➖'; } 
+                  else { uitslagKleur = '#E30022'; statusIcoon = '🔴'; } 
+                }
+                return (
+                  <div key={m.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 12px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: isDossierLive ? '1px solid #E30022' : '1px solid rgba(255,255,255,0.1)' }}>
+                    <div>
+                      <div style={{ fontSize: '0.6rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '2px' }}>{new Date(m.datum).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' })} • {m.ronde}{isDossierLive && <span style={{color: '#E30022', marginLeft: '5px'}}>🔴 LIVE</span>}</div>
+                      <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ fontSize: '0.65rem', color: '#6C757D' }}>vs</span> {tegenstanderInfo.name} <span style={{fontSize: '1rem'}}>{tegenstanderInfo.emoji}</span></div>
                     </div>
-                  );
-                })}
+                    <div style={{ textAlign: 'right' }}>
+                      {isDossierGespeeld ? (<div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem', color: uitslagKleur }}>{isThuis ? `${m.thuis_score} - ${m.uit_score}` : `${m.uit_score} - ${m.thuis_score}`}</span><span style={{ fontSize: '0.7rem' }}>{statusIcoon}</span></div>) : (<div style={{ background: 'rgba(255,255,255,0.1)', color: '#ADB5BD', padding: '3px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase' }}>Te spelen</div>)}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-
           </div>
         </div>,
         document.body
       )}
-
     </div>
   );
 }
