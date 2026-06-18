@@ -91,6 +91,7 @@ export default function Home() {
   const [alleMatchVoorspellingen, setAlleMatchVoorspellingen] = useState<any[]>([]); 
   const [matchSaveStatus, setMatchSaveStatus] = useState<Record<number, 'idle' | 'saving' | 'saved'>>({});
   const [alleToernooiV, setAlleToernooiV] = useState<any[]>([]);
+  const [matchViews, setMatchViews] = useState<any[]>([]); // NIEUW: State voor de gluurders
   const [opslaanStatus, setOpslaanStatus] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
   const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null);
@@ -308,6 +309,12 @@ export default function Home() {
         obj[v.match_id] = { thuis: v.thuis_score !== null ? v.thuis_score.toString() : '', uit: v.uit_score !== null ? v.uit_score.toString() : '' };
       });
       setMatchVoorspellingen(stateObj => ({...stateObj, ...obj}));
+    }
+
+    // NIEUW: Als Jorden inlogt, halen we de "gluurders" op
+    if (actieveSpelerRef.current?.naam?.toLowerCase().includes('jorden ricour')) {
+      const { data: viewsData } = await supabase.from('match_views').select('match_id, speler_id, bekeken_op, spelers(naam)');
+      if (viewsData) setMatchViews(viewsData);
     }
   };
 
@@ -577,13 +584,11 @@ export default function Home() {
 
   const gefilterdeMatchen = useMemo(() => {
     let basis = matchen;
-    const SPEEL_DUUR = 140 * 60 * 1000; // 2 uur en 20 minuten in milliseconden
+    const SPEEL_DUUR = 140 * 60 * 1000; 
 
     if (weergavePeriode === 'Actueel') {
-      // Actueel toont enkel matchen die nog niet gestart zijn, of bezig zijn (minder dan 2u20m oud)
       basis = basis.filter(m => nu < new Date(m.datum).getTime() + SPEEL_DUUR);
     } else {
-      // Historie toont enkel matchen die al langer dan 2u20m bezig/voorbij zijn
       basis = basis.filter(m => nu >= new Date(m.datum).getTime() + SPEEL_DUUR);
     }
 
@@ -658,47 +663,26 @@ export default function Home() {
         .btn-primary:active { transform: scale(0.98); }
       `}</style>
 
-      {/* 🚨 URGENTE MATCHEN POP-UP */}
       {toonUrgentPopup && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          background: 'rgba(9, 5, 20, 0.85)', backdropFilter: 'blur(10px)',
-          zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
-        }}>
-          <div style={{
-            background: '#1A1423', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '380px',
-            position: 'relative', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid var(--wk-orange)',
-            maxHeight: '90vh', overflowY: 'auto'
-          }}>
-            <button 
-              onClick={() => setShowUrgentPopup(false)}
-              style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.1)', border: 'none', width: '30px', height: '30px', borderRadius: '50%', fontWeight: 900, color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            >✕</button>
-            
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(9, 5, 20, 0.85)', backdropFilter: 'blur(10px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: '#1A1423', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '380px', position: 'relative', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid var(--wk-orange)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <button onClick={() => setShowUrgentPopup(false)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.1)', border: 'none', width: '30px', height: '30px', borderRadius: '50%', fontWeight: 900, color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             <div style={{ textAlign: 'center', marginBottom: '10px' }}>
               <div style={{ fontSize: '3rem', lineHeight: 1, marginBottom: '10px' }}>⏰</div>
               <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: 'var(--wk-orange)', margin: '0 0 5px 0', lineHeight: 1, letterSpacing: '1px' }}>VERGEET JE PRONO NIET!</h2>
               <p style={{ fontSize: '0.85rem', color: '#ADB5BD', fontWeight: 800, margin: '0 0 20px 0' }}>Deze matchen starten binnen de 36 uur en missen nog voorspellingen:</p>
-              
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', textAlign: 'left' }}>
                 {urgenteMatchen.map((u, i) => {
                   const matchDate = new Date(u.datum);
                   const isVandaag = new Date().toDateString() === matchDate.toDateString();
                   const dagStr = isVandaag ? 'Vandaag' : matchDate.toLocaleDateString('nl-BE', { weekday: 'short' });
                   const tijdStr = matchDate.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
-
                   return (
                     <div key={i} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px', borderLeft: '4px solid var(--wk-orange)' }}>
                       <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#FFF', marginBottom: '4px' }}>{u.matchNaam}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--wk-orange)', fontWeight: 900, textTransform: 'uppercase', marginBottom: '8px' }}>
-                        ⏳ {dagStr} om {tijdStr}
-                      </div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--wk-orange)', fontWeight: 900, textTransform: 'uppercase', marginBottom: '8px' }}>⏳ {dagStr} om {tijdStr}</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {u.ontbrekend.map((naam, j) => (
-                          <span key={j} style={{ background: 'rgba(255, 107, 0, 0.15)', color: '#FFF', border: '1px solid var(--wk-orange)', padding: '2px 8px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 800 }}>
-                            {naam}
-                          </span>
-                        ))}
+                        {u.ontbrekend.map((naam, j) => (<span key={j} style={{ background: 'rgba(255, 107, 0, 0.15)', color: '#FFF', border: '1px solid var(--wk-orange)', padding: '2px 8px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 800 }}>{naam}</span>))}
                       </div>
                     </div>
                   )
@@ -709,79 +693,34 @@ export default function Home() {
         </div>
       )}
 
-      {/* 🚨 BONUS WAARSCHUWING */}
       {toonBonusPopup && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          background: 'rgba(9, 5, 20, 0.85)', backdropFilter: 'blur(10px)',
-          zIndex: 99998, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
-        }}>
-          <div style={{
-            background: '#1A1423', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '380px',
-            position: 'relative', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid var(--wk-red)',
-            maxHeight: '90vh', overflowY: 'auto'
-          }}>
-            <button 
-              onClick={() => setShowInstallPopup(false)}
-              style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.1)', border: 'none', width: '30px', height: '30px', borderRadius: '50%', fontWeight: 900, color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            >✕</button>
-            
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(9, 5, 20, 0.85)', backdropFilter: 'blur(10px)', zIndex: 99998, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ background: '#1A1423', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '380px', position: 'relative', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid var(--wk-red)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <button onClick={() => setShowInstallPopup(false)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.1)', border: 'none', width: '30px', height: '30px', borderRadius: '50%', fontWeight: 900, color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
               <div style={{ fontSize: '3rem', lineHeight: 1, marginBottom: '10px' }}>🚨</div>
               <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: 'var(--wk-red)', margin: '0 0 5px 0', lineHeight: 1, letterSpacing: '1px' }}>VERGEET DE BONUS NIET!</h2>
-              <div style={{ background: 'var(--wk-red)', color: '#FFF', padding: '8px', borderRadius: '12px', fontSize: '0.9rem', fontWeight: 900, textTransform: 'uppercase', display: 'inline-block', marginBottom: '15px', boxShadow: '0 4px 15px rgba(227, 0, 34, 0.4)' }}>
-                ⏰ DEADLINE: VANAVOND OM 21:00
-              </div>
-              
+              <div style={{ background: 'var(--wk-red)', color: '#FFF', padding: '8px', borderRadius: '12px', fontSize: '0.9rem', fontWeight: 900, textTransform: 'uppercase', display: 'inline-block', marginBottom: '15px', boxShadow: '0 4px 15px rgba(227, 0, 34, 0.4)' }}>⏰ DEADLINE: VANAVOND OM 21:00</div>
               <p style={{ fontSize: '0.85rem', color: '#ADB5BD', fontWeight: 800, margin: '0 0 10px 0' }}>Deze spelers moeten hun bonusvragen nog invullen:</p>
-              
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
-                {ontbrekendeBonus.map((naam, i) => (
-                  <span key={i} style={{ background: 'rgba(227, 0, 34, 0.15)', color: '#FFF', border: '1px solid var(--wk-red)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900 }}>
-                    {naam}
-                  </span>
-                ))}
+                {ontbrekendeBonus.map((naam, i) => (<span key={i} style={{ background: 'rgba(227, 0, 34, 0.15)', color: '#FFF', border: '1px solid var(--wk-red)', padding: '4px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900 }}>{naam}</span>))}
               </div>
             </div>
-
             <hr style={{ border: 'none', borderTop: '1px dashed rgba(255,255,255,0.2)', margin: '20px 0' }} />
-
             <h3 style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: 'var(--wk-aqua)', margin: '0 0 10px 0', lineHeight: 1 }}>📲 App Installeren</h3>
             <p style={{ fontSize: '0.75rem', color: '#ADB5BD', fontWeight: 800, marginBottom: '15px' }}>Voor de beste ervaring zet je deze pronostiek op je startscherm.</p>
-            
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '12px', borderLeft: '3px solid var(--wk-blue)' }}>
-                <strong style={{ fontSize: '0.75rem', color: '#FFF' }}>🍎 iPhone (Safari):</strong>
-                <div style={{ fontSize: '0.65rem', color: '#868E96', marginTop: '2px' }}>Tik onderaan op het <strong>deel-icoontje</strong> en kies <strong>'Zet op beginscherm'</strong>.</div>
-              </div>
-
-              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '12px', borderLeft: '3px solid var(--wk-lime)' }}>
-                <strong style={{ fontSize: '0.75rem', color: '#FFF' }}>🤖 Android (Chrome):</strong>
-                <div style={{ fontSize: '0.65rem', color: '#868E96', marginTop: '2px' }}>Tik rechtsboven op de <strong>drie puntjes</strong> en kies <strong>'Toevoegen aan startscherm'</strong>.</div>
-              </div>
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '12px', borderLeft: '3px solid var(--wk-blue)' }}><strong style={{ fontSize: '0.75rem', color: '#FFF' }}>🍎 iPhone (Safari):</strong><div style={{ fontSize: '0.65rem', color: '#868E96', marginTop: '2px' }}>Tik onderaan op het <strong>deel-icoontje</strong> en kies <strong>'Zet op beginscherm'</strong>.</div></div>
+              <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px', borderRadius: '12px', borderLeft: '3px solid var(--wk-lime)' }}><strong style={{ fontSize: '0.75rem', color: '#FFF' }}>🤖 Android (Chrome):</strong><div style={{ fontSize: '0.65rem', color: '#868E96', marginTop: '2px' }}>Tik rechtsboven op de <strong>drie puntjes</strong> en kies <strong>'Toevoegen aan startscherm'</strong>.</div></div>
             </div>
           </div>
         </div>
       )}
 
       {toast && (
-        <div 
-          onClick={() => { setActieveTab('kleedkamer'); setToast(null); }}
-          style={{
-            position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
-            background: '#1A1423', border: '2px solid var(--wk-lime)',
-            padding: '12px 16px', borderRadius: '16px', zIndex: 9999,
-            boxShadow: '0 10px 30px rgba(0,0,0,0.5)', display: 'flex', gap: '12px',
-            alignItems: 'center', width: '90%', maxWidth: '350px', cursor: 'pointer'
-          }}
-        >
-          <div style={{ background: 'var(--wk-lime)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>
-            💬
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <span style={{ fontWeight: 900, color: '#FFF', fontSize: '0.8rem', marginBottom: '2px' }}>{toast.naam}</span>
-            <span style={{ color: '#ADB5BD', fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 800 }}>{toast.bericht}</span>
-          </div>
+        <div onClick={() => { setActieveTab('kleedkamer'); setToast(null); }} style={{ position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', background: '#1A1423', border: '2px solid var(--wk-lime)', padding: '12px 16px', borderRadius: '16px', zIndex: 9999, boxShadow: '0 10px 30px rgba(0,0,0,0.5)', display: 'flex', gap: '12px', alignItems: 'center', width: '90%', maxWidth: '350px', cursor: 'pointer' }}>
+          <div style={{ background: 'var(--wk-lime)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>💬</div>
+          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}><span style={{ fontWeight: 900, color: '#FFF', fontSize: '0.8rem', marginBottom: '2px' }}>{toast.naam}</span><span style={{ color: '#ADB5BD', fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 800 }}>{toast.bericht}</span></div>
         </div>
       )}
 
@@ -790,78 +729,36 @@ export default function Home() {
 
         {actieveSpeler && (
           <div style={{ textAlign: 'center' }}>
-            <div className="speler-badge">
-              <span className="avatar-icon">👤</span>
-              <span>{actieveSpeler.naam}</span>
-            </div>
+            <div className="speler-badge"><span className="avatar-icon">👤</span><span>{actieveSpeler.naam}</span></div>
           </div>
         )}
 
         {actieveSpeler && actieveTab === 'ranking' && (
           <div style={{ width: '100%', marginBottom: '20px' }}>
-            <button 
-              onClick={() => setInfoOpen(!infoOpen)}
-              style={{ width: '100%', background: '#1A1423', border: '2px solid var(--wk-aqua)', color: 'var(--wk-aqua)', padding: '15px', borderRadius: '16px', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 15px rgba(0, 229, 255, 0.2)' }}
-            >
-              <span>📜 REGLEMENT & PUNTEN</span>
-              <span>{infoOpen ? '▲' : '▼'}</span>
+            <button onClick={() => setInfoOpen(!infoOpen)} style={{ width: '100%', background: '#1A1423', border: '2px solid var(--wk-aqua)', color: 'var(--wk-aqua)', padding: '15px', borderRadius: '16px', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 15px rgba(0, 229, 255, 0.2)' }}>
+              <span>📜 REGLEMENT & PUNTEN</span><span>{infoOpen ? '▲' : '▼'}</span>
             </button>
-
             {infoOpen && (
               <div style={{ background: '#1A1423', padding: '20px', borderRadius: '16px', borderLeft: '4px solid var(--wk-purple)', marginTop: '10px', fontSize: '0.8rem', color: '#ADB5BD', lineHeight: '1.5', boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }}>
-                
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '15px' }}>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <strong style={{color: 'var(--wk-red)', fontSize: '0.9rem'}}>⚽ MATCHEN</strong><br/>
-                    <span style={{color: '#FFF'}}>• Exacte score: <strong>3 pt</strong></span><br/>
-                    <span style={{color: '#FFF'}}>• Juiste winnaar/gelijk: <strong>1 pt</strong></span><br/>
-                    <span style={{color: '#FFF'}}>• Fout: <strong>0 pt</strong></span>
-                  </div>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <strong style={{color: 'var(--wk-lime)', fontSize: '0.9rem'}}>💎 BONUSVRAGEN</strong><br/>
-                    <span style={{color: '#FFF'}}>• Goals/Kaarten/WK: <strong>5 pt</strong></span><br/>
-                    <span style={{color: '#FFF'}}>• Halve Fin/België: <strong>3 pt</strong></span><br/>
-                    <span style={{color: '#FFF'}}>• Aanval/Defensie: <strong>3 pt</strong></span>
-                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}><strong style={{color: 'var(--wk-red)', fontSize: '0.9rem'}}>⚽ MATCHEN</strong><br/><span style={{color: '#FFF'}}>• Exacte score: <strong>3 pt</strong></span><br/><span style={{color: '#FFF'}}>• Juiste winnaar/gelijk: <strong>1 pt</strong></span><br/><span style={{color: '#FFF'}}>• Fout: <strong>0 pt</strong></span></div>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}><strong style={{color: 'var(--wk-lime)', fontSize: '0.9rem'}}>💎 BONUSVRAGEN</strong><br/><span style={{color: '#FFF'}}>• Goals/Kaarten/WK: <strong>5 pt</strong></span><br/><span style={{color: '#FFF'}}>• Halve Fin/België: <strong>3 pt</strong></span><br/><span style={{color: '#FFF'}}>• Aanval/Defensie: <strong>3 pt</strong></span></div>
                 </div>
-                
-                <div style={{ background: 'rgba(255, 107, 0, 0.1)', padding: '12px', borderRadius: '12px', border: '1px solid var(--wk-orange)', marginBottom: '15px' }}>
-                  <strong style={{color: 'var(--wk-orange)', fontSize: '0.9rem'}}>⚖️ GELIJKE STAND (EX-AEQUO)</strong><br/>
-                  <span style={{color: '#FFF'}}>• <strong>Klassement:</strong> Wie de meeste <em>'Exacte Uitslagen'</em> heeft, wint. Nog gelijk? Dan telt <em>'Juiste Winnaars'</em>.</span><br/>
-                  <span style={{color: '#FFF'}}>• <strong>Bonusvragen:</strong> Gedeelde eerste plaats bij topschutter/verdediging/cijfers? Iedereen met dit antwoord krijgt de volle punten.</span>
-                </div>
-
-                <div style={{ background: 'var(--wk-blue)', padding: '12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 900, textAlign: 'center', color: '#FFF', boxShadow: '0 4px 15px rgba(43,0,255,0.3)' }}>
-                  💰 DEELNAME: €10 NAAR BE85 0018 2075 8506<br/>
-                  <span style={{color: 'var(--wk-lime)'}}>Mededeling: Naam + WK2026</span>
-                </div>
+                <div style={{ background: 'rgba(255, 107, 0, 0.1)', padding: '12px', borderRadius: '12px', border: '1px solid var(--wk-orange)', marginBottom: '15px' }}><strong style={{color: 'var(--wk-orange)', fontSize: '0.9rem'}}>⚖️ GELIJKE STAND (EX-AEQUO)</strong><br/><span style={{color: '#FFF'}}>• <strong>Klassement:</strong> Wie de meeste <em>'Exacte Uitslagen'</em> heeft, wint. Nog gelijk? Dan telt <em>'Juiste Winnaars'</em>.</span><br/><span style={{color: '#FFF'}}>• <strong>Bonusvragen:</strong> Gedeelde eerste plaats bij topschutter/verdediging/cijfers? Iedereen met dit antwoord krijgt de volle punten.</span></div>
+                <div style={{ background: 'var(--wk-blue)', padding: '12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 900, textAlign: 'center', color: '#FFF', boxShadow: '0 4px 15px rgba(43,0,255,0.3)' }}>💰 DEELNAME: €10 NAAR BE85 0018 2075 8506<br/><span style={{color: 'var(--wk-lime)'}}>Mededeling: Naam + WK2026</span></div>
               </div>
             )}
           </div>
         )}
 
-        {isAdmin && (
-          <button onClick={syncMetSpreadsheet} className="admin-btn">🔄 {syncStatus || 'SYNC MET GOOGLE SHEETS'}</button>
-        )}
+        {isAdmin && <button onClick={syncMetSpreadsheet} className="admin-btn">🔄 {syncStatus || 'SYNC MET GOOGLE SHEETS'}</button>}
 
         {!isGesloten && actieveSpeler && isTimerLoaded && (
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '30px', width: '100%' }}>
-            <div style={{ flex: 1, background: 'var(--wk-lime)', color: '#111827', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(204, 255, 0, 0.3)' }}>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.dagen}</div>
-              <div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Dagen</div>
-            </div>
-            <div style={{ flex: 1, background: 'var(--wk-purple)', color: '#FFF', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(122, 0, 230, 0.4)' }}>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.uren}</div>
-              <div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Uren</div>
-            </div>
-            <div style={{ flex: 1, background: 'var(--wk-aqua)', color: '#111827', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0, 229, 255, 0.4)' }}>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.minuten}</div>
-              <div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Min</div>
-            </div>
-            <div style={{ flex: 1, background: 'var(--wk-red)', color: '#FFF', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(227, 0, 34, 0.4)' }}>
-              <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.seconden}</div>
-              <div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Sec</div>
-            </div>
+            <div style={{ flex: 1, background: 'var(--wk-lime)', color: '#111827', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(204, 255, 0, 0.3)' }}><div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.dagen}</div><div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Dagen</div></div>
+            <div style={{ flex: 1, background: 'var(--wk-purple)', color: '#FFF', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(122, 0, 230, 0.4)' }}><div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.uren}</div><div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Uren</div></div>
+            <div style={{ flex: 1, background: 'var(--wk-aqua)', color: '#111827', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0, 229, 255, 0.4)' }}><div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.minuten}</div><div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Min</div></div>
+            <div style={{ flex: 1, background: 'var(--wk-red)', color: '#FFF', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(227, 0, 34, 0.4)' }}><div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.seconden}</div><div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Sec</div></div>
           </div>
         )}
 
@@ -870,26 +767,14 @@ export default function Home() {
             <div style={{ textAlign: 'center', padding: '20px 0', background: '#1A1423', borderRadius: '24px', border: '2px solid var(--wk-red)' }}>
               <div style={{ fontSize: '4rem', marginBottom: '10px' }}>🔒</div>
               <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '3rem', color: 'var(--wk-red)', lineHeight: 1, margin: '0 0 10px 0' }}>APP VERGRENDELD</h2>
-              <p style={{ fontWeight: 800, color: '#ADB5BD', fontSize: '0.9rem', marginBottom: '20px', padding: '0 15px' }}>
-                Je account wacht nog op goedkeuring. Breng je deelname (<strong>€10</strong>) in orde om mee te doen.
-              </p>
-              
-              <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '16px', padding: '20px', margin: '0 15px 20px 15px' }}>
-                <div style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--wk-aqua)', textTransform: 'uppercase' }}>Overschrijven naar:</div>
-                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#FFF', margin: '8px 0' }}>BE85 0018 2075 8506</div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#ADB5BD' }}>Mededeling: <strong style={{ color: 'var(--wk-lime)' }}>{actieveSpeler.naam} + WK2026</strong></div>
-              </div>
-
-              <button 
-                style={{ background: '#333', border: 'none', color: '#FFF', fontWeight: 900, cursor: 'pointer', padding: '12px 25px', borderRadius: '12px', fontSize: '0.8rem' }} 
-                onClick={() => { localStorage.removeItem('wk_speler_id'); window.location.reload(); }}
-              >
-                UITLOGGEN
-              </button>
+              <p style={{ fontWeight: 800, color: '#ADB5BD', fontSize: '0.9rem', marginBottom: '20px', padding: '0 15px' }}>Je account wacht nog op goedkeuring. Breng je deelname (<strong>€10</strong>) in orde om mee te doen.</p>
+              <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '16px', padding: '20px', margin: '0 15px 20px 15px' }}><div style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--wk-aqua)', textTransform: 'uppercase' }}>Overschrijven naar:</div><div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#FFF', margin: '8px 0' }}>BE85 0018 2075 8506</div><div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#ADB5BD' }}>Mededeling: <strong style={{ color: 'var(--wk-lime)' }}>{actieveSpeler.naam} + WK2026</strong></div></div>
+              <button style={{ background: '#333', border: 'none', color: '#FFF', fontWeight: 900, cursor: 'pointer', padding: '12px 25px', borderRadius: '12px', fontSize: '0.8rem' }} onClick={() => { localStorage.removeItem('wk_speler_id'); window.location.reload(); }}>UITLOGGEN</button>
             </div>
           ) : (
             <div style={{ width: '100%' }}>
-              {actieveTab === 'matchen' && <MatchenTab matchen={matchen} gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} weergavePeriode={weergavePeriode} setWeergavePeriode={setWeergavePeriode} />}
+              {/* DOORgeven weergavePeriode state EN de actieveSpeler, isJorden, en matchViews voor de spion! */}
+              {actieveTab === 'matchen' && <MatchenTab matchen={matchen} gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} weergavePeriode={weergavePeriode} setWeergavePeriode={setWeergavePeriode} actieveSpeler={actieveSpeler} isJorden={isJorden} matchViews={matchViews} />}
             
               {actieveTab === 'prijs' && <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />}
               {actieveTab === 'bonus' && <BonusTab winnaar={winnaar} setWinnaar={setWinnaar} hf={hf} setHf={setHf} meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} eindstation={eindstation} setEindstation={setEindstation} totaalGoals={totaalGoals} setTotaalGoals={setTotaalGoals} totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} />}
@@ -898,28 +783,19 @@ export default function Home() {
               {actieveTab === 'tellers' && <TellersTab matchen={matchen} alleToernooiV={alleToernooiV} isAdmin={isAdmin} />}
               {actieveTab === 'kleedkamer' && <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} matchen={matchen} alleMatchVoorspellingen={alleMatchVoorspellingen} klassement={klassement} />}
               
-              <div style={{textAlign:'center', marginTop:40, paddingBottom: 20}}>
-                <button style={{background:'rgba(255,255,255,0.1)', border:'none', color:'#ADB5BD', fontWeight:900, cursor:'pointer', padding: '10px 20px', borderRadius: '12px'}} onClick={() => {localStorage.removeItem('wk_speler_id'); window.location.reload();}}>UITLOGGEN</button>
-              </div>
+              <div style={{textAlign:'center', marginTop:40, paddingBottom: 20}}><button style={{background:'rgba(255,255,255,0.1)', border:'none', color:'#ADB5BD', fontWeight:900, cursor:'pointer', padding: '10px 20px', borderRadius: '12px'}} onClick={() => {localStorage.removeItem('wk_speler_id'); window.location.reload();}}>UITLOGGEN</button></div>
             </div>
           )
         ) : (
           <div style={{width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
             <form onSubmit={isRegistreren ? handleRegistreer : handleLogin} style={{width: '100%'}}>
-              <h2 className="login-title">
-                {isRegistreren ? 'Nieuwe Speler' : 'INLOGGEN'}
-              </h2>
+              <h2 className="login-title">{isRegistreren ? 'Nieuwe Speler' : 'INLOGGEN'}</h2>
               <input className="full-input" placeholder={isRegistreren ? "Voornaam + Familienaam" : "Je Naam"} value={ontgrendelNaam} onChange={e=>setOntgrendelNaam(e.target.value)} />
               <input className="full-input" type="password" placeholder={isRegistreren ? "Kies een veilige pincode" : "Pincode"} value={invoerCode} onChange={e=>setInvoerCode(e.target.value)} />
-              <button className="btn-primary" type="submit">
-                {isRegistreren ? 'ACCOUNT AANMAKEN' : 'HET VELD OP ⚽'}
-              </button>
+              <button className="btn-primary" type="submit">{isRegistreren ? 'ACCOUNT AANMAKEN' : 'HET VELD OP ⚽'}</button>
               <p style={{color:'var(--wk-red)', textAlign:'center', fontWeight:900, marginTop: '15px'}}>{status}</p>
             </form>
-            <button 
-              onClick={(e) => { e.preventDefault(); setIsRegistreren(!isRegistreren); setStatus(''); setOntgrendelNaam(''); setInvoerCode(''); }}
-              style={{background: 'transparent', border: 'none', color: '#ADB5BD', fontWeight: 900, marginTop: '10px', cursor: 'pointer', textDecoration: 'underline', padding: '10px'}}
-            >
+            <button onClick={(e) => { e.preventDefault(); setIsRegistreren(!isRegistreren); setStatus(''); setOntgrendelNaam(''); setInvoerCode(''); }} style={{background: 'transparent', border: 'none', color: '#ADB5BD', fontWeight: 900, marginTop: '10px', cursor: 'pointer', textDecoration: 'underline', padding: '10px'}}>
               {isRegistreren ? 'Heb je al een account? Log in' : 'Nieuw hier? Maak een account aan'}
             </button>
           </div>
@@ -939,11 +815,7 @@ export default function Home() {
           ].map(t => {
             const isActive = actieveTab === t.id;
             return (
-              <div 
-                key={t.id} 
-                className={`nav-item ${isActive ? 'active' : 'inactive'}`} 
-                onClick={() => veranderTab(t.id)}
-              >
+              <div key={t.id} className={`nav-item ${isActive ? 'active' : 'inactive'}`} onClick={() => veranderTab(t.id)}>
                 <span className="nav-icon">{t.i}</span>
                 {isActive && <span className="nav-text">{t.n}</span>}
                 {t.id === 'kleedkamer' && ongelezenBerichten && !isActive && <span className="unread-dot" />}
