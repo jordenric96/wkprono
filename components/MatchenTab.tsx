@@ -196,7 +196,7 @@ const cardThemes = [
 ];
 
 export default function MatchenTab({
-  gefilterdeMatchen, nu, matchVoorspellingen, matchSaveStatus,
+  matchen, gefilterdeMatchen, nu, matchVoorspellingen, matchSaveStatus,
   alleMatchVoorspellingen, alleSpelers, expandedMatchId, setExpandedMatchId,
   handleScore, filterRonde, setFilterRonde, weergavePeriode, setWeergavePeriode
 }: any) {
@@ -206,7 +206,6 @@ export default function MatchenTab({
 
   const rondes = ['Alle', 'Nog in te vullen', 'Groepsfase', 'Ronde van 32', 'Achtste finale', 'Kwartfinale', 'Halve finale', 'Troostfinale', 'Finale'];
 
-  // --- AUTO-SCROLL FUNCTIE ---
   useEffect(() => {
     if (!gefilterdeMatchen || gefilterdeMatchen.length === 0) return;
     if (hasScrolled.current === `${weergavePeriode}-${filterRonde}`) return;
@@ -232,7 +231,7 @@ export default function MatchenTab({
   }, [filterRonde, gefilterdeMatchen, nu, weergavePeriode]); 
 
   const genereerGroepsStand = (rawNaam: string) => {
-    const groepsMatchenVanDitTeam = gefilterdeMatchen.filter((m: any) => 
+    const groepsMatchenVanDitTeam = matchen.filter((m: any) => 
       m.ronde === 'Groepsfase' && (m.thuisploeg === rawNaam || m.uitploeg === rawNaam)
     );
     if (groepsMatchenVanDitTeam.length === 0) return null;
@@ -245,7 +244,7 @@ export default function MatchenTab({
     });
     const groepsNamenArray = Array.from(teamsInDeGroep);
 
-    const alleGroepsMatchen = gefilterdeMatchen.filter((m: any) => 
+    const alleGroepsMatchen = matchen.filter((m: any) => 
       m.ronde === 'Groepsfase' && 
       groepsNamenArray.includes(m.thuisploeg) && 
       groepsNamenArray.includes(m.uitploeg)
@@ -301,7 +300,6 @@ export default function MatchenTab({
         .live-pulse { animation: pulse-red 2s infinite; }
       `}</style>
 
-      {/* ACTUEEL / HISTORIE TOGGLE */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '5px' }}>
         <button 
            onClick={() => { setWeergavePeriode('Actueel'); hasScrolled.current = null; }}
@@ -317,7 +315,6 @@ export default function MatchenTab({
         </button>
       </div>
 
-      {/* FILTER KNOPPEN */}
       <div className="hide-scrollbar" style={{ display: 'flex', overflowX: 'auto', gap: '8px', paddingBottom: '5px' }}>
         {rondes.map(r => (
           <button 
@@ -551,7 +548,7 @@ export default function MatchenTab({
             })()}
             <div style={{ fontSize: '0.75rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '6px' }}>⚽ Matchen overzicht</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {gefilterdeMatchen.filter((m: any) => m.thuisploeg === geselecteerdTeamRaw || m.uitploeg === geselecteerdTeamRaw).map((m: any) => {
+              {matchen.filter((m: any) => m.thuisploeg === geselecteerdTeamRaw || m.uitploeg === geselecteerdTeamRaw).map((m: any) => {
                 const dossierMatchTijd = new Date(m.datum).getTime();
                 const isDossierGespeeld = m.thuis_score !== null;
                 const isDossierLive = nu >= dossierMatchTijd && nu < (dossierMatchTijd + (117 * 60 * 1000));
