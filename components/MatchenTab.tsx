@@ -348,7 +348,8 @@ export default function MatchenTab({
           
           const matchTijd = new Date(match.datum).getTime();
           const isMatchGesloten = nu >= matchTijd;
-          const isMatchLive = isMatchGesloten && nu < (matchTijd + (117 * 60 * 1000));
+          // De match is nu LIVE voor exact 140 minuten na start (2u20m)
+          const isMatchLive = isMatchGesloten && nu < (matchTijd + (140 * 60 * 1000));
           
           const voorspelling = matchVoorspellingen[match.id] || { thuis: '', uit: '' };
           const saveStatus = matchSaveStatus[match.id] || 'idle';
@@ -551,7 +552,8 @@ export default function MatchenTab({
               {matchen.filter((m: any) => m.thuisploeg === geselecteerdTeamRaw || m.uitploeg === geselecteerdTeamRaw).map((m: any) => {
                 const dossierMatchTijd = new Date(m.datum).getTime();
                 const isDossierGespeeld = m.thuis_score !== null;
-                const isDossierLive = nu >= dossierMatchTijd && nu < (dossierMatchTijd + (117 * 60 * 1000));
+                // De match in het dossier is nu LIVE voor exact 140 minuten na start
+                const isDossierLive = nu >= dossierMatchTijd && nu < (dossierMatchTijd + (140 * 60 * 1000));
                 const isThuis = m.thuisploeg === geselecteerdTeamRaw;
                 const tegenstanderRaw = isThuis ? m.uitploeg : m.thuisploeg;
                 const tegenstanderInfo = parseTeam(tegenstanderRaw);
