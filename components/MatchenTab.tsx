@@ -1,7 +1,7 @@
 // src/components/MatchenTab.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { supabase } from '../lib/supabase'; // <-- DIT WAS DE MISSENDE REGEL!
+import { supabase } from '../lib/supabase';
 
 const WK_GROEPEN: Record<string, string> = {
   'mexico': 'Groep A', 'zuid-afrika': 'Groep A', 'zuid-korea': 'Groep A', 'tsjechië': 'Groep A',
@@ -38,115 +38,48 @@ const parseTeam = (teamString: string) => {
     'belgium': 'België', 'belgië': 'België',
     'italy': 'Italië', 'italië': 'Italië',
     'argentina': 'Argentinië', 'argentinië': 'Argentinië',
-    'england': 'Engeland', 'wales': 'Wales', 'scotland': 'Schotland',
+    'england': 'Engeland', 'wales': 'Wales', 'scotland': 'Schotland', 'schotland': 'Schotland',
     'usa': 'Verenigde Staten', 'united states': 'Verenigde Staten', 'verenigde staten': 'Verenigde Staten',
     'canada': 'Canada', 'mexico': 'Mexico', 'japan': 'Japan',
     'croatia': 'Kroatië', 'kroatië': 'Kroatië',
     'uruguay': 'Uruguay', 'senegal': 'Senegal', 'ghana': 'Ghana', 'nigeria': 'Nigeria', 'ecuador': 'Ecuador',
     'sweden': 'Zweden', 'zweden': 'Zweden',
     'denmark': 'Denemarken', 'denemarken': 'Denemarken',
-    'poland': 'Polen', 'polen': 'Polen',
-    'serbia': 'Servië', 'servië': 'Servië',
-    'iran': 'Iran', 'ir iran': 'Iran', 'islamic republic of iran': 'Iran',
-    'saudi arabia': 'Saudi-Arabië', 'saudi-arabië': 'Saudi-Arabië',
-    'ukraine': 'Oekraïne', 'oekraïne': 'Oekraïne',
+    'polen': 'Polen', 'poland': 'Polen',
+    'servië': 'Servië', 'serbia': 'Servië',
+    'iran': 'Iran', 'saudi-arabië': 'Saudi-Arabië', 'saudi arabia': 'Saudi-Arabië',
+    'oekraïne': 'Oekraïne', 'ukraine': 'Oekraïne',
     'peru': 'Peru', 'panama': 'Panama',
     'egypt': 'Egypte', 'egypte': 'Egypte',
-    'tunesië': 'Tunesië',
-    'nieuw-zeeland': 'Nieuw-Zeeland',
-    'qatar': 'Qatar', 'ireland': 'Ierland', 'ierland': 'Ierland',
-    'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije', 'turkije': 'Turkije',
-    'romania': 'Roemenië', 'roemenië': 'Roemenië',
-    'hungary': 'Hongarije', 'hongarije': 'Hongarije',
-    'norway': 'Noorwegen', 'noorwegen': 'Noorwegen',
-    'iceland': 'IJsland', 'ijsland': 'IJsland',
-    'slovakia': 'Slowakije', 'slowakije': 'Slowakije',
-    'iraq': 'Irak', 'irak': 'Irak',
-    'paraguay': 'Paraguay', 'venezuela': 'Venezuela', 'mali': 'Mali',
-    'algeria': 'Algerije', 'algerije': 'Algerije',
+    'tunisia': 'Tunesië', 'tunesië': 'Tunesië',
+    'nieuw-zeeland': 'Nieuw-Zeeland', 'new zealand': 'Nieuw-Zeeland',
+    'qatar': 'Qatar', 'ierland': 'Ierland', 'ireland': 'Ierland',
+    'turkije': 'Turkije', 'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije',
+    'roemenië': 'Roemenië', 'romania': 'Roemenië',
+    'hongarije': 'Hongarije', 'hungary': 'Hongarije',
+    'noorwegen': 'Noorwegen', 'norway': 'Noorwegen',
+    'ijsland': 'IJsland', 'iceland': 'IJsland',
+    'slowakije': 'Slowakije', 'slovakia': 'Slowakije',
+    'irak': 'Irak', 'iraq': 'Irak',
+    'paraguay': 'Paraguay', 'venezuela': 'Venezuela',
+    'mali': 'Mali', 'algerije': 'Algerije', 'algeria': 'Algerije',
     'zambia': 'Zambia', 'honduras': 'Honduras', 'el salvador': 'El Salvador',
-    'cabo verde': 'Kaapverdië', 'cape verde': 'Kaapverdië', 'kaapverdië': 'Kaapverdië',
-    'haiti': 'Haïti', 'haïti': 'Haïti',
-    'curacao': 'Curaçao', 'curaçao': 'Curaçao',
-    'jordan': 'Jordanië', 'jordanië': 'Jordanië',
-    'congo dr': 'Congo', 'dr congo': 'Congo', 'congo': 'Congo',
-    'uzbekistan': 'Oezbekistan', 'oezbekistan': 'Oezbekistan'
+    'kaapverdië': 'Kaapverdië', 'cabo verde': 'Kaapverdië', 'cape verde': 'Kaapverdië',
+    'haïti': 'Haïti', 'haiti': 'Haïti',
+    'curaçao': 'Curaçao', 'curacao': 'Curaçao',
+    'jordanië': 'Jordanië', 'jordan': 'Jordanië',
+    'congo': 'Congo', 'congo dr': 'Congo', 'dr congo': 'Congo',
+    'oezbekistan': 'Oezbekistan', 'uzbekistan': 'Oezbekistan',
+    'ivoorkust': 'Ivoorkust', "cote d'ivoire": 'Ivoorkust', "côte d'ivoire": 'Ivoorkust', 'cote divoire': 'Ivoorkust',
+    'kameroen': 'Kameroen', 'cameroon': 'Kameroen',
+    'chili': 'Chili', 'chile': 'Chili',
+    'colombia': 'Colombia', 'costa rica': 'Costa Rica',
+    'oostenrijk': 'Oostenrijk', 'austria': 'Oostenrijk',
+    'australië': 'Australië', 'australia': 'Australië'
   };
 
   let nameNL = vertalingen[searchKey] || cleanString;
   const searchFinalKey = nameNL.toLowerCase();
-
-  const colors: Record<string, string> = {
-    'belgië': 'linear-gradient(135deg, #000 33%, #FFD700 33%, #FFD700 66%, #ED2939 66%)',
-    'nederland': 'linear-gradient(135deg, #AE1C28 33%, #FFF 33%, #FFF 66%, #21468B 66%)',
-    'frankrijk': 'linear-gradient(135deg, #002395 33%, #FFF 33%, #FFF 66%, #ED2939 66%)',
-    'duitsland': 'linear-gradient(135deg, #000 33%, #FF0000 33%, #FF0000 66%, #FFCC00 66%)',
-    'spanje': 'linear-gradient(135deg, #AA151B 33%, #F1BF00 33%, #F1BF00 66%, #AA151B 66%)',
-    'brazilië': 'linear-gradient(135deg, #009c3b 33%, #ffdf00 33%, #ffdf00 66%, #002776 66%)',
-    'argentinië': 'linear-gradient(135deg, #75AADB 33%, #FFF 33%, #FFF 66%, #75AADB 66%)',
-    'portugal': 'linear-gradient(135deg, #006600 50%, #FF0000 50%)',
-    'engeland': 'linear-gradient(135deg, #FFF 40%, #CE1124 40%, #CE1124 60%, #FFF 60%)',
-    'italië': 'linear-gradient(135deg, #009246 33%, #FFF 33%, #FFF 66%, #CE2B37 66%)',
-    'mexico': 'linear-gradient(135deg, #006847 33%, #FFF 33%, #FFF 66%, #CE1126 66%)',
-    'verenigde staten': 'linear-gradient(135deg, #B31942 33%, #FFF 33%, #FFF 66%, #0A3161 66%)',
-    'canada': 'linear-gradient(135deg, #FF0000 30%, #FFF 30%, #FFF 70%, #FF0000 70%)',
-    'marokko': 'linear-gradient(135deg, #c1272d 45%, #006233 45%, #006233 55%, #c1272d 55%)',
-    'chili': 'linear-gradient(135deg, #0039A6 33%, #FFF 33%, #FFF 66%, #D52B1E 66%)',
-    'kameroen': 'linear-gradient(135deg, #007A5E 33%, #CE1126 33%, #CE1126 66%, #FCD116 66%)',
-    'colombia': 'linear-gradient(135deg, #FCD116 50%, #003893 50%, #003893 75%, #CE1126 75%)',
-    'costa rica': 'linear-gradient(135deg, #002B7F 20%, #FFF 20%, #FFF 40%, #CE1126 40%, #CE1126 60%, #FFF 60%, #FFF 80%, #002B7F 80%)',
-    'zwitserland': 'linear-gradient(135deg, #FF0000 40%, #FFF 40%, #FFF 60%, #FF0000 60%)',
-    'ivoorkust': 'linear-gradient(135deg, #FF8200 33%, #FFF 33%, #FFF 66%, #009A44 66%)',
-    'oostenrijk': 'linear-gradient(135deg, #ED2939 33%, #FFF 33%, #FFF 66%, #ED2939 66%)',
-    'australië': 'linear-gradient(135deg, #012169 40%, #FFF 40%, #FFF 50%, #E4002B 50%)',
-    'japan': 'linear-gradient(135deg, #FFF 40%, #BC002D 40%, #BC002D 60%, #FFF 60%)',
-    'zuid-korea': 'linear-gradient(135deg, #FFF 40%, #CD2E3A 40%, #CD2E3A 60%, #0047A0 60%)',
-    'kroatië': 'linear-gradient(135deg, #FF0000 33%, #FFF 33%, #FFF 66%, #0000FF 66%)',
-    'uruguay': 'linear-gradient(135deg, #0038A8 40%, #FFF 40%, #FFF 60%, #0038A8 60%)',
-    'senegal': 'linear-gradient(135deg, #00853F 33%, #FDEF42 33%, #FDEF42 66%, #E31B23 66%)',
-    'ghana': 'linear-gradient(135deg, #CE1126 33%, #FCD116 33%, #FCD116 66%, #006B3F 66%)',
-    'nigeria': 'linear-gradient(135deg, #008751 33%, #FFF 33%, #FFF 66%, #008751 66%)',
-    'ecuador': 'linear-gradient(135deg, #FFD100 50%, #003893 50%, #003893 75%, #CE1126 75%)',
-    'zweden': 'linear-gradient(135deg, #004B87 40%, #FFCD00 40%, #FFCD00 60%, #004B87 60%)',
-    'denemarken': 'linear-gradient(135deg, #C60C30 40%, #FFF 40%, #FFF 60%, #C60C30 60%)',
-    'schotland': 'linear-gradient(135deg, #005EB8 40%, #FFF 40%, #FFF 60%, #005EB8 60%)',
-    'polen': 'linear-gradient(135deg, #FFF 50%, #DC143C 50%)',
-    'servië': 'linear-gradient(135deg, #C6363C 33%, #0C4076 33%, #0C4076 66%, #FFF 66%)',
-    'iran': 'linear-gradient(135deg, #239F40 33%, #FFF 33%, #FFF 66%, #DA0000 66%)',
-    'saudi-arabië': 'linear-gradient(135deg, #006C35 80%, #FFF 80%)',
-    'wales': 'linear-gradient(135deg, #FFF 50%, #00AB39 50%)',
-    'oekraïne': 'linear-gradient(135deg, #0057B7 50%, #FFD700 50%)',
-    'peru': 'linear-gradient(135deg, #D91023 33%, #FFF 33%, #FFF 66%, #D91023 66%)',
-    'panama': 'linear-gradient(135deg, #FFF 25%, #C2113A 25%, #C2113A 50%, #00225D 50%, #00225D 75%, #FFF 75%)',
-    'egypte': 'linear-gradient(135deg, #CE1126 33%, #FFF 33%, #FFF 66%, #000 66%)',
-    'tunesië': 'linear-gradient(135deg, #E70013 40%, #FFF 40%, #FFF 60%, #E70013 60%)',
-    'nieuw-zeeland': 'linear-gradient(135deg, #00247D 40%, #FFF 40%, #FFF 50%, #CC142B 50%)',
-    'qatar': 'linear-gradient(135deg, #FFF 30%, #8A1538 30%)',
-    'ierland': 'linear-gradient(135deg, #169B62 33%, #FFF 33%, #FFF 66%, #FF883E 66%)',
-    'turkije': 'linear-gradient(135deg, #E30A17 80%, #FFF 80%)',
-    'zuid-afrika': 'linear-gradient(135deg, #007A4D 25%, #FFB612 25%, #FFB612 50%, #000 50%, #000 75%, #DE3831 75%)',
-    'tsjechië': 'linear-gradient(135deg, #11457E 33%, #D7141A 33%, #D7141A 66%, #FFF 66%)',
-    'roemenië': 'linear-gradient(135deg, #002B7F 33%, #FCD116 33%, #FCD116 66%, #CE1126 66%)',
-    'hongarije': 'linear-gradient(135deg, #CE2939 33%, #FFF 33%, #FFF 66%, #477050 66%)',
-    'noorwegen': 'linear-gradient(135deg, #006AA7 40%, #FECC00 40%, #FECC00 60%, #006AA7 60%)',
-    'ijsland': 'linear-gradient(135deg, #02529C 40%, #FFF 40%, #FFF 45%, #DC1E35 45%, #DC1E35 55%, #FFF 55%, #FFF 60%, #02529C 60%)',
-    'slowakije': 'linear-gradient(135deg, #FFF 33%, #0B4EA2 33%, #0B4EA2 66%, #EE1C25 66%)',
-    'irak': 'linear-gradient(135deg, #239F40 33%, #FFF 33%, #FFF 66%, #DA0000 66%)',
-    'paraguay': 'linear-gradient(135deg, #D52B1E 33%, #FFF 33%, #FFF 66%, #0038A8 66%)',
-    'venezuela': 'linear-gradient(135deg, #FCE300 50%, #0038A8 50%, #0038A8 75%, #CE1126 75%)',
-    'mali': 'linear-gradient(135deg, #14B53A 33%, #FCD116 33%, #FCD116 66%, #CE1126 66%)',
-    'algerije': 'linear-gradient(135deg, #006233 50%, #FFF 50%)',
-    'zambia': 'linear-gradient(135deg, #198A00 33%, #FF0000 33%, #FF0000 66%, #000 66%)',
-    'honduras': 'linear-gradient(135deg, #005293 40%, #FFF 40%, #FFF 60%, #D21034 60%)',
-    'el salvador': 'linear-gradient(135deg, #001489 20%, #FFF 20%, #FFF 40%, #CE1126 40%, #CE1126 60%, #FFF 60%, #FFF 80%, #001489 80%)',
-    'bosnië': 'linear-gradient(135deg, #002395 40%, #FECB00 40%, #FECB00 60%, #FFFFFF 60%)',
-    'kaapverdië': 'linear-gradient(135deg, #003893 40%, #FFF 40%, #FFF 45%, #CE1126 45%, #CE1126 55%, #FFF 55%, #FFF 60%, #003893 60%)',
-    'haïti': 'linear-gradient(135deg, #00209F 50%, #D21034 50%)',
-    'curaçao': 'linear-gradient(135deg, #002B7F 65%, #F9E814 65%, #F9E814 80%, #002B7F 80%)',
-    'jordanië': 'linear-gradient(135deg, #CE1126 25%, #000 25%, #000 50%, #FFF 50%, #FFF 75%, #007A3D 75%)',
-    'congo': 'linear-gradient(135deg, #007FFF 35%, #F7D116 35%, #F7D116 42%, #CE1021 42%, #CE1021 58%, #F7D116 58%, #F7D116 65%, #007FFF 65%)',
-    'oezbekistan': 'linear-gradient(135deg, #0099B5 30%, #CE1126 30%, #CE1126 35%, #FFF 35%, #FFF 65%, #CE1126 65%, #CE1126 70%, #1EB53A 70%)'
-  };
 
   const defaultEmojis: Record<string, string> = {
     'belgië': '🇧🇪', 'nederland': '🇳🇱', 'frankrijk': '🇫🇷', 'duitsland': '🇩🇪', 'spanje': '🇪🇸',
@@ -167,9 +100,7 @@ const parseTeam = (teamString: string) => {
   };
 
   let emoji = defaultEmojis[searchFinalKey] || '🏳️';
-  let gradient = colors[searchFinalKey] || 'linear-gradient(135deg, #DEE2E6, #ADB5BD)';
-  
-  return { name: nameNL, emoji, gradient };
+  return { name: nameNL, emoji, gradient: 'linear-gradient(135deg, #DEE2E6, #ADB5BD)' };
 };
 
 const formateerNaam = (volledigeNaam: string) => {
@@ -484,58 +415,41 @@ export default function MatchenTab({
                   </div>
                 )
               ) : (
-                (() => {
-                  const _revealTijd = matchTijd + (3 * 60 * 60 * 1000);
-                  const _syncMode = match.id === 23 && nu >= matchTijd && nu < _revealTijd;
-                  const _dbFout = new Date("2026-06-17T23:53:00+02:00").getTime();
-                  const _connState = isMatchLive && nu < _dbFout;
+                <div className="hide-scrollbar" style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.1)', display: 'flex', gap: '6px', overflowX: 'auto' }}>
+                  {alleSpelers.map((s: any) => {
+                    const v = alleMatchVoorspellingen.find((x: any) => x.match_id === match.id && x.speler_id === s.id);
+                    const heeftIngevuld = v && v.thuis_score !== null && v.uit_score !== null;
+                    const spelerNaam = formateerNaam(s.naam);
 
-                  if (_syncMode || _connState) {
+                    let pillBg = 'rgba(0,0,0,0.2)';
+                    let pillColor = theme.color;
+                    let scoreTekst = heeftIngevuld ? `${v.thuis_score}-${v.uit_score}` : 'Geen';
+                    let icoontje = heeftIngevuld ? '🤔' : '❌';
+                    
+                    if (match.thuis_score !== null && heeftIngevuld) {
+                      const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
+                      const pred = v.thuis_score > v.uit_score ? 1 : v.thuis_score < v.uit_score ? 2 : 0;
+                      if (v.thuis_score === match.thuis_score && v.uit_score === match.uit_score) { 
+                        pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; 
+                      } else if (echt === pred) { 
+                        pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; 
+                      } else { 
+                        pillBg = '#E30022'; pillColor = '#FFF'; icoontje = '🔴'; 
+                      }
+                    }
+
                     return (
-                      <div style={{ width: '100%', background: 'rgba(227, 0, 34, 0.15)', color: '#FFF', borderTop: '1px dashed #E30022', padding: '12px', borderRadius: '0 0 20px 20px', textAlign: 'center', fontSize: '0.75rem', fontWeight: 900 }}>
-                        <span style={{ color: '#E30022' }}>⚠️ SQL ERROR 503:</span> Synchronisatie mislukt. Pronostiek-codes tijdelijk corrupt of onbereikbaar.
+                      <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: pillBg, padding: '4px 10px', borderRadius: '10px', minWidth: '55px', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                        <span style={{ fontSize: '0.55rem', fontWeight: 900, color: pillColor, opacity: 0.8, textTransform: 'uppercase', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
+                          {spelerNaam}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 900, color: pillColor, whiteSpace: 'nowrap', display: 'flex', gap: '2px', alignItems: 'center' }}>
+                          {scoreTekst} <span style={{fontSize: '0.6rem'}}>{icoontje}</span>
+                        </span>
                       </div>
                     );
-                  }
-
-                  return (
-                    <div className="hide-scrollbar" style={{ padding: '10px 12px', background: 'rgba(0,0,0,0.1)', display: 'flex', gap: '6px', overflowX: 'auto' }}>
-                      {alleSpelers.map((s: any) => {
-                        const v = alleMatchVoorspellingen.find((x: any) => x.match_id === match.id && x.speler_id === s.id);
-                        const heeftIngevuld = v && v.thuis_score !== null && v.uit_score !== null;
-                        const spelerNaam = formateerNaam(s.naam);
-
-                        let pillBg = 'rgba(0,0,0,0.2)';
-                        let pillColor = theme.color;
-                        let scoreTekst = heeftIngevuld ? `${v.thuis_score}-${v.uit_score}` : 'Geen';
-                        let icoontje = heeftIngevuld ? '🤔' : '❌';
-                        
-                        if (match.thuis_score !== null && heeftIngevuld) {
-                          const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
-                          const pred = v.thuis_score > v.uit_score ? 1 : v.thuis_score < v.uit_score ? 2 : 0;
-                          if (v.thuis_score === match.thuis_score && v.uit_score === match.uit_score) { 
-                            pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; 
-                          } else if (echt === pred) { 
-                            pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; 
-                          } else { 
-                            pillBg = '#E30022'; pillColor = '#FFF'; icoontje = '🔴'; 
-                          }
-                        }
-
-                        return (
-                          <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: pillBg, padding: '4px 10px', borderRadius: '10px', minWidth: '55px', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
-                            <span style={{ fontSize: '0.55rem', fontWeight: 900, color: pillColor, opacity: 0.8, textTransform: 'uppercase', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
-                              {spelerNaam}
-                            </span>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 900, color: pillColor, whiteSpace: 'nowrap', display: 'flex', gap: '2px', alignItems: 'center' }}>
-                              {scoreTekst} <span style={{fontSize: '0.6rem'}}>{icoontje}</span>
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()
+                  })}
+                </div>
               )}
 
             </div>
