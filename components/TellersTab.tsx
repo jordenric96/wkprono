@@ -22,45 +22,44 @@ const parseTeam = (teamString: string) => {
     'belgium': 'België', 'belgië': 'België',
     'italy': 'Italië', 'italië': 'Italië',
     'argentina': 'Argentinië', 'argentinië': 'Argentinië',
-    'england': 'Engeland', 'wales': 'Wales', 'scotland': 'Schotland',
+    'england': 'Engeland', 'wales': 'Wales', 'scotland': 'Schotland', 'schotland': 'Schotland',
     'usa': 'Verenigde Staten', 'united states': 'Verenigde Staten', 'verenigde staten': 'Verenigde Staten',
     'canada': 'Canada', 'mexico': 'Mexico', 'japan': 'Japan',
     'croatia': 'Kroatië', 'kroatië': 'Kroatië',
     'uruguay': 'Uruguay', 'senegal': 'Senegal', 'ghana': 'Ghana', 'nigeria': 'Nigeria', 'ecuador': 'Ecuador',
     'sweden': 'Zweden', 'zweden': 'Zweden',
     'denmark': 'Denemarken', 'denemarken': 'Denemarken',
-    'poland': 'Polen', 'polen': 'Polen',
-    'serbia': 'Servië', 'servië': 'Servië',
-    'iran': 'Iran', 'ir iran': 'Iran', 'islamic republic of iran': 'Iran',
-    'saudi arabia': 'Saudi-Arabië', 'saudi-arabië': 'Saudi-Arabië',
-    'ukraine': 'Oekraïne', 'oekraïne': 'Oekraïne',
+    'polen': 'Polen', 'poland': 'Polen',
+    'servië': 'Servië', 'serbia': 'Servië',
+    'iran': 'Iran', 'saudi-arabië': 'Saudi-Arabië', 'saudi arabia': 'Saudi-Arabië',
+    'oekraïne': 'Oekraïne', 'ukraine': 'Oekraïne',
     'peru': 'Peru', 'panama': 'Panama',
     'egypt': 'Egypte', 'egypte': 'Egypte',
     'tunisia': 'Tunesië', 'tunesië': 'Tunesië',
-    'new zealand': 'Nieuw-Zeeland', 'nieuw-zeeland': 'Nieuw-Zeeland',
-    'qatar': 'Qatar', 'ireland': 'Ierland', 'ierland': 'Ierland',
-    'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije', 'turkije': 'Turkije',
-    'romania': 'Roemenië', 'roemenië': 'Roemenië',
-    'hungary': 'Hongarije', 'hongarije': 'Hongarije',
-    'norway': 'Noorwegen', 'noorwegen': 'Noorwegen',
-    'iceland': 'IJsland', 'ijsland': 'IJsland',
-    'slovakia': 'Slowakije', 'slowakije': 'Slowakije',
-    'iraq': 'Irak', 'irak': 'Irak',
-    'paraguay': 'Paraguay', 'venezuela': 'Venezuela', 'mali': 'Mali',
-    'algeria': 'Algerije', 'algerije': 'Algerije',
+    'nieuw-zeeland': 'Nieuw-Zeeland', 'new zealand': 'Nieuw-Zeeland',
+    'qatar': 'Qatar', 'ierland': 'Ierland', 'ireland': 'Ierland',
+    'turkije': 'Turkije', 'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije',
+    'roemenië': 'Roemenië', 'romania': 'Roemenië',
+    'hongarije': 'Hongarije', 'hungary': 'Hongarije',
+    'noorwegen': 'Noorwegen', 'norway': 'Noorwegen',
+    'ijsland': 'IJsland', 'iceland': 'IJsland',
+    'slowakije': 'Slowakije', 'slovakia': 'Slowakije',
+    'irak': 'Irak', 'iraq': 'Irak',
+    'paraguay': 'Paraguay', 'venezuela': 'Venezuela',
+    'mali': 'Mali', 'algerije': 'Algerije', 'algeria': 'Algerije',
     'zambia': 'Zambia', 'honduras': 'Honduras', 'el salvador': 'El Salvador',
-    'ivory coast': 'Ivoorkust', 'cote d\'ivoire': 'Ivoorkust', 'côte d\'ivoire': 'Ivoorkust', 'cote divoire': 'Ivoorkust', 'cote d ivoire': 'Ivoorkust', 'core divoir': 'Ivoorkust', 'ivoorkust': 'Ivoorkust',
-    'cameroon': 'Kameroen', 'kameroen': 'Kameroen',
-    'chile': 'Chili', 'chili': 'Chili',
+    'kaapverdië': 'Kaapverdië', 'cabo verde': 'Kaapverdië', 'cape verde': 'Kaapverdië',
+    'haïti': 'Haïti', 'haiti': 'Haïti',
+    'curaçao': 'Curaçao', 'curacao': 'Curaçao',
+    'jordanië': 'Jordanië', 'jordan': 'Jordanië',
+    'congo': 'Congo', 'congo dr': 'Congo', 'dr congo': 'Congo',
+    'oezbekistan': 'Oezbekistan', 'uzbekistan': 'Oezbekistan',
+    'ivoorkust': 'Ivoorkust', "cote d'ivoire": 'Ivoorkust', "côte d'ivoire": 'Ivoorkust', 'cote divoire': 'Ivoorkust',
+    'kameroen': 'Kameroen', 'cameroon': 'Kameroen',
+    'chili': 'Chili', 'chile': 'Chili',
     'colombia': 'Colombia', 'costa rica': 'Costa Rica',
-    'austria': 'Oostenrijk', 'oostenrijk': 'Oostenrijk',
-    'australia': 'Australië', 'australië': 'Australië',
-    'cabo verde': 'Kaapverdië', 'cape verde': 'Kaapverdië', 'kaapverdië': 'Kaapverdië',
-    'haiti': 'Haïti', 'haïti': 'Haïti',
-    'curacao': 'Curaçao', 'curaçao': 'Curaçao',
-    'jordan': 'Jordanië', 'jordanië': 'Jordanië',
-    'congo dr': 'Congo', 'dr congo': 'Congo', 'congo': 'Congo',
-    'uzbekistan': 'Oezbekistan', 'oezbekistan': 'Oezbekistan'
+    'oostenrijk': 'Oostenrijk', 'austria': 'Oostenrijk',
+    'australië': 'Australië', 'australia': 'Australië'
   };
 
   let nameNL = vertalingen[searchKey] || cleanString;
@@ -69,9 +68,19 @@ const parseTeam = (teamString: string) => {
   const defaultEmojis: Record<string, string> = {
     'belgië': '🇧🇪', 'nederland': '🇳🇱', 'frankrijk': '🇫🇷', 'duitsland': '🇩🇪', 'spanje': '🇪🇸',
     'brazilië': '🇧🇷', 'argentinië': '🇦🇷', 'portugal': '🇵🇹', 'italië': '🇮🇹', 'engeland': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-    'mexico': '🇲🇽', 'verenigde staten': '🇺🇸', 'canada': '🇨🇦', 'marokko': '🇲🇦', 'kroatië': '🇭🇷',
-    'japan': '🇯🇵', 'senegal': '🇸🇳', 'zwitserland': '🇨🇭', 'uruguay': '🇺🇾', 'colombia': '🇨🇴',
-    'zuid-afrika': '🇿🇦', 'tsjechië': '🇨🇿', 'zuid-korea': '🇰🇷', 'bosnië': '🇧🇦'
+    'mexico': '🇲🇽', 'verenigde staten': '🇺🇸', 'canada': '🇨🇦', 'marokko': '🇲🇦',
+    'chili': '🇨🇱', 'kameroen': '🇨🇲', 'colombia': '🇨🇴', 'costa rica': '🇨🇷', 'zwitserland': '🇨🇭',
+    'ivoorkust': '🇨🇮', 'oostenrijk': '🇦🇹', 'australië': '🇦🇺', 'japan': '🇯🇵', 'zuid-korea': '🇰🇷',
+    'kroatië': '🇭🇷', 'uruguay': '🇺🇾', 'senegal': '🇸🇳', 'ghana': '🇬🇭', 'nigeria': '🇳🇬', 
+    'ecuador': '🇪🇨', 'zweden': '🇸🇪', 'denemarken': '🇩🇰', 'schotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'polen': '🇵🇱', 
+    'servië': '🇷🇸', 'iran': '🇮🇷', 'saudi-arabië': '🇸🇦', 'wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'oekraïne': '🇺🇦', 
+    'peru': '🇵🇪', 'panama': '🇵🇦', 'egypte': '🇪🇬', 'tunesië': '🇹🇳', 'nieuw-zeeland': '🇳🇿', 
+    'qatar': '🇶🇦', 'ierland': '🇮🇪', 'turkije': '🇹🇷', 'zuid-afrika': '🇿🇦', 'tsjechië': '🇨🇿', 
+    'roemenië': '🇷🇴', 'hongarije': '🇭🇺', 'noorwegen': '🇳🇴', 'ijsland': '🇮🇸', 'slowakije': '🇸🇰', 
+    'irak': '🇮🇶', 'paraguay': '🇵🇾', 'venezuela': '🇻🇪', 'mali': '🇲🇱', 'algerije': '🇩🇿', 
+    'zambia': '🇿🇲', 'honduras': '🇭🇳', 'el salvador': '🇸🇻', 'bosnië': '🇧🇦',
+    'kaapverdië': '🇨🇻', 'haïti': '🇭🇹', 'curaçao': '🇨🇼', 'jordanië': '🇯🇴', 
+    'congo': '🇨🇩', 'oezbekistan': '🇺🇿'
   };
 
   let emoji = defaultEmojis[searchFinalKey] || '🏳️';
@@ -79,7 +88,6 @@ const parseTeam = (teamString: string) => {
   return { name: nameNL, emoji };
 };
 
-// DE FIX: Strip emoji's via parseTeam en haal dan pas accenten weg
 const normalizeString = (str: string) => {
   if (!str) return '';
   const cleanName = parseTeam(str).name;
@@ -188,8 +196,9 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
     let markerInserted = false;
     const combinedList: any[] = [];
 
+    // OPLOSSING: '<' in plaats van '<='. Zo komt het 'Huidige Stand' balkje altijd ná de personen die exact op het juiste getal staan!
     validPreds.forEach((pred: any) => {
-      if (!markerInserted && actualValue <= pred.value) {
+      if (!markerInserted && actualValue < pred.value) {
         combinedList.push({ type: 'marker', value: actualValue });
         markerInserted = true;
       }
@@ -200,9 +209,13 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
       combinedList.push({ type: 'marker', value: actualValue });
     }
 
+    let hasPassedMarker = false;
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {combinedList.map((item, index) => {
+          if (item.type === 'marker') hasPassedMarker = true;
+
           const isPassed = item.type === 'player' && item.value < actualValue;
           const isMarker = item.type === 'marker';
           const isFirst = index === 0;
@@ -211,8 +224,9 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
           const darkColor = 'rgba(255,255,255,0.15)';
           const brightColor = themeHex;
 
-          const topLineColor = (isPassed || isMarker) ? darkColor : brightColor;
-          const bottomLineColor = isPassed ? darkColor : brightColor;
+          // OPLOSSING: De lijn wordt logisch opgebouwd. Donker voor het verleden (tot aan de marker), en de Neon kleur voor de toekomst (onder de marker).
+          const topLineColor = (hasPassedMarker && !isMarker) ? brightColor : darkColor;
+          const bottomLineColor = hasPassedMarker ? brightColor : darkColor;
 
           const spelerGemiddelde = formatGemiddelde(item.value, stats.totaleMatchenToernooi);
 
