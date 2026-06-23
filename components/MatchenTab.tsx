@@ -100,7 +100,9 @@ const parseTeam = (teamString: string) => {
   };
 
   let emoji = defaultEmojis[searchFinalKey] || '🏳️';
-  return { name: nameNL, emoji, gradient: 'linear-gradient(135deg, #DEE2E6, #ADB5BD)' };
+  let gradient = colors[searchFinalKey] || 'linear-gradient(135deg, #DEE2E6, #ADB5BD)';
+  
+  return { name: nameNL, emoji, gradient };
 };
 
 const formateerNaam = (volledigeNaam: string) => {
@@ -425,21 +427,54 @@ export default function MatchenTab({
                     let pillColor = theme.color;
                     let scoreTekst = heeftIngevuld ? `${v.thuis_score}-${v.uit_score}` : 'Geen';
                     let icoontje = heeftIngevuld ? '🤔' : '❌';
-                    
+                    let borderStyle = '1px solid transparent';
+                    let pillOpacity = 1;
+
                     if (match.thuis_score !== null && heeftIngevuld) {
                       const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
                       const pred = v.thuis_score > v.uit_score ? 1 : v.thuis_score < v.uit_score ? 2 : 0;
-                      if (v.thuis_score === match.thuis_score && v.uit_score === match.uit_score) { 
-                        pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; 
-                      } else if (echt === pred) { 
-                        pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; 
-                      } else { 
-                        pillBg = '#E30022'; pillColor = '#FFF'; icoontje = '🔴'; 
+                      
+                      const isExactNu = v.thuis_score === match.thuis_score && v.uit_score === match.uit_score;
+                      const isJuisteWinnaarNu = echt === pred;
+                      
+                      // DE NIEUWE LOGICA: Kans op 3 punten is dood als er in het echt AL MEER gescoord is dan ze voorspeld hebben.
+                      const is3PtDood = match.thuis_score > v.thuis_score || match.uit_score > v.uit_score;
+
+                      if (isMatchLive) {
+                        if (!is3PtDood) {
+                          // Kans op 3 punten leeft nog!
+                          if (isExactNu) {
+                            pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; // Momenteel 3 punten
+                          } else {
+                            pillBg = 'rgba(204, 255, 0, 0.15)'; 
+                            pillColor = '#CCFF00'; 
+                            borderStyle = '1px solid #CCFF00'; 
+                            icoontje = isJuisteWinnaarNu ? '🤞' : '⏳';
+                          }
+                        } else {
+                          // Kans op 3 punten is definitief dood
+                          if (isJuisteWinnaarNu) {
+                            pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; // Heeft wel nog 1 punt
+                          } else {
+                            pillBg = '#E30022'; pillColor = '#FFF'; icoontje = '🔴'; 
+                            pillOpacity = 0.4; // Fade out om de winnaars eruit te laten springen
+                          }
+                        }
+                      } else {
+                        // Match is gedaan (Historie weergave)
+                        if (isExactNu) { 
+                          pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; 
+                        } else if (isJuisteWinnaarNu) { 
+                          pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; 
+                        } else { 
+                          pillBg = '#E30022'; pillColor = '#FFF'; icoontje = '🔴'; 
+                          pillOpacity = 0.4;
+                        }
                       }
                     }
 
                     return (
-                      <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: pillBg, padding: '4px 10px', borderRadius: '10px', minWidth: '55px', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>
+                      <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: pillBg, border: borderStyle, opacity: pillOpacity, padding: '4px 10px', borderRadius: '10px', minWidth: '55px', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)', transition: 'all 0.3s ease' }}>
                         <span style={{ fontSize: '0.55rem', fontWeight: 900, color: pillColor, opacity: 0.8, textTransform: 'uppercase', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
                           {spelerNaam}
                         </span>
