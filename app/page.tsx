@@ -17,7 +17,6 @@ const POPUP_DEADLINE = new Date('2026-06-11T19:00:00+02:00').getTime();
 
 const normalizeString = (teamString: string) => {
   if (!teamString) return '';
-  
   let cleanString = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
   let searchKey = cleanString.toLowerCase();
 
@@ -87,11 +86,12 @@ export default function Home() {
   const isJorden = actieveSpeler?.naam?.toLowerCase().includes('jorden ricour');
   
   const [matchen, setMatchen] = useState<any[]>([]);
-  const [matchVoorspellingen, setMatchVoorspellingen] = useState<Record<number, {thuis: string, uit: string}>>({});
+  // GEÜPDATET: We houden nu ook 'penaltys' bij in de voorspelling state
+  const [matchVoorspellingen, setMatchVoorspellingen] = useState<Record<number, {thuis: string, uit: string, penaltys: string}>>({});
   const [alleMatchVoorspellingen, setAlleMatchVoorspellingen] = useState<any[]>([]); 
   const [matchSaveStatus, setMatchSaveStatus] = useState<Record<number, 'idle' | 'saving' | 'saved'>>({});
   const [alleToernooiV, setAlleToernooiV] = useState<any[]>([]);
-  const [matchViews, setMatchViews] = useState<any[]>([]); // NIEUW: State voor de gluurders
+  const [matchViews, setMatchViews] = useState<any[]>([]); 
   const [opslaanStatus, setOpslaanStatus] = useState('');
   const [showConfetti, setShowConfetti] = useState(false);
   const [expandedMatchId, setExpandedMatchId] = useState<number | null>(null);
@@ -178,7 +178,7 @@ export default function Home() {
 
     const { data: mData } = await supabase.from('matchen').select('*').order('datum', { ascending: true });
     const { data: sData } = await supabase.from('spelers').select('id, naam, betaald').eq('betaald', true);
-    const { data: vData } = await supabase.from('match_voorspellingen').select('match_id, speler_id, thuis_score, uit_score').limit(10000);
+    const { data: vData } = await supabase.from('match_voorspellingen').select('match_id, speler_id, thuis_score, uit_score, winnaar_na_penaltys').limit(10000);
 
     if (!mData || !sData || !vData) return;
 
@@ -186,12 +186,16 @@ export default function Home() {
 
     mData.forEach(match => {
       const matchTijd = new Date(match.datum).getTime();
+      const isKnockout = match.ronde !== 'Groepsfase';
       
       if (matchTijd > nuTijd && matchTijd <= tijd36u) {
         
         const ontbrekendSpelers = sData.filter(speler => {
           const prono = vData.find(v => v.match_id === match.id && v.speler_id === speler.id);
-          return !prono || prono.thuis_score === null || prono.uit_score === null || prono.thuis_score === '' || prono.uit_score === '';
+          if (!prono || prono.thuis_score === null || prono.uit_score === null || prono.thuis_score === '' || prono.uit_score === '') return true;
+          // In knock-out is een draw zonder penalty-winnaar ook "niet compleet"
+          if (isKnockout && prono.thuis_score === prono.uit_score && !prono.winnaar_na_penaltys) return true;
+          return false;
         });
 
         if (ontbrekendSpelers.length > 0) {
@@ -306,19 +310,23 @@ export default function Home() {
       const mijnV = vData.filter(v => v.speler_id === actieveSpeler.id);
       const obj: any = {};
       mijnV.forEach(v => {
-        obj[v.match_id] = { thuis: v.thuis_score !== null ? v.thuis_score.toString() : '', uit: v.uit_score !== null ? v.uit_score.toString() : '' };
+        // GEÜPDATET: We halen nu ook de winnaar_na_penaltys op
+        obj[v.match_id] = { 
+          thuis: v.thuis_score !== null ? v.thuis_score.toString() : '', 
+          uit: v.uit_score !== null ? v.uit_score.toString() : '',
+          penaltys: v.winnaar_na_penaltys || ''
+        };
       });
       setMatchVoorspellingen(stateObj => ({...stateObj, ...obj}));
     }
 
-    // NIEUW: Als Jorden inlogt, halen we de "gluurders" op
     if (actieveSpelerRef.current?.naam?.toLowerCase().includes('jorden ricour')) {
       const { data: viewsData } = await supabase.from('match_views').select('match_id, speler_id, bekeken_op, spelers(naam)');
       if (viewsData) setMatchViews(viewsData);
     }
   };
 
-  const triggerAutoSave = (mId: number, data: { thuis: string, uit: string }) => {
+  const triggerAutoSave = (mId: number, data: { thuis: string, uit: string, penaltys: string }) => {
     const m = matchen.find(x => x.id === mId);
     const actueleTijd = new Date().getTime(); 
     
@@ -328,6 +336,9 @@ export default function Home() {
     const thuisScore = parseInt(data.thuis);
     const uitScore = parseInt(data.uit);
     if (isNaN(thuisScore) || isNaN(uitScore)) return;
+
+    const isKnockout = m && m.ronde !== 'Groepsfase';
+    const finalPenalty = (thuisScore === uitScore && isKnockout && data.penaltys !== '') ? data.penaltys : null;
 
     if (saveTimeoutRef.current[mId]) clearTimeout(saveTimeoutRef.current[mId]);
     setMatchSaveStatus(prev => ({ ...prev, [mId]: 'saving' }));
@@ -343,7 +354,7 @@ export default function Home() {
         if (bestaandeRij && bestaandeRij.length > 0) {
           await supabase
             .from('match_voorspellingen')
-            .update({ thuis_score: thuisScore, uit_score: uitScore })
+            .update({ thuis_score: thuisScore, uit_score: uitScore, winnaar_na_penaltys: finalPenalty })
             .eq('speler_id', actieveSpeler.id)
             .eq('match_id', mId);
         } else {
@@ -353,7 +364,8 @@ export default function Home() {
               speler_id: actieveSpeler.id, 
               match_id: mId, 
               thuis_score: thuisScore, 
-              uit_score: uitScore
+              uit_score: uitScore,
+              winnaar_na_penaltys: finalPenalty
             }]);
         }
         
@@ -366,9 +378,9 @@ export default function Home() {
     }, 600); 
   };
 
-  const handleScore = (mId: number, veld: 'thuis'|'uit', waarde: string) => {
+  const handleScore = (mId: number, veld: 'thuis'|'uit'|'penaltys', waarde: string) => {
     setMatchVoorspellingen(prev => {
-      const v = prev[mId] || { thuis: '', uit: '' };
+      const v = prev[mId] || { thuis: '', uit: '', penaltys: '' };
       const newData = { ...v, [veld]: waarde };
       
       setTimeout(() => triggerAutoSave(mId, newData), 0);
@@ -475,11 +487,28 @@ export default function Home() {
       v.filter(vo => vo.speler_id === sp.id).forEach(vo => {
         const match = m.find(ma => ma.id === vo.match_id);
         if (match && match.thuis_score !== null) {
-          const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
-          const pred = vo.thuis_score > vo.uit_score ? 1 : vo.thuis_score < vo.uit_score ? 2 : 0;
-          if (vo.thuis_score === match.thuis_score && vo.uit_score === match.uit_score) { pronoP += 3; ex++; }
-          else if (echt === pred) { pronoP += 1; wc++; }
-          else f++;
+          
+          // DE NIEUWE SLIMME PUNTENBEREKENING
+          const isKnockout = match.ronde !== 'Groepsfase';
+          let echteWinnaar = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
+          let predWinnaar = vo.thuis_score > vo.uit_score ? 1 : vo.thuis_score < vo.uit_score ? 2 : 0;
+
+          // Vervang "Gelijkspel (0)" door de penalty-winnaar indien van toepassing
+          if (isKnockout) {
+            if (echteWinnaar === 0 && match.winnaar_na_penaltys === match.thuisploeg) echteWinnaar = 1;
+            if (echteWinnaar === 0 && match.winnaar_na_penaltys === match.uitploeg) echteWinnaar = 2;
+            
+            if (predWinnaar === 0 && vo.winnaar_na_penaltys === match.thuisploeg) predWinnaar = 1;
+            if (predWinnaar === 0 && vo.winnaar_na_penaltys === match.uitploeg) predWinnaar = 2;
+          }
+
+          if (vo.thuis_score === match.thuis_score && vo.uit_score === match.uit_score) { 
+            pronoP += 3; ex++; 
+          } else if (echteWinnaar === predWinnaar) { 
+            pronoP += 1; wc++; 
+          } else { 
+            f++; 
+          }
         }
       });
 
@@ -741,8 +770,18 @@ export default function Home() {
             {infoOpen && (
               <div style={{ background: '#1A1423', padding: '20px', borderRadius: '16px', borderLeft: '4px solid var(--wk-purple)', marginTop: '10px', fontSize: '0.8rem', color: '#ADB5BD', lineHeight: '1.5', boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '15px' }}>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}><strong style={{color: 'var(--wk-red)', fontSize: '0.9rem'}}>⚽ MATCHEN</strong><br/><span style={{color: '#FFF'}}>• Exacte score: <strong>3 pt</strong></span><br/><span style={{color: '#FFF'}}>• Juiste winnaar/gelijk: <strong>1 pt</strong></span><br/><span style={{color: '#FFF'}}>• Fout: <strong>0 pt</strong></span></div>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}><strong style={{color: 'var(--wk-lime)', fontSize: '0.9rem'}}>💎 BONUSVRAGEN</strong><br/><span style={{color: '#FFF'}}>• Goals/Kaarten/WK: <strong>5 pt</strong></span><br/><span style={{color: '#FFF'}}>• Halve Fin/België: <strong>3 pt</strong></span><br/><span style={{color: '#FFF'}}>• Aanval/Defensie: <strong>3 pt</strong></span></div>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <strong style={{color: 'var(--wk-red)', fontSize: '0.9rem'}}>⚽ MATCHEN</strong><br/>
+                    <span style={{color: '#FFF'}}>• Exacte score: <strong>3 pt</strong></span><br/>
+                    <span style={{color: '#FFF'}}>• Juiste winnaar/gelijk: <strong>1 pt</strong></span><br/>
+                    <span style={{color: '#FFF'}}>• Fout: <strong>0 pt</strong></span>
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                    <strong style={{color: 'var(--wk-lime)', fontSize: '0.9rem'}}>💎 BONUSVRAGEN</strong><br/>
+                    <span style={{color: '#FFF'}}>• Goals/Kaarten/WK: <strong>5 pt</strong></span><br/>
+                    <span style={{color: '#FFF'}}>• Halve Fin/België: <strong>3 pt</strong></span><br/>
+                    <span style={{color: '#FFF'}}>• Aanval/Defensie: <strong>3 pt</strong></span>
+                  </div>
                 </div>
                 <div style={{ background: 'rgba(255, 107, 0, 0.1)', padding: '12px', borderRadius: '12px', border: '1px solid var(--wk-orange)', marginBottom: '15px' }}><strong style={{color: 'var(--wk-orange)', fontSize: '0.9rem'}}>⚖️ GELIJKE STAND (EX-AEQUO)</strong><br/><span style={{color: '#FFF'}}>• <strong>Klassement:</strong> Wie de meeste <em>'Exacte Uitslagen'</em> heeft, wint. Nog gelijk? Dan telt <em>'Juiste Winnaars'</em>.</span><br/><span style={{color: '#FFF'}}>• <strong>Bonusvragen:</strong> Gedeelde eerste plaats bij topschutter/verdediging/cijfers? Iedereen met dit antwoord krijgt de volle punten.</span></div>
                 <div style={{ background: 'var(--wk-blue)', padding: '12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 900, textAlign: 'center', color: '#FFF', boxShadow: '0 4px 15px rgba(43,0,255,0.3)' }}>💰 DEELNAME: €10 NAAR BE85 0018 2075 8506<br/><span style={{color: 'var(--wk-lime)'}}>Mededeling: Naam + WK2026</span></div>
@@ -773,7 +812,6 @@ export default function Home() {
             </div>
           ) : (
             <div style={{ width: '100%' }}>
-              {/* DOORgeven weergavePeriode state EN de actieveSpeler, isJorden, en matchViews voor de spion! */}
               {actieveTab === 'matchen' && <MatchenTab matchen={matchen} gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} weergavePeriode={weergavePeriode} setWeergavePeriode={setWeergavePeriode} actieveSpeler={actieveSpeler} isJorden={isJorden} matchViews={matchViews} />}
             
               {actieveTab === 'prijs' && <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />}
