@@ -38,7 +38,7 @@ const parseTeam = (teamString: string) => {
     'belgium': 'België', 'belgië': 'België',
     'italy': 'Italië', 'italië': 'Italië',
     'argentina': 'Argentinië', 'argentinië': 'Argentinië',
-    'england': 'Engeland', 'wales': 'Wales', 'scotland': 'Schotland', 'schotland': 'Schotland',
+    'england': 'Engeland', 'wales': 'Wales', 'scotland': 'Schotland',
     'usa': 'Verenigde Staten', 'united states': 'Verenigde Staten', 'verenigde staten': 'Verenigde Staten',
     'canada': 'Canada', 'mexico': 'Mexico', 'japan': 'Japan',
     'croatia': 'Kroatië', 'kroatië': 'Kroatië',
@@ -379,10 +379,9 @@ export default function MatchenTab({
                 </div>
               </div>
 
-              {/* PENALTY KEUZE VOOR KNOCKOUTS */}
               {isKnockout && !isMatchGesloten && voorspelling.thuis !== '' && voorspelling.uit !== '' && voorspelling.thuis === voorspelling.uit && (
                 <div style={{ margin: '0 12px 12px 12px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.2)' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 900, textAlign: 'center', marginBottom: '8px', textTransform: 'uppercase' }}>Wie wint de penalty's?</div>
+                  <div style={{ fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 900, textAlign: 'center', marginBottom: '8px', textTransform: 'uppercase' }}>Welk land gaat door?</div>
                   <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                     <button 
                       onClick={() => handleScore(match.id, 'penaltys', match.thuisploeg)}
@@ -400,7 +399,6 @@ export default function MatchenTab({
                 </div>
               )}
 
-              {/* TUSSENSTAND / EINDSTAND */}
               {isMatchGesloten && match.thuis_score !== null && (
                 <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <div style={{ textAlign: 'center', fontSize: '0.85rem', fontWeight: 900, color: isMatchLive ? '#E30022' : theme.color, textTransform: 'uppercase', letterSpacing: '1px' }}>
@@ -409,7 +407,7 @@ export default function MatchenTab({
                   
                   {match.winnaar_na_penaltys && (
                     <div style={{ textAlign: 'center', fontSize: '0.7rem', fontWeight: 900, color: '#CCFF00', marginTop: '-4px' }}>
-                      {parseTeam(match.winnaar_na_penaltys).name} wint na penalty's
+                      {parseTeam(match.winnaar_na_penaltys).name} stoot door
                     </div>
                   )}
 
@@ -432,7 +430,6 @@ export default function MatchenTab({
                 </div>
               )}
 
-              {/* HORIZONTALE SCROLL LIJST */}
               {!isMatchGesloten ? (
                 nietIngevuldeSpelers.length === 0 ? (
                   <div style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: theme.color, padding: '6px', fontSize: '0.75rem', fontWeight: 900, textAlign: 'center' }}>
@@ -471,15 +468,9 @@ export default function MatchenTab({
                       let echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
                       let pred = v.thuis_score > v.uit_score ? 1 : v.thuis_score < v.uit_score ? 2 : 0;
                       
-                      if (isKnockout) {
-                         if (echt === 0 && match.winnaar_na_penaltys === match.thuisploeg) echt = 1;
-                         if (echt === 0 && match.winnaar_na_penaltys === match.uitploeg) echt = 2;
-                         if (pred === 0 && v.winnaar_na_penaltys === match.thuisploeg) pred = 1;
-                         if (pred === 0 && v.winnaar_na_penaltys === match.uitploeg) pred = 2;
-                      }
-
                       const isExactNu = v.thuis_score === match.thuis_score && v.uit_score === match.uit_score;
-                      const isJuisteWinnaarNu = echt !== 0 && echt === pred; // 0 = er is nog geen penalty-winnaar gekozen tijdens live-match
+                      const isJuisteWinnaarNu = echt === pred; 
+                      const isJuisteDoorstromerNu = isKnockout && echt === 0 && pred === 0 && match.winnaar_na_penaltys && v.winnaar_na_penaltys === match.winnaar_na_penaltys;
                       const is3PtDood = match.thuis_score > v.thuis_score || match.uit_score > v.uit_score;
 
                       if (isMatchLive) {
@@ -493,7 +484,9 @@ export default function MatchenTab({
                             icoontje = isJuisteWinnaarNu ? '🤞' : '⏳';
                           }
                         } else {
-                          if (isJuisteWinnaarNu) {
+                          if (isJuisteDoorstromerNu) {
+                            pillBg = '#7A00E6'; pillColor = '#FFF'; icoontje = '✌️'; 
+                          } else if (isJuisteWinnaarNu) {
                             pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; 
                           } else {
                             pillBg = '#E30022'; pillColor = '#FFF'; icoontje = '🔴'; 
@@ -503,6 +496,8 @@ export default function MatchenTab({
                       } else {
                         if (isExactNu) { 
                           pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; 
+                        } else if (isJuisteDoorstromerNu) {
+                          pillBg = '#7A00E6'; pillColor = '#FFF'; icoontje = '✌️'; 
                         } else if (isJuisteWinnaarNu) { 
                           pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; 
                         } else { 
@@ -531,7 +526,6 @@ export default function MatchenTab({
         })
       )}
 
-      {/* JORDEN'S GEHEIME GLUUR POP-UP */}
       {gluurPopUp !== null && isJorden && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div onClick={() => setGluurPopUp(null)} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.8)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#1A1423', padding: '20px', borderRadius: '20px', width: '90%', maxWidth: '350px', border: '2px solid #00E5FF', animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
