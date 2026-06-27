@@ -25,19 +25,21 @@ export async function GET(request: Request) {
 
     // 3. Koppel de kolommen aan de database velden
     const matchenOmOpTeSlaan = rijenZonderHeader.map(rij => {
-      // Check of de rij wel data bevat (9 kolommen)
+      // Check of de rij wel data bevat (minstens 9 kolommen)
       if (rij.length < 9 || !rij[0]) return null;
 
       return {
         id: parseInt(rij[0].trim()),
-        thuisploeg: rij[1].trim(),
-        uitploeg: rij[2].trim(),
-        datum: rij[3].trim(),
-        thuis_score: rij[4].trim() !== '' ? parseInt(rij[4].trim()) : null,
-        uit_score: rij[5].trim() !== '' ? parseInt(rij[5].trim()) : null,
-        gele_kaarten: rij[6].trim() !== '' ? parseInt(rij[6].trim()) : 0,
-        rode_kaarten: rij[7].trim() !== '' ? parseInt(rij[7].trim()) : 0,
-        ronde: rij[8].trim() // De nieuwe kolom die we hebben toegevoegd!
+        thuisploeg: rij[1]?.trim() || '',
+        uitploeg: rij[2]?.trim() || '',
+        datum: rij[3]?.trim() || '',
+        thuis_score: rij[4] && rij[4].trim() !== '' ? parseInt(rij[4].trim()) : null,
+        uit_score: rij[5] && rij[5].trim() !== '' ? parseInt(rij[5].trim()) : null,
+        gele_kaarten: rij[6] && rij[6].trim() !== '' ? parseInt(rij[6].trim()) : 0,
+        rode_kaarten: rij[7] && rij[7].trim() !== '' ? parseInt(rij[7].trim()) : 0,
+        ronde: rij[8]?.trim() || '',
+        // DE NIEUWE PENALTY KOLOM (Kolom J of K, afhankelijk van je sheet, index 9)
+        winnaar_na_penaltys: rij[9] && rij[9].trim() !== '' ? rij[9].trim() : null
       };
     }).filter(match => match !== null);
 
