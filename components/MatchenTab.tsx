@@ -23,10 +23,11 @@ const parseTeam = (teamString: string) => {
   let cleanString = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
   let searchKey = cleanString.toLowerCase();
 
+  // HELEMAAL OPGESCHOOND: Nul duplicate keys
   const vertalingen: Record<string, string> = {
-    'brazil': 'Brazilië', 'brazilië': 'Brazilië',
-    'morocco': 'Marokko', 'marokko': 'Marokko',
-    'switzerland': 'Zwitserland', 'zwitserland': 'Zwitserland',
+    'brazil': 'Brazilië', 
+    'morocco': 'Marokko', 
+    'switzerland': 'Zwitserland',
     'bosnia and herzegovina': 'Bosnië', 'bosnia & herzegovina': 'Bosnië', 'bosnia': 'Bosnië', 'bosnië': 'Bosnië',
     'south korea': 'Zuid-Korea', 'zuid-korea': 'Zuid-Korea',
     'south africa': 'Zuid-Afrika', 'zuid-afrika': 'Zuid-Afrika',
@@ -80,6 +81,78 @@ const parseTeam = (teamString: string) => {
 
   let nameNL = vertalingen[searchKey] || cleanString;
   const searchFinalKey = nameNL.toLowerCase();
+
+  const colors: Record<string, string> = {
+    'belgië': 'linear-gradient(135deg, #000 33%, #FFD700 33%, #FFD700 66%, #ED2939 66%)',
+    'nederland': 'linear-gradient(135deg, #AE1C28 33%, #FFF 33%, #FFF 66%, #21468B 66%)',
+    'frankrijk': 'linear-gradient(135deg, #002395 33%, #FFF 33%, #FFF 66%, #ED2939 66%)',
+    'duitsland': 'linear-gradient(135deg, #000 33%, #FF0000 33%, #FF0000 66%, #FFCC00 66%)',
+    'spanje': 'linear-gradient(135deg, #AA151B 33%, #F1BF00 33%, #F1BF00 66%, #AA151B 66%)',
+    'brazilië': 'linear-gradient(135deg, #009c3b 33%, #ffdf00 33%, #ffdf00 66%, #002776 66%)',
+    'argentinië': 'linear-gradient(135deg, #75AADB 33%, #FFF 33%, #FFF 66%, #75AADB 66%)',
+    'portugal': 'linear-gradient(135deg, #006600 50%, #FF0000 50%)',
+    'engeland': 'linear-gradient(135deg, #FFF 40%, #CE1124 40%, #CE1124 60%, #FFF 60%)',
+    'italië': 'linear-gradient(135deg, #009246 33%, #FFF 33%, #FFF 66%, #CE2B37 66%)',
+    'mexico': 'linear-gradient(135deg, #006847 33%, #FFF 33%, #FFF 66%, #CE1126 66%)',
+    'verenigde staten': 'linear-gradient(135deg, #B31942 33%, #FFF 33%, #FFF 66%, #0A3161 66%)',
+    'canada': 'linear-gradient(135deg, #FF0000 30%, #FFF 30%, #FFF 70%, #FF0000 70%)',
+    'marokko': 'linear-gradient(135deg, #c1272d 45%, #006233 45%, #006233 55%, #c1272d 55%)',
+    'chili': 'linear-gradient(135deg, #0039A6 33%, #FFF 33%, #FFF 66%, #D52B1E 66%)',
+    'kameroen': 'linear-gradient(135deg, #007A5E 33%, #CE1126 33%, #CE1126 66%, #FCD116 66%)',
+    'colombia': 'linear-gradient(135deg, #FCD116 50%, #003893 50%, #003893 75%, #CE1126 75%)',
+    'costa rica': 'linear-gradient(135deg, #002B7F 20%, #FFF 20%, #FFF 40%, #CE1126 40%, #CE1126 60%, #FFF 60%, #FFF 80%, #002B7F 80%)',
+    'zwitserland': 'linear-gradient(135deg, #FF0000 40%, #FFF 40%, #FFF 60%, #FF0000 60%)',
+    'ivoorkust': 'linear-gradient(135deg, #FF8200 33%, #FFF 33%, #FFF 66%, #009A44 66%)',
+    'oostenrijk': 'linear-gradient(135deg, #ED2939 33%, #FFF 33%, #FFF 66%, #ED2939 66%)',
+    'australië': 'linear-gradient(135deg, #012169 40%, #FFF 40%, #FFF 50%, #E4002B 50%)',
+    'japan': 'linear-gradient(135deg, #FFF 40%, #BC002D 40%, #BC002D 60%, #FFF 60%)',
+    'zuid-korea': 'linear-gradient(135deg, #FFF 40%, #CD2E3A 40%, #CD2E3A 60%, #0047A0 60%)',
+    'kroatië': 'linear-gradient(135deg, #FF0000 33%, #FFF 33%, #FFF 66%, #0000FF 66%)',
+    'uruguay': 'linear-gradient(135deg, #0038A8 40%, #FFF 40%, #FFF 60%, #0038A8 60%)',
+    'senegal': 'linear-gradient(135deg, #00853F 33%, #FDEF42 33%, #FDEF42 66%, #E31B23 66%)',
+    'ghana': 'linear-gradient(135deg, #CE1126 33%, #FCD116 33%, #FCD116 66%, #006B3F 66%)',
+    'nigeria': 'linear-gradient(135deg, #008751 33%, #FFF 33%, #FFF 66%, #008751 66%)',
+    'ecuador': 'linear-gradient(135deg, #FFD100 50%, #003893 50%, #003893 75%, #CE1126 75%)',
+    'zweden': 'linear-gradient(135deg, #004B87 40%, #FFCD00 40%, #FFCD00 60%, #004B87 60%)',
+    'denemarken': 'linear-gradient(135deg, #C60C30 40%, #FFF 40%, #FFF 60%, #C60C30 60%)',
+    'schotland': 'linear-gradient(135deg, #005EB8 40%, #FFF 40%, #FFF 60%, #005EB8 60%)',
+    'polen': 'linear-gradient(135deg, #FFF 50%, #DC143C 50%)',
+    'servië': 'linear-gradient(135deg, #C6363C 33%, #0C4076 33%, #0C4076 66%, #FFF 66%)',
+    'iran': 'linear-gradient(135deg, #239F40 33%, #FFF 33%, #FFF 66%, #DA0000 66%)',
+    'saudi-arabië': 'linear-gradient(135deg, #006C35 80%, #FFF 80%)',
+    'wales': 'linear-gradient(135deg, #FFF 50%, #00AB39 50%)',
+    'oekraïne': 'linear-gradient(135deg, #0057B7 50%, #FFD700 50%)',
+    'peru': 'linear-gradient(135deg, #D91023 33%, #FFF 33%, #FFF 66%, #D91023 66%)',
+    'panama': 'linear-gradient(135deg, #FFF 25%, #C2113A 25%, #C2113A 50%, #00225D 50%, #00225D 75%, #FFF 75%)',
+    'egypte': 'linear-gradient(135deg, #CE1126 33%, #FFF 33%, #FFF 66%, #000 66%)',
+    'tunesië': 'linear-gradient(135deg, #E70013 40%, #FFF 40%, #FFF 60%, #E70013 60%)',
+    'nieuw-zeeland': 'linear-gradient(135deg, #00247D 40%, #FFF 40%, #FFF 50%, #CC142B 50%)',
+    'qatar': 'linear-gradient(135deg, #FFF 30%, #8A1538 30%)',
+    'ierland': 'linear-gradient(135deg, #169B62 33%, #FFF 33%, #FFF 66%, #FF883E 66%)',
+    'turkije': 'linear-gradient(135deg, #E30A17 80%, #FFF 80%)',
+    'zuid-afrika': 'linear-gradient(135deg, #007A4D 25%, #FFB612 25%, #FFB612 50%, #000 50%, #000 75%, #DE3831 75%)',
+    'tsjechië': 'linear-gradient(135deg, #11457E 33%, #D7141A 33%, #D7141A 66%, #FFF 66%)',
+    'roemenië': 'linear-gradient(135deg, #002B7F 33%, #FCD116 33%, #FCD116 66%, #CE1126 66%)',
+    'hongarije': 'linear-gradient(135deg, #CE2939 33%, #FFF 33%, #FFF 66%, #477050 66%)',
+    'noorwegen': 'linear-gradient(135deg, #006AA7 40%, #FECC00 40%, #FECC00 60%, #006AA7 60%)',
+    'ijsland': 'linear-gradient(135deg, #02529C 40%, #FFF 40%, #FFF 45%, #DC1E35 45%, #DC1E35 55%, #FFF 55%, #FFF 60%, #02529C 60%)',
+    'slowakije': 'linear-gradient(135deg, #FFF 33%, #0B4EA2 33%, #0B4EA2 66%, #EE1C25 66%)',
+    'irak': 'linear-gradient(135deg, #239F40 33%, #FFF 33%, #FFF 66%, #DA0000 66%)',
+    'paraguay': 'linear-gradient(135deg, #D52B1E 33%, #FFF 33%, #FFF 66%, #0038A8 66%)',
+    'venezuela': 'linear-gradient(135deg, #FCE300 50%, #0038A8 50%, #0038A8 75%, #CE1126 75%)',
+    'mali': 'linear-gradient(135deg, #14B53A 33%, #FCD116 33%, #FCD116 66%, #CE1126 66%)',
+    'algerije': 'linear-gradient(135deg, #006233 50%, #FFF 50%)',
+    'zambia': 'linear-gradient(135deg, #198A00 33%, #FF0000 33%, #FF0000 66%, #000 66%)',
+    'honduras': 'linear-gradient(135deg, #005293 40%, #FFF 40%, #FFF 60%, #D21034 60%)',
+    'el salvador': 'linear-gradient(135deg, #001489 20%, #FFF 20%, #FFF 40%, #CE1126 40%, #CE1126 60%, #FFF 60%, #FFF 80%, #001489 80%)',
+    'bosnië': 'linear-gradient(135deg, #002395 40%, #FECB00 40%, #FECB00 60%, #FFFFFF 60%)',
+    'kaapverdië': 'linear-gradient(135deg, #003893 40%, #FFF 40%, #FFF 45%, #CE1126 45%, #CE1126 55%, #FFF 55%, #FFF 60%, #003893 60%)',
+    'haïti': 'linear-gradient(135deg, #00209F 50%, #D21034 50%)',
+    'curaçao': 'linear-gradient(135deg, #002B7F 65%, #F9E814 65%, #F9E814 80%, #002B7F 80%)',
+    'jordanië': 'linear-gradient(135deg, #CE1126 25%, #000 25%, #000 50%, #FFF 50%, #FFF 75%, #007A3D 75%)',
+    'congo': 'linear-gradient(135deg, #007FFF 35%, #F7D116 35%, #F7D116 42%, #CE1021 42%, #CE1021 58%, #F7D116 58%, #F7D116 65%, #007FFF 65%)',
+    'oezbekistan': 'linear-gradient(135deg, #0099B5 30%, #CE1126 30%, #CE1126 35%, #FFF 35%, #FFF 65%, #CE1126 65%, #CE1126 70%, #1EB53A 70%)'
+  };
 
   const defaultEmojis: Record<string, string> = {
     'belgië': '🇧🇪', 'nederland': '🇳🇱', 'frankrijk': '🇫🇷', 'duitsland': '🇩🇪', 'spanje': '🇪🇸',
@@ -469,10 +542,25 @@ export default function MatchenTab({
                       let pred = v.thuis_score > v.uit_score ? 1 : v.thuis_score < v.uit_score ? 2 : 0;
                       
                       const isExactNu = v.thuis_score === match.thuis_score && v.uit_score === match.uit_score;
+                      
+                      // Check of de doorstromer juist voorspeld is
+                      let isJuisteDoorstromerNu = false;
+                      if (isKnockout) {
+                        let uiteindelijkeEchteWinnaar = echt;
+                        if (echt === 0 && match.winnaar_na_penaltys === match.thuisploeg) uiteindelijkeEchteWinnaar = 1;
+                        if (echt === 0 && match.winnaar_na_penaltys === match.uitploeg) uiteindelijkeEchteWinnaar = 2;
+                        
+                        let uiteindelijkePredWinnaar = pred;
+                        if (pred === 0 && v.winnaar_na_penaltys === match.thuisploeg) uiteindelijkePredWinnaar = 1;
+                        if (pred === 0 && v.winnaar_na_penaltys === match.uitploeg) uiteindelijkePredWinnaar = 2;
+                        
+                        isJuisteDoorstromerNu = uiteindelijkeEchteWinnaar !== 0 && uiteindelijkeEchteWinnaar === uiteindelijkePredWinnaar;
+                      }
+
                       const isJuisteWinnaarNu = echt === pred; 
-                      const isJuisteDoorstromerNu = isKnockout && echt === 0 && pred === 0 && match.winnaar_na_penaltys && v.winnaar_na_penaltys === match.winnaar_na_penaltys;
                       const is3PtDood = match.thuis_score > v.thuis_score || match.uit_score > v.uit_score;
 
+                      // LIVE WEERGAVE
                       if (isMatchLive) {
                         if (!is3PtDood) {
                           if (isExactNu) {
@@ -481,24 +569,30 @@ export default function MatchenTab({
                             pillBg = 'rgba(204, 255, 0, 0.1)'; 
                             pillColor = '#CCFF00'; 
                             borderStyle = '1px solid #CCFF00'; 
-                            icoontje = isJuisteWinnaarNu ? '🤞' : '⏳';
+                            icoontje = (isJuisteWinnaarNu || isJuisteDoorstromerNu) ? '🤞' : '⏳';
                           }
                         } else {
-                          if (isJuisteDoorstromerNu) {
+                          // Kans op exacte uitslag is dood
+                          if (isKnockout && isJuisteDoorstromerNu && !isJuisteWinnaarNu) {
+                            // Foute score, fout regulier resultaat, maar WEL de juiste doorstromer na penalty's
                             pillBg = '#7A00E6'; pillColor = '#FFF'; icoontje = '✌️'; 
-                          } else if (isJuisteWinnaarNu) {
+                          } else if (isJuisteWinnaarNu || isJuisteDoorstromerNu) {
+                            // Regulier resultaat was goed, of doorstromer was goed
                             pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; 
                           } else {
+                            // Alles is dood
                             pillBg = '#E30022'; pillColor = '#FFF'; icoontje = '🔴'; 
                             pillOpacity = 0.35; 
                           }
                         }
-                      } else {
+                      } 
+                      // HISTORIE WEERGAVE (Match is gedaan)
+                      else {
                         if (isExactNu) { 
                           pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; 
-                        } else if (isJuisteDoorstromerNu) {
+                        } else if (isKnockout && isJuisteDoorstromerNu && !isJuisteWinnaarNu) {
                           pillBg = '#7A00E6'; pillColor = '#FFF'; icoontje = '✌️'; 
-                        } else if (isJuisteWinnaarNu) { 
+                        } else if (isJuisteWinnaarNu || isJuisteDoorstromerNu) { 
                           pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; 
                         } else { 
                           pillBg = '#E30022'; pillColor = '#FFF'; icoontje = '🔴'; 
@@ -526,6 +620,7 @@ export default function MatchenTab({
         })
       )}
 
+      {/* JORDEN'S GEHEIME GLUUR POP-UP */}
       {gluurPopUp !== null && isJorden && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div onClick={() => setGluurPopUp(null)} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.8)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#1A1423', padding: '20px', borderRadius: '20px', width: '90%', maxWidth: '350px', border: '2px solid #00E5FF', animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
