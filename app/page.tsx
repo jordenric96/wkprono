@@ -86,7 +86,6 @@ export default function Home() {
   const isJorden = actieveSpeler?.naam?.toLowerCase().includes('jorden ricour');
   
   const [matchen, setMatchen] = useState<any[]>([]);
-  // GEÜPDATET: We houden nu ook 'penaltys' bij in de voorspelling state
   const [matchVoorspellingen, setMatchVoorspellingen] = useState<Record<number, {thuis: string, uit: string, penaltys: string}>>({});
   const [alleMatchVoorspellingen, setAlleMatchVoorspellingen] = useState<any[]>([]); 
   const [matchSaveStatus, setMatchSaveStatus] = useState<Record<number, 'idle' | 'saving' | 'saved'>>({});
@@ -193,7 +192,6 @@ export default function Home() {
         const ontbrekendSpelers = sData.filter(speler => {
           const prono = vData.find(v => v.match_id === match.id && v.speler_id === speler.id);
           if (!prono || prono.thuis_score === null || prono.uit_score === null || prono.thuis_score === '' || prono.uit_score === '') return true;
-          // In knock-out is een draw zonder penalty-winnaar ook "niet compleet"
           if (isKnockout && prono.thuis_score === prono.uit_score && !prono.winnaar_na_penaltys) return true;
           return false;
         });
@@ -310,7 +308,6 @@ export default function Home() {
       const mijnV = vData.filter(v => v.speler_id === actieveSpeler.id);
       const obj: any = {};
       mijnV.forEach(v => {
-        // GEÜPDATET: We halen nu ook de winnaar_na_penaltys op
         obj[v.match_id] = { 
           thuis: v.thuis_score !== null ? v.thuis_score.toString() : '', 
           uit: v.uit_score !== null ? v.uit_score.toString() : '',
@@ -488,24 +485,20 @@ export default function Home() {
         const match = m.find(ma => ma.id === vo.match_id);
         if (match && match.thuis_score !== null) {
           
-          // DE NIEUWE SLIMME PUNTENBEREKENING
           const isKnockout = match.ronde !== 'Groepsfase';
           let echteWinnaar = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
           let predWinnaar = vo.thuis_score > vo.uit_score ? 1 : vo.thuis_score < vo.uit_score ? 2 : 0;
 
-          // Vervang "Gelijkspel (0)" door de penalty-winnaar indien van toepassing
-          if (isKnockout) {
-            if (echteWinnaar === 0 && match.winnaar_na_penaltys === match.thuisploeg) echteWinnaar = 1;
-            if (echteWinnaar === 0 && match.winnaar_na_penaltys === match.uitploeg) echteWinnaar = 2;
-            
-            if (predWinnaar === 0 && vo.winnaar_na_penaltys === match.thuisploeg) predWinnaar = 1;
-            if (predWinnaar === 0 && vo.winnaar_na_penaltys === match.uitploeg) predWinnaar = 2;
-          }
-
+          // DE NIEUWE SLIMME PUNTENBEREKENING (90-MIN)
           if (vo.thuis_score === match.thuis_score && vo.uit_score === match.uit_score) { 
             pronoP += 3; ex++; 
           } else if (echteWinnaar === predWinnaar) { 
-            pronoP += 1; wc++; 
+            if (isKnockout && echteWinnaar === 0 && vo.winnaar_na_penaltys && match.winnaar_na_penaltys && vo.winnaar_na_penaltys === match.winnaar_na_penaltys) {
+              pronoP += 2; // Foute score, maar perfect aangeduid wie er doorgaat (2pt)
+            } else {
+              pronoP += 1; // Enkel het resultaat (winnaar of gelijkspel) juist
+            }
+            wc++; 
           } else { 
             f++; 
           }
@@ -771,9 +764,10 @@ export default function Home() {
               <div style={{ background: '#1A1423', padding: '20px', borderRadius: '16px', borderLeft: '4px solid var(--wk-purple)', marginTop: '10px', fontSize: '0.8rem', color: '#ADB5BD', lineHeight: '1.5', boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '15px' }}>
                   <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <strong style={{color: 'var(--wk-red)', fontSize: '0.9rem'}}>⚽ MATCHEN</strong><br/>
+                    <strong style={{color: 'var(--wk-red)', fontSize: '0.9rem'}}>⚽ MATCHEN (Score na 90 min)</strong><br/>
                     <span style={{color: '#FFF'}}>• Exacte score: <strong>3 pt</strong></span><br/>
-                    <span style={{color: '#FFF'}}>• Juiste winnaar/gelijk: <strong>1 pt</strong></span><br/>
+                    <span style={{color: '#FFF'}}>• Gelijkspel (foute score) + Juiste doorstromer: <strong>2 pt</strong></span><br/>
+                    <span style={{color: '#FFF'}}>• Juiste winnaar (of enkel gelijkspel juist): <strong>1 pt</strong></span><br/>
                     <span style={{color: '#FFF'}}>• Fout: <strong>0 pt</strong></span>
                   </div>
                   <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
