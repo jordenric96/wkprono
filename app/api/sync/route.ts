@@ -1,11 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const wachtwoord = searchParams.get('code');
@@ -15,8 +10,14 @@ export async function GET(request: Request) {
   }
 
   try {
-    // 1. Haal de data op uit JOUW Google Sheet (via de Vercel variabele)
-    const res = await fetch(process.env.GOOGLE_SHEETS_CSV_URL!, { cache: 'no-store' });
+    // Veiligere manier om Supabase te initialiseren voor Vercel's TypeScript
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // 1. Haal de data op uit JOUW Google Sheet
+    const sheetUrl = process.env.GOOGLE_SHEETS_CSV_URL || '';
+    const res = await fetch(sheetUrl, { cache: 'no-store' });
     const csvData = await res.text();
 
     // 2. Hak de tekst in rijen en sla de titel-rij over
@@ -25,7 +26,6 @@ export async function GET(request: Request) {
 
     // 3. Koppel de kolommen aan de database velden
     const matchenOmOpTeSlaan = rijenZonderHeader.map(rij => {
-      // Check of de rij wel data bevat (minstens 9 kolommen)
       if (rij.length < 9 || !rij[0]) return null;
 
       return {
@@ -38,8 +38,7 @@ export async function GET(request: Request) {
         gele_kaarten: rij[6] && rij[6].trim() !== '' ? parseInt(rij[6].trim()) : 0,
         rode_kaarten: rij[7] && rij[7].trim() !== '' ? parseInt(rij[7].trim()) : 0,
         ronde: rij[8]?.trim() || '',
-        // DE NIEUWE PENALTY KOLOM (Kolom J of K, afhankelijk van je sheet, index 9)
-        winnaar_na_penaltys: rij[9] && rij[9].trim() !== '' ? rij[9].trim() : null
+        winnaar_na_penaltys: rij.length > 9 && rij[9].trim() !== '' ? rij[9].trim() : null
       };
     }).filter(match => match !== null);
 
@@ -55,8 +54,9 @@ export async function GET(request: Request) {
       bericht: `${matchenOmOpTeSlaan.length} matchen succesvol gesynchroniseerd vanuit Google Sheets!` 
     });
 
-  } catch (error: any) {
-    console.error('Sync Error:', error);
-    return NextResponse.json({ error: 'Er is iets misgegaan', details: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Onbekende fout';
+    console.error('Sync Error:', errorMessage);
+    return NextResponse.json({ error: 'Er is iets misgegaan', details: errorMessage }, { status: 500 });
   }
 }
