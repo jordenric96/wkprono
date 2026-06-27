@@ -24,7 +24,10 @@ const normalizeString = (teamString: string) => {
     'brazil': 'Brazilië', 'brazilië': 'Brazilië',
     'morocco': 'Marokko', 'marokko': 'Marokko',
     'switzerland': 'Zwitserland', 'zwitserland': 'Zwitserland',
+    'bosnia and herzegovina': 'Bosnië', 'bosnia & herzegovina': 'Bosnië', 'bosnia': 'Bosnië', 'bosnië': 'Bosnië',
     'south korea': 'Zuid-Korea', 'zuid-korea': 'Zuid-Korea',
+    'south africa': 'Zuid-Afrika', 'zuid-afrika': 'Zuid-Afrika',
+    'czechia': 'Tsjechië', 'czech republic': 'Tsjechië', 'tsjechië': 'Tsjechië',
     'germany': 'Duitsland', 'duitsland': 'Duitsland',
     'spain': 'Spanje', 'spanje': 'Spanje',
     'france': 'Frankrijk', 'frankrijk': 'Frankrijk',
@@ -32,10 +35,44 @@ const normalizeString = (teamString: string) => {
     'belgium': 'België', 'belgië': 'België',
     'italy': 'Italië', 'italië': 'Italië',
     'argentina': 'Argentinië', 'argentinië': 'Argentinië',
-    'england': 'Engeland', 'usa': 'Verenigde Staten', 'united states': 'Verenigde Staten',
+    'england': 'Engeland', 'wales': 'Wales', 'scotland': 'Schotland',
+    'usa': 'Verenigde Staten', 'united states': 'Verenigde Staten', 'verenigde staten': 'Verenigde Staten',
+    'canada': 'Canada', 'mexico': 'Mexico', 'japan': 'Japan',
     'croatia': 'Kroatië', 'kroatië': 'Kroatië',
-    'uruguay': 'Uruguay', 'senegal': 'Senegal', 'ghana': 'Ghana', 'nigeria': 'Nigeria',
-    'mexico': 'Mexico', 'japan': 'Japan'
+    'uruguay': 'Uruguay', 'senegal': 'Senegal', 'ghana': 'Ghana', 'nigeria': 'Nigeria', 'ecuador': 'Ecuador',
+    'sweden': 'Zweden', 'zweden': 'Zweden',
+    'denmark': 'Denemarken', 'denemarken': 'Denemarken',
+    'polen': 'Polen', 'poland': 'Polen',
+    'servië': 'Servië', 'serbia': 'Servië',
+    'iran': 'Iran', 'saudi-arabië': 'Saudi-Arabië', 'saudi arabia': 'Saudi-Arabië',
+    'oekraïne': 'Oekraïne', 'ukraine': 'Oekraïne',
+    'peru': 'Peru', 'panama': 'Panama',
+    'egypt': 'Egypte', 'egypte': 'Egypte',
+    'tunisia': 'Tunesië', 'tunesië': 'Tunesië',
+    'nieuw-zeeland': 'Nieuw-Zeeland', 'new zealand': 'Nieuw-Zeeland',
+    'qatar': 'Qatar', 'ierland': 'Ierland', 'ireland': 'Ierland',
+    'turkije': 'Turkije', 'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije',
+    'roemenië': 'Roemenië', 'romania': 'Roemenië',
+    'hongarije': 'Hongarije', 'hungary': 'Hongarije',
+    'noorwegen': 'Noorwegen', 'norway': 'Noorwegen',
+    'ijsland': 'IJsland', 'iceland': 'IJsland',
+    'slowakije': 'Slowakije', 'slovakia': 'Slowakije',
+    'irak': 'Irak', 'iraq': 'Irak',
+    'paraguay': 'Paraguay', 'venezuela': 'Venezuela',
+    'mali': 'Mali', 'algerije': 'Algerije', 'algeria': 'Algerije',
+    'zambia': 'Zambia', 'honduras': 'Honduras', 'el salvador': 'El Salvador',
+    'kaapverdië': 'Kaapverdië', 'cabo verde': 'Kaapverdië', 'cape verde': 'Kaapverdië',
+    'haïti': 'Haïti', 'haiti': 'Haïti',
+    'curaçao': 'Curaçao', 'curacao': 'Curaçao',
+    'jordanië': 'Jordanië', 'jordan': 'Jordanië',
+    'congo': 'Congo', 'congo dr': 'Congo', 'dr congo': 'Congo',
+    'oezbekistan': 'Oezbekistan', 'uzbekistan': 'Oezbekistan',
+    'ivoorkust': 'Ivoorkust', "cote d'ivoire": 'Ivoorkust', "côte d'ivoire": 'Ivoorkust', 'cote divoire': 'Ivoorkust',
+    'kameroen': 'Kameroen', 'cameroon': 'Kameroen',
+    'chili': 'Chili', 'chile': 'Chili',
+    'colombia': 'Colombia', 'costa rica': 'Costa Rica',
+    'oostenrijk': 'Oostenrijk', 'austria': 'Oostenrijk',
+    'australië': 'Australië', 'australia': 'Australië'
   };
 
   let nameNL = vertalingen[searchKey] || cleanString;
@@ -486,8 +523,8 @@ export default function Home() {
         if (match && match.thuis_score !== null) {
           
           const isKnockout = match.ronde !== 'Groepsfase';
-          let echteWinnaar = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
-          let predWinnaar = vo.thuis_score > vo.uit_score ? 1 : vo.thuis_score < vo.uit_score ? 2 : 0;
+          let echteWinnaar = Number(match.thuis_score) > Number(match.uit_score) ? 1 : Number(match.thuis_score) < Number(match.uit_score) ? 2 : 0;
+          let predWinnaar = Number(vo.thuis_score) > Number(vo.uit_score) ? 1 : Number(vo.thuis_score) < Number(vo.uit_score) ? 2 : 0;
 
           // DE NIEUWE SLIMME PUNTENBEREKENING (90-MIN)
           if (vo.thuis_score === match.thuis_score && vo.uit_score === match.uit_score) { 
@@ -620,10 +657,12 @@ export default function Home() {
   }, [matchen, filterRonde, matchVoorspellingen, nu, weergavePeriode]);
 
   const moetUrgentInvullen = actieveSpeler && urgenteMatchen.some(u => u.ontbrekendIds.includes(actieveSpeler.id));
-  const toonUrgentPopup = showUrgentPopup && moetUrgentInvullen && urgenteMatchen.length > 0;
   
-  const moetBonusInvullen = actieveSpeler && ontbrekendeBonusIds.includes(actieveSpeler.id);
-  const toonBonusPopup = !toonUrgentPopup && toonInstallPopup && moetBonusInvullen;
+  // Toon de info pop-up sowieso voor de komende paar dagen (tot 29 juni 23:59), ook als er géén urgente matchen zijn
+  const isInfoPeriode = nu < new Date('2026-06-29T23:59:59+02:00').getTime();
+  const toonGecombineerdePopup = showUrgentPopup && (moetUrgentInvullen || isInfoPeriode);
+
+  const toonBonusPopup = !toonGecombineerdePopup && toonInstallPopup && actieveSpeler && ontbrekendeBonusIds.includes(actieveSpeler.id);
 
   return (
     <main className="main-container">
@@ -685,32 +724,53 @@ export default function Home() {
         .btn-primary:active { transform: scale(0.98); }
       `}</style>
 
-      {toonUrgentPopup && (
+      {/* GECOMBINEERDE POPUP: NIEUWE REGELS + URGENTE MATCHEN */}
+      {toonGecombineerdePopup && actieveSpeler && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(9, 5, 20, 0.85)', backdropFilter: 'blur(10px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: '#1A1423', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '380px', position: 'relative', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid var(--wk-orange)', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{ background: '#1A1423', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '380px', position: 'relative', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid var(--wk-purple)', maxHeight: '90vh', overflowY: 'auto' }}>
             <button onClick={() => setShowUrgentPopup(false)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.1)', border: 'none', width: '30px', height: '30px', borderRadius: '50%', fontWeight: 900, color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-            <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-              <div style={{ fontSize: '3rem', lineHeight: 1, marginBottom: '10px' }}>⏰</div>
-              <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: 'var(--wk-orange)', margin: '0 0 5px 0', lineHeight: 1, letterSpacing: '1px' }}>VERGEET JE PRONO NIET!</h2>
-              <p style={{ fontSize: '0.85rem', color: '#ADB5BD', fontWeight: 800, margin: '0 0 20px 0' }}>Deze matchen starten binnen de 36 uur en missen nog voorspellingen:</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', textAlign: 'left' }}>
-                {urgenteMatchen.map((u, i) => {
-                  const matchDate = new Date(u.datum);
-                  const isVandaag = new Date().toDateString() === matchDate.toDateString();
-                  const dagStr = isVandaag ? 'Vandaag' : matchDate.toLocaleDateString('nl-BE', { weekday: 'short' });
-                  const tijdStr = matchDate.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
-                  return (
-                    <div key={i} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px', borderLeft: '4px solid var(--wk-orange)' }}>
-                      <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#FFF', marginBottom: '4px' }}>{u.matchNaam}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--wk-orange)', fontWeight: 900, textTransform: 'uppercase', marginBottom: '8px' }}>⏳ {dagStr} om {tijdStr}</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {u.ontbrekend.map((naam, j) => (<span key={j} style={{ background: 'rgba(255, 107, 0, 0.15)', color: '#FFF', border: '1px solid var(--wk-orange)', padding: '2px 8px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 800 }}>{naam}</span>))}
-                      </div>
-                    </div>
-                  )
-                })}
+            
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ fontSize: '3rem', lineHeight: 1, marginBottom: '10px' }}>⚔️</div>
+              <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: 'var(--wk-purple)', margin: '0 0 5px 0', lineHeight: 1, letterSpacing: '1px' }}>NIEUWE REGELS KNOCK-OUTS!</h2>
+              
+              <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '15px', textAlign: 'left', marginTop: '15px', borderLeft: '4px solid var(--wk-purple)' }}>
+                <p style={{ fontSize: '0.8rem', color: '#ADB5BD', margin: '0 0 10px 0', fontWeight: 800 }}>Je voorspelt altijd de uitslag <strong style={{ color: '#FFF' }}>na 90 minuten</strong>. Typ je een gelijkspel in? Dan moet je aanduiden wie er uiteindelijk doorgaat (bv. na penalty's).</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ fontSize: '0.75rem' }}><strong style={{ color: 'var(--wk-lime)' }}>🎯 3 Punten:</strong> Je raadt de exacte uitslag na 90 minuten.</div>
+                  <div style={{ fontSize: '0.75rem' }}><strong style={{ color: 'var(--wk-purple)' }}>✌️ 2 Punten:</strong> Foute score (bijv. je zei 1-1, het werd 0-0), maar je had wél de juiste ploeg aangeduid die doorging!</div>
+                  <div style={{ fontSize: '0.75rem' }}><strong style={{ color: 'var(--wk-aqua)' }}>🟢 1 Punt:</strong> Enkel de winnaar/doorstromer juist.</div>
+                </div>
               </div>
             </div>
+
+            {urgenteMatchen.length > 0 && (
+              <>
+                <hr style={{ border: 'none', borderTop: '1px dashed rgba(255,255,255,0.2)', margin: '20px 0' }} />
+                <div style={{ textAlign: 'center' }}>
+                  <h3 style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', color: 'var(--wk-orange)', margin: '0 0 10px 0', lineHeight: 1 }}>⏰ VERGEET JE PRONO NIET</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', textAlign: 'left' }}>
+                    {urgenteMatchen.map((u, i) => {
+                      const matchDate = new Date(u.datum);
+                      const isVandaag = new Date().toDateString() === matchDate.toDateString();
+                      const dagStr = isVandaag ? 'Vandaag' : matchDate.toLocaleDateString('nl-BE', { weekday: 'short' });
+                      const tijdStr = matchDate.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
+                      return (
+                        <div key={i} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px', borderLeft: '4px solid var(--wk-orange)' }}>
+                          <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#FFF', marginBottom: '4px' }}>{u.matchNaam}</div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--wk-orange)', fontWeight: 900, textTransform: 'uppercase', marginBottom: '8px' }}>⏳ {dagStr} om {tijdStr}</div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {u.ontbrekend.map((naam, j) => (<span key={j} style={{ background: 'rgba(255, 107, 0, 0.15)', color: '#FFF', border: '1px solid var(--wk-orange)', padding: '2px 8px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 800 }}>{naam}</span>))}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+            
+            <button onClick={() => setShowUrgentPopup(false)} style={{ width: '100%', background: 'var(--wk-purple)', color: '#FFF', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: 900, marginTop: '20px', cursor: 'pointer' }}>IK SNAP HET! ⚽</button>
           </div>
         </div>
       )}
