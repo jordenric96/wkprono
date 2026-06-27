@@ -280,6 +280,7 @@ export default function MatchenTab({
           const matchTijd = new Date(match.datum).getTime();
           const isMatchGesloten = nu >= matchTijd;
           const isMatchLive = isMatchGesloten && nu < (matchTijd + (140 * 60 * 1000));
+          const isKnockout = match.ronde !== 'Groepsfase';
           
           if (isMatchGesloten && actieveSpeler && !isJorden) {
             if (!viewedMatches.current.has(match.id)) {
@@ -291,7 +292,7 @@ export default function MatchenTab({
             }
           }
 
-          const voorspelling = matchVoorspellingen[match.id] || { thuis: '', uit: '' };
+          const voorspelling = matchVoorspellingen[match.id] || { thuis: '', uit: '', penaltys: '' };
           const saveStatus = matchSaveStatus[match.id] || 'idle';
           
           const matchDateObj = new Date(match.datum);
@@ -304,7 +305,9 @@ export default function MatchenTab({
 
           const nietIngevuldeSpelers = alleSpelers.filter((s: any) => {
             const v = alleMatchVoorspellingen.find((x: any) => x.match_id === match.id && x.speler_id === s.id);
-            return !v || v.thuis_score === null || v.uit_score === null || v.thuis_score === '' || v.uit_score === '';
+            if (!v || v.thuis_score === null || v.uit_score === null || v.thuis_score === '' || v.uit_score === '') return true;
+            if (isKnockout && v.thuis_score === v.uit_score && !v.winnaar_na_penaltys) return true;
+            return false;
           });
 
           return (
@@ -335,7 +338,7 @@ export default function MatchenTab({
                 </span>
               </div>
 
-              <div style={{ padding: '12px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '5px' }}>
+              <div style={{ padding: '12px 12px 6px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '5px' }}>
                 
                 <div 
                   onClick={() => setGeselecteerdTeamRaw(match.thuisploeg)}
@@ -376,12 +379,40 @@ export default function MatchenTab({
                 </div>
               </div>
 
+              {/* PENALTY KEUZE VOOR KNOCKOUTS */}
+              {isKnockout && !isMatchGesloten && voorspelling.thuis !== '' && voorspelling.uit !== '' && voorspelling.thuis === voorspelling.uit && (
+                <div style={{ margin: '0 12px 12px 12px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.2)' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 900, textAlign: 'center', marginBottom: '8px', textTransform: 'uppercase' }}>Wie wint de penalty's?</div>
+                  <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                    <button 
+                      onClick={() => handleScore(match.id, 'penaltys', match.thuisploeg)}
+                      style={{ flex: 1, background: voorspelling.penaltys === match.thuisploeg ? '#CCFF00' : 'rgba(255,255,255,0.05)', color: voorspelling.penaltys === match.thuisploeg ? '#000' : '#FFF', padding: '8px', borderRadius: '8px', border: 'none', fontWeight: 900, cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    >
+                      {thuisInfo.emoji} {thuisInfo.name}
+                    </button>
+                    <button 
+                      onClick={() => handleScore(match.id, 'penaltys', match.uitploeg)}
+                      style={{ flex: 1, background: voorspelling.penaltys === match.uitploeg ? '#CCFF00' : 'rgba(255,255,255,0.05)', color: voorspelling.penaltys === match.uitploeg ? '#000' : '#FFF', padding: '8px', borderRadius: '8px', border: 'none', fontWeight: 900, cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                    >
+                      {uitInfo.emoji} {uitInfo.name}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* TUSSENSTAND / EINDSTAND */}
               {isMatchGesloten && match.thuis_score !== null && (
                 <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <div style={{ textAlign: 'center', fontSize: '0.85rem', fontWeight: 900, color: isMatchLive ? '#E30022' : theme.color, textTransform: 'uppercase', letterSpacing: '1px' }}>
                     {isMatchLive ? '🔴 TUSSENSTAND:' : 'EINDSTAND:'} {match.thuis_score} - {match.uit_score}
                   </div>
                   
+                  {match.winnaar_na_penaltys && (
+                    <div style={{ textAlign: 'center', fontSize: '0.7rem', fontWeight: 900, color: '#CCFF00', marginTop: '-4px' }}>
+                      {parseTeam(match.winnaar_na_penaltys).name} wint na penalty's
+                    </div>
+                  )}
+
                   { ((match.gele_kaarten !== null && match.gele_kaarten !== undefined) || match.thuis_geel !== undefined) && (
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '0.7rem', fontWeight: 800, color: '#FFF', opacity: 0.9 }}>
                       {match.thuis_geel !== undefined ? (
@@ -401,6 +432,7 @@ export default function MatchenTab({
                 </div>
               )}
 
+              {/* HORIZONTALE SCROLL LIJST */}
               {!isMatchGesloten ? (
                 nietIngevuldeSpelers.length === 0 ? (
                   <div style={{ width: '100%', background: 'rgba(0,0,0,0.2)', color: theme.color, padding: '6px', fontSize: '0.75rem', fontWeight: 900, textAlign: 'center' }}>
@@ -430,45 +462,52 @@ export default function MatchenTab({
                     let borderStyle = '1px solid transparent';
                     let pillOpacity = 1;
 
+                    if (isKnockout && heeftIngevuld && v.thuis_score === v.uit_score && v.winnaar_na_penaltys) {
+                      const winInfo = parseTeam(v.winnaar_na_penaltys);
+                      scoreTekst += ` (${winInfo.emoji})`;
+                    }
+
                     if (match.thuis_score !== null && heeftIngevuld) {
-                      const echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
-                      const pred = v.thuis_score > v.uit_score ? 1 : v.thuis_score < v.uit_score ? 2 : 0;
+                      let echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
+                      let pred = v.thuis_score > v.uit_score ? 1 : v.thuis_score < v.uit_score ? 2 : 0;
                       
+                      if (isKnockout) {
+                         if (echt === 0 && match.winnaar_na_penaltys === match.thuisploeg) echt = 1;
+                         if (echt === 0 && match.winnaar_na_penaltys === match.uitploeg) echt = 2;
+                         if (pred === 0 && v.winnaar_na_penaltys === match.thuisploeg) pred = 1;
+                         if (pred === 0 && v.winnaar_na_penaltys === match.uitploeg) pred = 2;
+                      }
+
                       const isExactNu = v.thuis_score === match.thuis_score && v.uit_score === match.uit_score;
-                      const isJuisteWinnaarNu = echt === pred;
-                      
-                      // DE NIEUWE LOGICA: Kans op 3 punten is dood als er in het echt AL MEER gescoord is dan ze voorspeld hebben.
+                      const isJuisteWinnaarNu = echt !== 0 && echt === pred; // 0 = er is nog geen penalty-winnaar gekozen tijdens live-match
                       const is3PtDood = match.thuis_score > v.thuis_score || match.uit_score > v.uit_score;
 
                       if (isMatchLive) {
                         if (!is3PtDood) {
-                          // Kans op 3 punten leeft nog!
                           if (isExactNu) {
-                            pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; // Momenteel 3 punten
+                            pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; 
                           } else {
-                            pillBg = 'rgba(204, 255, 0, 0.15)'; 
+                            pillBg = 'rgba(204, 255, 0, 0.1)'; 
                             pillColor = '#CCFF00'; 
                             borderStyle = '1px solid #CCFF00'; 
                             icoontje = isJuisteWinnaarNu ? '🤞' : '⏳';
                           }
                         } else {
-                          // Kans op 3 punten is definitief dood
                           if (isJuisteWinnaarNu) {
-                            pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; // Heeft wel nog 1 punt
+                            pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; 
                           } else {
                             pillBg = '#E30022'; pillColor = '#FFF'; icoontje = '🔴'; 
-                            pillOpacity = 0.4; // Fade out om de winnaars eruit te laten springen
+                            pillOpacity = 0.35; 
                           }
                         }
                       } else {
-                        // Match is gedaan (Historie weergave)
                         if (isExactNu) { 
                           pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; 
                         } else if (isJuisteWinnaarNu) { 
                           pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; 
                         } else { 
                           pillBg = '#E30022'; pillColor = '#FFF'; icoontje = '🔴'; 
-                          pillOpacity = 0.4;
+                          pillOpacity = 0.35;
                         }
                       }
                     }
