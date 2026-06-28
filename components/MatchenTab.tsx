@@ -23,7 +23,6 @@ const parseTeam = (teamString: string) => {
   let cleanString = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
   let searchKey = cleanString.toLowerCase();
 
-  // HELEMAAL OPGESCHOOND: Nul duplicate keys
   const vertalingen: Record<string, string> = {
     'brazil': 'Brazilië', 
     'morocco': 'Marokko', 
@@ -452,22 +451,57 @@ export default function MatchenTab({
                 </div>
               </div>
 
-              {isKnockout && !isMatchGesloten && voorspelling.thuis !== '' && voorspelling.uit !== '' && voorspelling.thuis === voorspelling.uit && (
+              {/* DOORSTROMER / PENALTY KEUZE VOOR ALLE KNOCKOUTS (Altijd zichtbaar, knoppen disablen o.b.v. score) */}
+              {isKnockout && !isMatchGesloten && (
                 <div style={{ margin: '0 12px 12px 12px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.2)' }}>
-                  <div style={{ fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 900, textAlign: 'center', marginBottom: '8px', textTransform: 'uppercase' }}>Welk land gaat door?</div>
+                  <div style={{ fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 900, textAlign: 'center', marginBottom: '8px', textTransform: 'uppercase' }}>
+                    {match.ronde === 'Finale' ? 'Wie wint het WK 2026?' : 'Wie gaat door?'}
+                  </div>
                   <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                    <button 
-                      onClick={() => handleScore(match.id, 'penaltys', match.thuisploeg)}
-                      style={{ flex: 1, background: voorspelling.penaltys === match.thuisploeg ? '#CCFF00' : 'rgba(255,255,255,0.05)', color: voorspelling.penaltys === match.thuisploeg ? '#000' : '#FFF', padding: '8px', borderRadius: '8px', border: 'none', fontWeight: 900, cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                    >
-                      {thuisInfo.emoji} {thuisInfo.name}
-                    </button>
-                    <button 
-                      onClick={() => handleScore(match.id, 'penaltys', match.uitploeg)}
-                      style={{ flex: 1, background: voorspelling.penaltys === match.uitploeg ? '#CCFF00' : 'rgba(255,255,255,0.05)', color: voorspelling.penaltys === match.uitploeg ? '#000' : '#FFF', padding: '8px', borderRadius: '8px', border: 'none', fontWeight: 900, cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                    >
-                      {uitInfo.emoji} {uitInfo.name}
-                    </button>
+                    {(() => {
+                      const hasScores = voorspelling.thuis !== '' && voorspelling.uit !== '';
+                      const isDraw = hasScores && Number(voorspelling.thuis) === Number(voorspelling.uit);
+                      const thuisWins = hasScores && Number(voorspelling.thuis) > Number(voorspelling.uit);
+                      const uitWins = hasScores && Number(voorspelling.uit) > Number(voorspelling.thuis);
+                      
+                      const thuisSelected = thuisWins || (isDraw && voorspelling.penaltys === match.thuisploeg);
+                      const uitSelected = uitWins || (isDraw && voorspelling.penaltys === match.uitploeg);
+                      
+                      return (
+                        <>
+                          <button 
+                            disabled={!isDraw}
+                            onClick={() => handleScore(match.id, 'penaltys', match.thuisploeg)}
+                            style={{ 
+                              flex: 1, 
+                              background: thuisSelected ? '#CCFF00' : 'rgba(255,255,255,0.05)', 
+                              color: thuisSelected ? '#000' : '#FFF', 
+                              padding: '8px', borderRadius: '8px', border: 'none', fontWeight: 900, 
+                              cursor: isDraw ? 'pointer' : 'not-allowed', 
+                              transition: '0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                              opacity: (!hasScores || (!isDraw && !thuisSelected)) ? 0.4 : 1
+                            }}
+                          >
+                            {thuisInfo.emoji} {thuisInfo.name}
+                          </button>
+                          <button 
+                            disabled={!isDraw}
+                            onClick={() => handleScore(match.id, 'penaltys', match.uitploeg)}
+                            style={{ 
+                              flex: 1, 
+                              background: uitSelected ? '#CCFF00' : 'rgba(255,255,255,0.05)', 
+                              color: uitSelected ? '#000' : '#FFF', 
+                              padding: '8px', borderRadius: '8px', border: 'none', fontWeight: 900, 
+                              cursor: isDraw ? 'pointer' : 'not-allowed', 
+                              transition: '0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                              opacity: (!hasScores || (!isDraw && !uitSelected)) ? 0.4 : 1
+                            }}
+                          >
+                            {uitInfo.emoji} {uitInfo.name}
+                          </button>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
@@ -543,7 +577,6 @@ export default function MatchenTab({
                       
                       const isExactNu = v.thuis_score === match.thuis_score && v.uit_score === match.uit_score;
                       
-                      // Check of de doorstromer juist voorspeld is
                       let isJuisteDoorstromerNu = false;
                       if (isKnockout) {
                         let uiteindelijkeEchteWinnaar = echt;
@@ -560,7 +593,6 @@ export default function MatchenTab({
                       const isJuisteWinnaarNu = echt === pred; 
                       const is3PtDood = match.thuis_score > v.thuis_score || match.uit_score > v.uit_score;
 
-                      // LIVE WEERGAVE
                       if (isMatchLive) {
                         if (!is3PtDood) {
                           if (isExactNu) {
@@ -572,22 +604,16 @@ export default function MatchenTab({
                             icoontje = (isJuisteWinnaarNu || isJuisteDoorstromerNu) ? '🤞' : '⏳';
                           }
                         } else {
-                          // Kans op exacte uitslag is dood
                           if (isKnockout && isJuisteDoorstromerNu && !isJuisteWinnaarNu) {
-                            // Foute score, fout regulier resultaat, maar WEL de juiste doorstromer na penalty's
                             pillBg = '#7A00E6'; pillColor = '#FFF'; icoontje = '✌️'; 
                           } else if (isJuisteWinnaarNu || isJuisteDoorstromerNu) {
-                            // Regulier resultaat was goed, of doorstromer was goed
                             pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; 
                           } else {
-                            // Alles is dood
                             pillBg = '#E30022'; pillColor = '#FFF'; icoontje = '🔴'; 
                             pillOpacity = 0.35; 
                           }
                         }
-                      } 
-                      // HISTORIE WEERGAVE (Match is gedaan)
-                      else {
+                      } else {
                         if (isExactNu) { 
                           pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; 
                         } else if (isKnockout && isJuisteDoorstromerNu && !isJuisteWinnaarNu) {
@@ -620,7 +646,6 @@ export default function MatchenTab({
         })
       )}
 
-      {/* JORDEN'S GEHEIME GLUUR POP-UP */}
       {gluurPopUp !== null && isJorden && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div onClick={() => setGluurPopUp(null)} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.8)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#1A1423', padding: '20px', borderRadius: '20px', width: '90%', maxWidth: '350px', border: '2px solid #00E5FF', animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
