@@ -1,7 +1,6 @@
 // src/components/TellersTab.tsx
 import React, { useMemo, useState } from 'react';
 
-// Robuust filter om dubbele emoji's weg te halen en Engelse namen te vertalen
 const parseTeam = (teamString: string) => {
   if (!teamString) return { name: '', emoji: '🏳️' };
   let cleanString = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
@@ -133,8 +132,8 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
       if (m.thuis_score !== null && m.thuis_score !== '' && m.uit_score !== null && m.uit_score !== '') {
         gespeeldeMatchenCount++;
         
-        const thuisScore = Number(m.thuis_score);
-        const uitScore = Number(m.uit_score);
+        const thuisScore = Number(m.thuis_score) + Number(m.extra_goals_thuis || 0);
+        const uitScore = Number(m.uit_score) + Number(m.extra_goals_uit || 0);
 
         totaleGoals += (thuisScore + uitScore);
         totaleGeel += Number(m.gele_kaarten || 0);
@@ -196,7 +195,6 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
     let markerInserted = false;
     const combinedList: any[] = [];
 
-    // OPLOSSING: '<' in plaats van '<='. Zo komt het 'Huidige Stand' balkje altijd ná de personen die exact op het juiste getal staan!
     validPreds.forEach((pred: any) => {
       if (!markerInserted && actualValue < pred.value) {
         combinedList.push({ type: 'marker', value: actualValue });
@@ -224,7 +222,6 @@ export default function TellersTab({ matchen = [], alleToernooiV = [] }: any) {
           const darkColor = 'rgba(255,255,255,0.15)';
           const brightColor = themeHex;
 
-          // OPLOSSING: De lijn wordt logisch opgebouwd. Donker voor het verleden (tot aan de marker), en de Neon kleur voor de toekomst (onder de marker).
           const topLineColor = (hasPassedMarker && !isMarker) ? brightColor : darkColor;
           const bottomLineColor = hasPassedMarker ? brightColor : darkColor;
 
