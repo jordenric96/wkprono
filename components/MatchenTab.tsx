@@ -424,18 +424,23 @@ export default function MatchenTab({
                   <span style={{ fontWeight: 900, fontSize: '0.8rem', textAlign: 'center', lineHeight: 1.1, textShadow: theme.color === '#FFF' ? '0 1px 3px rgba(0,0,0,0.4)' : 'none' }}>{thuisInfo.name}</span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <input 
-                    type="tel" value={voorspelling.thuis} disabled={isMatchGesloten}
-                    onChange={(e) => handleScore(match.id, 'thuis', e.target.value)}
-                    style={{ width: '40px', height: '40px', textAlign: 'center', fontSize: '1.2rem', fontWeight: 900, fontFamily: 'Bebas Neue', borderRadius: '10px', border: 'none', background: 'rgba(0,0,0,0.2)', color: theme.color, outline: 'none' }}
-                  />
-                  <span style={{ fontWeight: 900, opacity: 0.8 }}>-</span>
-                  <input 
-                    type="tel" value={voorspelling.uit} disabled={isMatchGesloten}
-                    onChange={(e) => handleScore(match.id, 'uit', e.target.value)}
-                    style={{ width: '40px', height: '40px', textAlign: 'center', fontSize: '1.2rem', fontWeight: 900, fontFamily: 'Bebas Neue', borderRadius: '10px', border: 'none', background: 'rgba(0,0,0,0.2)', color: theme.color, outline: 'none' }}
-                  />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ fontSize: '0.55rem', color: '#ADB5BD', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                    STAND NA 90 MIN
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <input 
+                      type="tel" value={voorspelling.thuis} disabled={isMatchGesloten}
+                      onChange={(e) => handleScore(match.id, 'thuis', e.target.value)}
+                      style={{ width: '40px', height: '40px', textAlign: 'center', fontSize: '1.2rem', fontWeight: 900, fontFamily: 'Bebas Neue', borderRadius: '10px', border: 'none', background: 'rgba(0,0,0,0.2)', color: theme.color, outline: 'none' }}
+                    />
+                    <span style={{ fontWeight: 900, opacity: 0.8 }}>-</span>
+                    <input 
+                      type="tel" value={voorspelling.uit} disabled={isMatchGesloten}
+                      onChange={(e) => handleScore(match.id, 'uit', e.target.value)}
+                      style={{ width: '40px', height: '40px', textAlign: 'center', fontSize: '1.2rem', fontWeight: 900, fontFamily: 'Bebas Neue', borderRadius: '10px', border: 'none', background: 'rgba(0,0,0,0.2)', color: theme.color, outline: 'none' }}
+                    />
+                  </div>
                 </div>
 
                 <div 
