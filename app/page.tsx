@@ -35,44 +35,10 @@ const normalizeString = (teamString: string) => {
     'belgium': 'België', 'belgië': 'België',
     'italy': 'Italië', 'italië': 'Italië',
     'argentina': 'Argentinië', 'argentinië': 'Argentinië',
-    'england': 'Engeland', 'wales': 'Wales', 'scotland': 'Schotland',
-    'usa': 'Verenigde Staten', 'united states': 'Verenigde Staten', 'verenigde staten': 'Verenigde Staten',
-    'canada': 'Canada', 'mexico': 'Mexico', 'japan': 'Japan',
+    'england': 'Engeland', 'usa': 'Verenigde Staten', 'united states': 'Verenigde Staten',
     'croatia': 'Kroatië', 'kroatië': 'Kroatië',
-    'uruguay': 'Uruguay', 'senegal': 'Senegal', 'ghana': 'Ghana', 'nigeria': 'Nigeria', 'ecuador': 'Ecuador',
-    'sweden': 'Zweden', 'zweden': 'Zweden',
-    'denmark': 'Denemarken', 'denemarken': 'Denemarken',
-    'polen': 'Polen', 'poland': 'Polen',
-    'servië': 'Servië', 'serbia': 'Servië',
-    'iran': 'Iran', 'saudi-arabië': 'Saudi-Arabië', 'saudi arabia': 'Saudi-Arabië',
-    'oekraïne': 'Oekraïne', 'ukraine': 'Oekraïne',
-    'peru': 'Peru', 'panama': 'Panama',
-    'egypt': 'Egypte', 'egypte': 'Egypte',
-    'tunisia': 'Tunesië', 'tunesië': 'Tunesië',
-    'nieuw-zeeland': 'Nieuw-Zeeland', 'new zealand': 'Nieuw-Zeeland',
-    'qatar': 'Qatar', 'ierland': 'Ierland', 'ireland': 'Ierland',
-    'turkije': 'Turkije', 'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije',
-    'roemenië': 'Roemenië', 'romania': 'Roemenië',
-    'hongarije': 'Hongarije', 'hungary': 'Hongarije',
-    'noorwegen': 'Noorwegen', 'norway': 'Noorwegen',
-    'ijsland': 'IJsland', 'iceland': 'IJsland',
-    'slowakije': 'Slowakije', 'slovakia': 'Slowakije',
-    'irak': 'Irak', 'iraq': 'Irak',
-    'paraguay': 'Paraguay', 'venezuela': 'Venezuela',
-    'mali': 'Mali', 'algerije': 'Algerije', 'algeria': 'Algerije',
-    'zambia': 'Zambia', 'honduras': 'Honduras', 'el salvador': 'El Salvador',
-    'kaapverdië': 'Kaapverdië', 'cabo verde': 'Kaapverdië', 'cape verde': 'Kaapverdië',
-    'haïti': 'Haïti', 'haiti': 'Haïti',
-    'curaçao': 'Curaçao', 'curacao': 'Curaçao',
-    'jordanië': 'Jordanië', 'jordan': 'Jordanië',
-    'congo': 'Congo', 'congo dr': 'Congo', 'dr congo': 'Congo',
-    'oezbekistan': 'Oezbekistan', 'uzbekistan': 'Oezbekistan',
-    'ivoorkust': 'Ivoorkust', "cote d'ivoire": 'Ivoorkust', "côte d'ivoire": 'Ivoorkust', 'cote divoire': 'Ivoorkust',
-    'kameroen': 'Kameroen', 'cameroon': 'Kameroen',
-    'chili': 'Chili', 'chile': 'Chili',
-    'colombia': 'Colombia', 'costa rica': 'Costa Rica',
-    'oostenrijk': 'Oostenrijk', 'austria': 'Oostenrijk',
-    'australië': 'Australië', 'australia': 'Australië'
+    'uruguay': 'Uruguay', 'senegal': 'Senegal', 'ghana': 'Ghana', 'nigeria': 'Nigeria',
+    'mexico': 'Mexico', 'japan': 'Japan'
   };
 
   let nameNL = vertalingen[searchKey] || cleanString;
@@ -475,17 +441,20 @@ export default function Home() {
         if (match.uitploeg && !match.uitploeg.toLowerCase().includes('winnaar')) halveFinalisten.push(match.uitploeg);
       }
       if (match.id === 104 && match.thuis_score !== null && match.uit_score !== null) {
-        if (match.thuis_score > match.uit_score) wkWinnaar = match.thuisploeg;
-        else if (match.uit_score > match.thuis_score) wkWinnaar = match.uitploeg;
+        const echtWinnaarFinal = Number(match.thuis_score) + Number(match.extra_goals_thuis || 0) > Number(match.uit_score) + Number(match.extra_goals_uit || 0) || match.winnaar_na_penaltys === match.thuisploeg ? match.thuisploeg : match.uitploeg;
+        wkWinnaar = echtWinnaarFinal;
       }
       if (match.thuis_score !== null && match.uit_score !== null) {
-        liveGoals += (match.thuis_score + match.uit_score);
+        const thuisGoalsTotal = Number(match.thuis_score) + Number(match.extra_goals_thuis || 0);
+        const uitGoalsTotal = Number(match.uit_score) + Number(match.extra_goals_uit || 0);
+
+        liveGoals += (thuisGoalsTotal + uitGoalsTotal);
         liveGeel += (match.gele_kaarten || 0);
         liveRood += (match.rode_kaarten || 0);
-        teamGoalsVoor[match.thuisploeg] = (teamGoalsVoor[match.thuisploeg] || 0) + match.thuis_score;
-        teamGoalsVoor[match.uitploeg] = (teamGoalsVoor[match.uitploeg] || 0) + match.uit_score;
-        teamGoalsTegen[match.thuisploeg] = (teamGoalsTegen[match.thuisploeg] || 0) + match.uit_score;
-        teamGoalsTegen[match.uitploeg] = (teamGoalsTegen[match.uitploeg] || 0) + match.thuis_score;
+        teamGoalsVoor[match.thuisploeg] = (teamGoalsVoor[match.thuisploeg] || 0) + thuisGoalsTotal;
+        teamGoalsVoor[match.uitploeg] = (teamGoalsVoor[match.uitploeg] || 0) + uitGoalsTotal;
+        teamGoalsTegen[match.thuisploeg] = (teamGoalsTegen[match.thuisploeg] || 0) + uitGoalsTotal;
+        teamGoalsTegen[match.uitploeg] = (teamGoalsTegen[match.uitploeg] || 0) + thuisGoalsTotal;
       }
     });
 
@@ -526,14 +495,13 @@ export default function Home() {
           let echteWinnaar = Number(match.thuis_score) > Number(match.uit_score) ? 1 : Number(match.thuis_score) < Number(match.uit_score) ? 2 : 0;
           let predWinnaar = Number(vo.thuis_score) > Number(vo.uit_score) ? 1 : Number(vo.thuis_score) < Number(vo.uit_score) ? 2 : 0;
 
-          // DE NIEUWE SLIMME PUNTENBEREKENING (90-MIN)
           if (vo.thuis_score === match.thuis_score && vo.uit_score === match.uit_score) { 
             pronoP += 3; ex++; 
           } else if (echteWinnaar === predWinnaar) { 
             if (isKnockout && echteWinnaar === 0 && vo.winnaar_na_penaltys && match.winnaar_na_penaltys && vo.winnaar_na_penaltys === match.winnaar_na_penaltys) {
-              pronoP += 2; // Foute score, maar perfect aangeduid wie er doorgaat (2pt)
+              pronoP += 2; 
             } else {
-              pronoP += 1; // Enkel het resultaat (winnaar of gelijkspel) juist
+              pronoP += 1; 
             }
             wc++; 
           } else { 
@@ -658,7 +626,6 @@ export default function Home() {
 
   const moetUrgentInvullen = actieveSpeler && urgenteMatchen.some(u => u.ontbrekendIds.includes(actieveSpeler.id));
   
-  // Toon de info pop-up sowieso voor de komende paar dagen (tot 29 juni 23:59), ook als er géén urgente matchen zijn
   const isInfoPeriode = nu < new Date('2026-06-29T23:59:59+02:00').getTime();
   const toonGecombineerdePopup = showUrgentPopup && (moetUrgentInvullen || isInfoPeriode);
 
@@ -724,7 +691,6 @@ export default function Home() {
         .btn-primary:active { transform: scale(0.98); }
       `}</style>
 
-      {/* GECOMBINEERDE POPUP: NIEUWE REGELS + URGENTE MATCHEN */}
       {toonGecombineerdePopup && actieveSpeler && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(9, 5, 20, 0.85)', backdropFilter: 'blur(10px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: '#1A1423', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '380px', position: 'relative', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid var(--wk-purple)', maxHeight: '90vh', overflowY: 'auto' }}>
