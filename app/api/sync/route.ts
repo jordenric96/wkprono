@@ -10,21 +10,17 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Veiligere manier om Supabase te initialiseren voor Vercel's TypeScript
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 1. Haal de data op uit JOUW Google Sheet
     const sheetUrl = process.env.GOOGLE_SHEETS_CSV_URL || '';
     const res = await fetch(sheetUrl, { cache: 'no-store' });
     const csvData = await res.text();
 
-    // 2. Hak de tekst in rijen en sla de titel-rij over
     const rijen = csvData.split('\n').map(rij => rij.split(','));
     const rijenZonderHeader = rijen.slice(1);
 
-    // 3. Koppel de kolommen aan de database velden
     const matchenOmOpTeSlaan = rijenZonderHeader.map(rij => {
       if (rij.length < 9 || !rij[0]) return null;
 
@@ -38,11 +34,12 @@ export async function GET(request: Request) {
         gele_kaarten: rij[6] && rij[6].trim() !== '' ? parseInt(rij[6].trim()) : 0,
         rode_kaarten: rij[7] && rij[7].trim() !== '' ? parseInt(rij[7].trim()) : 0,
         ronde: rij[8]?.trim() || '',
-        winnaar_na_penaltys: rij.length > 9 && rij[9].trim() !== '' ? rij[9].trim() : null
+        winnaar_na_penaltys: rij.length > 9 && rij[9].trim() !== '' ? rij[9].trim() : null,
+        extra_goals_thuis: rij.length > 10 && rij[10].trim() !== '' ? parseInt(rij[10].trim()) : 0,
+        extra_goals_uit: rij.length > 11 && rij[11].trim() !== '' ? parseInt(rij[11].trim()) : 0
       };
     }).filter(match => match !== null);
 
-    // 4. Stuur alles naar Supabase
     const { error } = await supabase
       .from('matchen')
       .upsert(matchenOmOpTeSlaan, { onConflict: 'id' });
