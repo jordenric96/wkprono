@@ -456,7 +456,7 @@ export default function MatchenTab({
                 </div>
               </div>
 
-              {/* DOORSTROMER / PENALTY KEUZE VOOR ALLE KNOCKOUTS */}
+              {/* DOORSTROMER / PENALTY KEUZE VOOR ALLE KNOCKOUTS (Altijd zichtbaar) */}
               {isKnockout && !isMatchGesloten && (
                 <div style={{ margin: '0 12px 12px 12px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.2)' }}>
                   <div style={{ fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 900, textAlign: 'center', marginBottom: '8px', textTransform: 'uppercase' }}>
@@ -517,7 +517,8 @@ export default function MatchenTab({
                     {isMatchLive ? '🔴 TUSSENSTAND:' : 'EINDSTAND:'} {match.thuis_score} - {match.uit_score}
                   </div>
                   
-                  { ((match.extra_goals_thuis && match.extra_goals_thuis > 0) || (match.extra_goals_uit && match.extra_goals_uit > 0)) && (
+                  {/* GEFIXED: Check expliciet met Number() > 0 zodat React niet per ongeluk een 0 print */}
+                  { (Number(match.extra_goals_thuis) > 0 || Number(match.extra_goals_uit) > 0) && (
                     <div style={{ textAlign: 'center', fontSize: '0.75rem', fontWeight: 900, color: '#ADB5BD', marginTop: '-4px' }}>
                       Na verlengingen: {Number(match.thuis_score) + Number(match.extra_goals_thuis || 0)} - {Number(match.uit_score) + Number(match.extra_goals_uit || 0)}
                     </div>
@@ -575,7 +576,6 @@ export default function MatchenTab({
                     let scoreTekst = heeftIngevuld ? `${v.thuis_score}-${v.uit_score}` : 'Geen';
                     let icoontje = heeftIngevuld ? '🤔' : '❌';
                     let borderStyle = '1px solid transparent';
-                    let pillOpacity = 1;
 
                     if (isKnockout && heeftIngevuld && v.thuis_score === v.uit_score && v.winnaar_na_penaltys) {
                       const winInfo = parseTeam(v.winnaar_na_penaltys);
@@ -604,43 +604,39 @@ export default function MatchenTab({
                       const isJuisteWinnaarNu = echt === pred; 
                       const is3PtDood = match.thuis_score > v.thuis_score || match.uit_score > v.uit_score;
 
+                      // DE FIX: Uniforme kleuren voor Live & Historie, en losers zijn nu donker grijs/zwart in plaats van doorzichtig-rood
                       if (isMatchLive) {
                         if (!is3PtDood) {
                           if (isExactNu) {
-                            pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; 
+                            pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; borderStyle = '1px solid #CCFF00';
                           } else {
-                            pillBg = 'rgba(204, 255, 0, 0.1)'; 
-                            pillColor = '#CCFF00'; 
-                            borderStyle = '1px solid #CCFF00'; 
-                            icoontje = (isJuisteWinnaarNu || isJuisteDoorstromerNu) ? '🤞' : '⏳';
+                            pillBg = 'rgba(204, 255, 0, 0.2)'; pillColor = '#CCFF00'; borderStyle = '1px dashed #CCFF00'; icoontje = (isJuisteWinnaarNu || isJuisteDoorstromerNu) ? '🤞' : '⏳';
                           }
                         } else {
                           if (isKnockout && isJuisteDoorstromerNu && !isJuisteWinnaarNu) {
-                            pillBg = '#7A00E6'; pillColor = '#FFF'; icoontje = '✌️'; 
+                            pillBg = '#7A00E6'; pillColor = '#FFF'; icoontje = '✌️'; borderStyle = '1px solid #7A00E6';
                           } else if (isJuisteWinnaarNu || isJuisteDoorstromerNu) {
-                            pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; 
+                            pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; borderStyle = '1px solid #00E5FF';
                           } else {
-                            pillBg = '#E30022'; pillColor = '#FFF'; icoontje = '🔴'; 
-                            pillOpacity = 0.35; 
+                            pillBg = 'rgba(0, 0, 0, 0.5)'; pillColor = 'rgba(255, 255, 255, 0.6)'; icoontje = '❌'; borderStyle = '1px solid rgba(255,255,255,0.1)';
                           }
                         }
                       } else {
                         if (isExactNu) { 
-                          pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; 
+                          pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; borderStyle = '1px solid #CCFF00';
                         } else if (isKnockout && isJuisteDoorstromerNu && !isJuisteWinnaarNu) {
-                          pillBg = '#7A00E6'; pillColor = '#FFF'; icoontje = '✌️'; 
+                          pillBg = '#7A00E6'; pillColor = '#FFF'; icoontje = '✌️'; borderStyle = '1px solid #7A00E6';
                         } else if (isJuisteWinnaarNu || isJuisteDoorstromerNu) { 
-                          pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; 
+                          pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; borderStyle = '1px solid #00E5FF';
                         } else { 
-                          pillBg = '#E30022'; pillColor = '#FFF'; icoontje = '🔴'; 
-                          pillOpacity = 0.35;
+                          pillBg = 'rgba(0, 0, 0, 0.5)'; pillColor = 'rgba(255, 255, 255, 0.6)'; icoontje = '❌'; borderStyle = '1px solid rgba(255,255,255,0.1)';
                         }
                       }
                     }
 
                     return (
-                      <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: pillBg, border: borderStyle, opacity: pillOpacity, padding: '4px 10px', borderRadius: '10px', minWidth: '55px', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)', transition: 'all 0.3s ease' }}>
-                        <span style={{ fontSize: '0.55rem', fontWeight: 900, color: pillColor, opacity: 0.8, textTransform: 'uppercase', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
+                      <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: pillBg, border: borderStyle, padding: '4px 10px', borderRadius: '10px', minWidth: '55px', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)', transition: 'all 0.3s ease' }}>
+                        <span style={{ fontSize: '0.55rem', fontWeight: 900, color: pillColor, textTransform: 'uppercase', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
                           {spelerNaam}
                         </span>
                         <span style={{ fontSize: '0.75rem', fontWeight: 900, color: pillColor, whiteSpace: 'nowrap', display: 'flex', gap: '2px', alignItems: 'center' }}>
@@ -724,37 +720,4 @@ export default function MatchenTab({
               {matchen.filter((m: any) => m.thuisploeg === geselecteerdTeamRaw || m.uitploeg === geselecteerdTeamRaw).map((m: any) => {
                 const dossierMatchTijd = new Date(m.datum).getTime();
                 const isDossierGespeeld = m.thuis_score !== null;
-                const isDossierLive = nu >= dossierMatchTijd && nu < (dossierMatchTijd + (140 * 60 * 1000));
-                const isThuis = m.thuisploeg === geselecteerdTeamRaw;
-                const tegenstanderRaw = isThuis ? m.uitploeg : m.thuisploeg;
-                const tegenstanderInfo = parseTeam(tegenstanderRaw);
-                
-                const tScore = Number(m.thuis_score) + Number(m.extra_goals_thuis || 0);
-                const uScore = Number(m.uit_score) + Number(m.extra_goals_uit || 0);
-
-                let uitslagKleur = '#FFF'; let statusIcoon = '⏳';
-                if (isDossierGespeeld) {
-                  if ((isThuis && tScore > uScore) || (!isThuis && uScore > tScore)) { uitslagKleur = '#CCFF00'; statusIcoon = '🟢'; } 
-                  else if (tScore === uScore) { uitslagKleur = '#00E5FF'; statusIcoon = '➖'; } 
-                  else { uitslagKleur = '#E30022'; statusIcoon = '🔴'; } 
-                }
-                return (
-                  <div key={m.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 12px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: isDossierLive ? '1px solid #E30022' : '1px solid rgba(255,255,255,0.1)' }}>
-                    <div>
-                      <div style={{ fontSize: '0.6rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '2px' }}>{new Date(m.datum).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' })} • {m.ronde}{isDossierLive && <span style={{color: '#E30022', marginLeft: '5px'}}>🔴 LIVE</span>}</div>
-                      <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ fontSize: '0.65rem', color: '#6C757D' }}>vs</span> {tegenstanderInfo.name} <span style={{fontSize: '1rem'}}>{tegenstanderInfo.emoji}</span></div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      {isDossierGespeeld ? (<div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem', color: uitslagKleur }}>{isThuis ? `${tScore} - ${uScore}` : `${uScore} - ${tScore}`}</span><span style={{ fontSize: '0.7rem' }}>{statusIcoon}</span></div>) : (<div style={{ background: 'rgba(255,255,255,0.1)', color: '#ADB5BD', padding: '3px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase' }}>Te spelen</div>)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
-    </div>
-  );
-}
+                const isDossierLive = nu >= dossierMatchTijd && nu < (dossierMatchTijd + (14
