@@ -24,9 +24,9 @@ const parseTeam = (teamString: string) => {
   let searchKey = cleanString.toLowerCase();
 
   const vertalingen: Record<string, string> = {
-    'brazil': 'Brazilië', 
-    'morocco': 'Marokko', 
-    'switzerland': 'Zwitserland',
+    'brazil': 'Brazilië', 'brazilië': 'Brazilië',
+    'morocco': 'Marokko', 'marokko': 'Marokko',
+    'switzerland': 'Zwitserland', 'zwitserland': 'Zwitserland',
     'bosnia and herzegovina': 'Bosnië', 'bosnia & herzegovina': 'Bosnië', 'bosnia': 'Bosnië', 'bosnië': 'Bosnië',
     'south korea': 'Zuid-Korea', 'zuid-korea': 'Zuid-Korea',
     'south africa': 'Zuid-Afrika', 'zuid-afrika': 'Zuid-Afrika',
@@ -51,7 +51,7 @@ const parseTeam = (teamString: string) => {
     'oekraïne': 'Oekraïne', 'ukraine': 'Oekraïne',
     'peru': 'Peru', 'panama': 'Panama',
     'egypt': 'Egypte', 'egypte': 'Egypte',
-    'tunesië': 'Tunesië', 'tunesië': 'Tunesië',
+    'tunisia': 'Tunesië', 'tunesië': 'Tunesië',
     'nieuw-zeeland': 'Nieuw-Zeeland', 'new zealand': 'Nieuw-Zeeland',
     'qatar': 'Qatar', 'ierland': 'Ierland', 'ireland': 'Ierland',
     'turkije': 'Turkije', 'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije',
@@ -603,6 +603,7 @@ export default function MatchenTab({
                       const isJuisteWinnaarNu = echt === pred; 
                       const is3PtDood = match.thuis_score > v.thuis_score || match.uit_score > v.uit_score;
 
+                      // FIX: Losers nu zwart en heel contrastrijk!
                       if (isMatchLive) {
                         if (!is3PtDood) {
                           if (isExactNu) {
