@@ -456,7 +456,7 @@ export default function MatchenTab({
                 </div>
               </div>
 
-              {/* DOORSTROMER / PENALTY KEUZE VOOR ALLE KNOCKOUTS (Altijd zichtbaar) */}
+              {/* DOORSTROMER / PENALTY KEUZE VOOR ALLE KNOCKOUTS */}
               {isKnockout && !isMatchGesloten && (
                 <div style={{ margin: '0 12px 12px 12px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.2)' }}>
                   <div style={{ fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 900, textAlign: 'center', marginBottom: '8px', textTransform: 'uppercase' }}>
@@ -517,7 +517,7 @@ export default function MatchenTab({
                     {isMatchLive ? '🔴 TUSSENSTAND:' : 'EINDSTAND:'} {match.thuis_score} - {match.uit_score}
                   </div>
                   
-                  {/* GEFIXED: Check expliciet met Number() > 0 zodat React niet per ongeluk een 0 print */}
+                  {/* FIX: Veilig controleren of extra_goals groter is dan 0 om '0' output te voorkomen */}
                   { (Number(match.extra_goals_thuis) > 0 || Number(match.extra_goals_uit) > 0) && (
                     <div style={{ textAlign: 'center', fontSize: '0.75rem', fontWeight: 900, color: '#ADB5BD', marginTop: '-4px' }}>
                       Na verlengingen: {Number(match.thuis_score) + Number(match.extra_goals_thuis || 0)} - {Number(match.uit_score) + Number(match.extra_goals_uit || 0)}
@@ -604,13 +604,16 @@ export default function MatchenTab({
                       const isJuisteWinnaarNu = echt === pred; 
                       const is3PtDood = match.thuis_score > v.thuis_score || match.uit_score > v.uit_score;
 
-                      // DE FIX: Uniforme kleuren voor Live & Historie, en losers zijn nu donker grijs/zwart in plaats van doorzichtig-rood
+                      // FIX: Losers nu duidelijk zichtbaar dankzij donkere, doffe lay-out in plaats van transparant rood.
                       if (isMatchLive) {
                         if (!is3PtDood) {
                           if (isExactNu) {
                             pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; borderStyle = '1px solid #CCFF00';
                           } else {
-                            pillBg = 'rgba(204, 255, 0, 0.2)'; pillColor = '#CCFF00'; borderStyle = '1px dashed #CCFF00'; icoontje = (isJuisteWinnaarNu || isJuisteDoorstromerNu) ? '🤞' : '⏳';
+                            pillBg = 'rgba(204, 255, 0, 0.1)'; 
+                            pillColor = '#CCFF00'; 
+                            borderStyle = '1px dashed #CCFF00'; 
+                            icoontje = (isJuisteWinnaarNu || isJuisteDoorstromerNu) ? '🤞' : '⏳';
                           }
                         } else {
                           if (isKnockout && isJuisteDoorstromerNu && !isJuisteWinnaarNu) {
@@ -618,7 +621,7 @@ export default function MatchenTab({
                           } else if (isJuisteWinnaarNu || isJuisteDoorstromerNu) {
                             pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; borderStyle = '1px solid #00E5FF';
                           } else {
-                            pillBg = 'rgba(0, 0, 0, 0.5)'; pillColor = 'rgba(255, 255, 255, 0.6)'; icoontje = '❌'; borderStyle = '1px solid rgba(255,255,255,0.1)';
+                            pillBg = 'rgba(0, 0, 0, 0.5)'; pillColor = 'rgba(255, 255, 255, 0.6)'; icoontje = '❌'; borderStyle = '1px solid rgba(255,255,255,0.1)'; 
                           }
                         }
                       } else {
@@ -653,7 +656,6 @@ export default function MatchenTab({
         })
       )}
 
-      {/* JORDEN'S GEHEIME GLUUR POP-UP */}
       {gluurPopUp !== null && isJorden && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div onClick={() => setGluurPopUp(null)} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.8)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#1A1423', padding: '20px', borderRadius: '20px', width: '90%', maxWidth: '350px', border: '2px solid #00E5FF', animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
@@ -720,4 +722,21 @@ export default function MatchenTab({
               {matchen.filter((m: any) => m.thuisploeg === geselecteerdTeamRaw || m.uitploeg === geselecteerdTeamRaw).map((m: any) => {
                 const dossierMatchTijd = new Date(m.datum).getTime();
                 const isDossierGespeeld = m.thuis_score !== null;
-                const isDossierLive = nu >= dossierMatchTijd && nu < (dossierMatchTijd + (14
+                const isDossierLive = nu >= dossierMatchTijd && nu < (dossierMatchTijd + (140 * 60 * 1000));
+                const isThuis = m.thuisploeg === geselecteerdTeamRaw;
+                const tegenstanderRaw = isThuis ? m.uitploeg : m.thuisploeg;
+                const tegenstanderInfo = parseTeam(tegenstanderRaw);
+                
+                const tScore = Number(m.thuis_score) + Number(m.extra_goals_thuis || 0);
+                const uScore = Number(m.uit_score) + Number(m.extra_goals_uit || 0);
+
+                let uitslagKleur = '#FFF'; let statusIcoon = '⏳';
+                if (isDossierGespeeld) {
+                  if ((isThuis && tScore > uScore) || (!isThuis && uScore > tScore)) { uitslagKleur = '#CCFF00'; statusIcoon = '🟢'; } 
+                  else if (tScore === uScore) { uitslagKleur = '#00E5FF'; statusIcoon = '➖'; } 
+                  else { uitslagKleur = '#E30022'; statusIcoon = '🔴'; } 
+                }
+                return (
+                  <div key={m.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 12px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: isDossierLive ? '1px solid #E30022' : '1px solid rgba(255,255,255,0.1)' }}>
+                    <div>
+                      <div style={{ fontSize: '0.6rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '2px' }}>{new Date(m.datum).toLocaleDateString('nl
