@@ -51,7 +51,7 @@ const parseTeam = (teamString: string) => {
     'oekraïne': 'Oekraïne', 'ukraine': 'Oekraïne',
     'peru': 'Peru', 'panama': 'Panama',
     'egypt': 'Egypte', 'egypte': 'Egypte',
-    'tunisia': 'Tunesië', 'tunesië': 'Tunesië',
+    'tunesië': 'Tunesië', 'tunesië': 'Tunesië',
     'nieuw-zeeland': 'Nieuw-Zeeland', 'new zealand': 'Nieuw-Zeeland',
     'qatar': 'Qatar', 'ierland': 'Ierland', 'ireland': 'Ierland',
     'turkije': 'Turkije', 'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije',
@@ -517,7 +517,6 @@ export default function MatchenTab({
                     {isMatchLive ? '🔴 TUSSENSTAND:' : 'EINDSTAND:'} {match.thuis_score} - {match.uit_score}
                   </div>
                   
-                  {/* FIX: Veilig controleren of extra_goals groter is dan 0 om '0' output te voorkomen */}
                   { (Number(match.extra_goals_thuis) > 0 || Number(match.extra_goals_uit) > 0) && (
                     <div style={{ textAlign: 'center', fontSize: '0.75rem', fontWeight: 900, color: '#ADB5BD', marginTop: '-4px' }}>
                       Na verlengingen: {Number(match.thuis_score) + Number(match.extra_goals_thuis || 0)} - {Number(match.uit_score) + Number(match.extra_goals_uit || 0)}
@@ -604,7 +603,6 @@ export default function MatchenTab({
                       const isJuisteWinnaarNu = echt === pred; 
                       const is3PtDood = match.thuis_score > v.thuis_score || match.uit_score > v.uit_score;
 
-                      // FIX: Losers nu duidelijk zichtbaar dankzij donkere, doffe lay-out in plaats van transparant rood.
                       if (isMatchLive) {
                         if (!is3PtDood) {
                           if (isExactNu) {
@@ -656,6 +654,7 @@ export default function MatchenTab({
         })
       )}
 
+      {/* JORDEN'S GEHEIME GLUUR POP-UP */}
       {gluurPopUp !== null && isJorden && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div onClick={() => setGluurPopUp(null)} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.8)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#1A1423', padding: '20px', borderRadius: '20px', width: '90%', maxWidth: '350px', border: '2px solid #00E5FF', animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
@@ -739,4 +738,38 @@ export default function MatchenTab({
                 return (
                   <div key={m.id} style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 12px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: isDossierLive ? '1px solid #E30022' : '1px solid rgba(255,255,255,0.1)' }}>
                     <div>
-                      <div style={{ fontSize: '0.6rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '2px' }}>{new Date(m.datum).toLocaleDateString('nl
+                      <div style={{ fontSize: '0.6rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginBottom: '2px' }}>
+                        {new Date(m.datum).toLocaleDateString('nl-BE', { day: '2-digit', month: 'short' })} • {m.ronde}
+                        {isDossierLive && <span style={{color: '#E30022', marginLeft: '5px'}}>🔴 LIVE</span>}
+                      </div>
+                      <div style={{ fontWeight: 900, fontSize: '0.95rem', color: '#FFF', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <span style={{ fontSize: '0.65rem', color: '#6C757D' }}>vs</span> 
+                        {tegenstanderInfo.name} 
+                        <span style={{fontSize: '1rem'}}>{tegenstanderInfo.emoji}</span>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      {isDossierGespeeld ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <span style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem', color: uitslagKleur }}>
+                            {isThuis ? `${tScore} - ${uScore}` : `${uScore} - ${tScore}`}
+                          </span>
+                          <span style={{ fontSize: '0.7rem' }}>{statusIcoon}</span>
+                        </div>
+                      ) : (
+                        <div style={{ background: 'rgba(255,255,255,0.1)', color: '#ADB5BD', padding: '3px 8px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase' }}>
+                          Te spelen
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
