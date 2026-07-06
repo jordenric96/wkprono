@@ -24,9 +24,9 @@ const parseTeam = (teamString: string) => {
   let searchKey = cleanString.toLowerCase();
 
   const vertalingen: Record<string, string> = {
-    'brazil': 'Brazilië', 'brazilië': 'Brazilië',
-    'morocco': 'Marokko', 'marokko': 'Marokko',
-    'switzerland': 'Zwitserland', 'zwitserland': 'Zwitserland',
+    'brazil': 'Brazilië', 
+    'morocco': 'Marokko', 
+    'switzerland': 'Zwitserland',
     'bosnia and herzegovina': 'Bosnië', 'bosnia & herzegovina': 'Bosnië', 'bosnia': 'Bosnië', 'bosnië': 'Bosnië',
     'south korea': 'Zuid-Korea', 'zuid-korea': 'Zuid-Korea',
     'south africa': 'Zuid-Afrika', 'zuid-afrika': 'Zuid-Afrika',
@@ -51,7 +51,7 @@ const parseTeam = (teamString: string) => {
     'oekraïne': 'Oekraïne', 'ukraine': 'Oekraïne',
     'peru': 'Peru', 'panama': 'Panama',
     'egypt': 'Egypte', 'egypte': 'Egypte',
-    'tunisia': 'Tunesië', 'tunesië': 'Tunesië',
+    'tunesië': 'Tunesië', 'tunesië': 'Tunesië',
     'nieuw-zeeland': 'Nieuw-Zeeland', 'new zealand': 'Nieuw-Zeeland',
     'qatar': 'Qatar', 'ierland': 'Ierland', 'ireland': 'Ierland',
     'turkije': 'Turkije', 'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije',
@@ -575,6 +575,7 @@ export default function MatchenTab({
                     let scoreTekst = heeftIngevuld ? `${v.thuis_score}-${v.uit_score}` : 'Geen';
                     let icoontje = heeftIngevuld ? '🤔' : '❌';
                     let borderStyle = '1px solid transparent';
+                    let pillOpacity = 1;
 
                     if (isKnockout && heeftIngevuld && v.thuis_score === v.uit_score && v.winnaar_na_penaltys) {
                       const winInfo = parseTeam(v.winnaar_na_penaltys);
@@ -582,63 +583,61 @@ export default function MatchenTab({
                     }
 
                     if (match.thuis_score !== null && heeftIngevuld) {
-                      let echt = match.thuis_score > match.uit_score ? 1 : match.thuis_score < match.uit_score ? 2 : 0;
-                      let pred = v.thuis_score > v.uit_score ? 1 : v.thuis_score < v.uit_score ? 2 : 0;
+                      let echt = Number(match.thuis_score) > Number(match.uit_score) ? 1 : Number(match.thuis_score) < Number(match.uit_score) ? 2 : 0;
+                      let pred = Number(v.thuis_score) > Number(v.uit_score) ? 1 : Number(v.thuis_score) < Number(v.uit_score) ? 2 : 0;
                       
-                      const isExactNu = v.thuis_score === match.thuis_score && v.uit_score === match.uit_score;
-                      
-                      let isJuisteDoorstromerNu = false;
-                      if (isKnockout) {
-                        let uiteindelijkeEchteWinnaar = echt;
-                        if (echt === 0 && match.winnaar_na_penaltys === match.thuisploeg) uiteindelijkeEchteWinnaar = 1;
-                        if (echt === 0 && match.winnaar_na_penaltys === match.uitploeg) uiteindelijkeEchteWinnaar = 2;
-                        
-                        let uiteindelijkePredWinnaar = pred;
-                        if (pred === 0 && v.winnaar_na_penaltys === match.thuisploeg) uiteindelijkePredWinnaar = 1;
-                        if (pred === 0 && v.winnaar_na_penaltys === match.uitploeg) uiteindelijkePredWinnaar = 2;
-                        
-                        isJuisteDoorstromerNu = uiteindelijkeEchteWinnaar !== 0 && uiteindelijkeEchteWinnaar === uiteindelijkePredWinnaar;
+                      let punten = 0;
+                      if (Number(v.thuis_score) === Number(match.thuis_score) && Number(v.uit_score) === Number(match.uit_score)) {
+                          punten = 3;
+                      } else if (echt === pred) {
+                          if (isKnockout && echt === 0 && v.winnaar_na_penaltys && match.winnaar_na_penaltys && v.winnaar_na_penaltys === match.winnaar_na_penaltys) {
+                              punten = 2;
+                          } else {
+                              punten = 1;
+                          }
+                      } else {
+                          punten = 0;
                       }
 
-                      const isJuisteWinnaarNu = echt === pred; 
-                      const is3PtDood = match.thuis_score > v.thuis_score || match.uit_score > v.uit_score;
+                      const is3PtDood = Number(match.thuis_score) > Number(v.thuis_score) || Number(match.uit_score) > Number(v.uit_score);
 
-                      // FIX: Losers nu zwart en heel contrastrijk!
                       if (isMatchLive) {
-                        if (!is3PtDood) {
-                          if (isExactNu) {
-                            pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; borderStyle = '1px solid #CCFF00';
+                          if (!is3PtDood) {
+                              if (punten === 3) {
+                                  pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; borderStyle = '1px solid #CCFF00';
+                              } else {
+                                  pillBg = 'rgba(204, 255, 0, 0.1)'; 
+                                  pillColor = '#CCFF00'; 
+                                  borderStyle = '1px dashed #CCFF00'; 
+                                  icoontje = (punten > 0) ? '🤞' : '⏳';
+                              }
                           } else {
-                            pillBg = 'rgba(204, 255, 0, 0.1)'; 
-                            pillColor = '#CCFF00'; 
-                            borderStyle = '1px dashed #CCFF00'; 
-                            icoontje = (isJuisteWinnaarNu || isJuisteDoorstromerNu) ? '🤞' : '⏳';
+                              if (punten === 2) {
+                                  pillBg = '#7A00E6'; pillColor = '#FFF'; icoontje = '✌️'; borderStyle = '1px solid #7A00E6';
+                              } else if (punten === 1) {
+                                  pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; borderStyle = '1px solid #00E5FF';
+                              } else {
+                                  pillBg = 'rgba(0, 0, 0, 0.5)'; pillColor = 'rgba(255, 255, 255, 0.6)'; icoontje = '❌'; borderStyle = '1px solid rgba(255,255,255,0.1)'; 
+                                  pillOpacity = 0.35;
+                              }
                           }
-                        } else {
-                          if (isKnockout && isJuisteDoorstromerNu && !isJuisteWinnaarNu) {
-                            pillBg = '#7A00E6'; pillColor = '#FFF'; icoontje = '✌️'; borderStyle = '1px solid #7A00E6';
-                          } else if (isJuisteWinnaarNu || isJuisteDoorstromerNu) {
-                            pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; borderStyle = '1px solid #00E5FF';
-                          } else {
-                            pillBg = 'rgba(0, 0, 0, 0.5)'; pillColor = 'rgba(255, 255, 255, 0.6)'; icoontje = '❌'; borderStyle = '1px solid rgba(255,255,255,0.1)'; 
-                          }
-                        }
                       } else {
-                        if (isExactNu) { 
-                          pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; borderStyle = '1px solid #CCFF00';
-                        } else if (isKnockout && isJuisteDoorstromerNu && !isJuisteWinnaarNu) {
-                          pillBg = '#7A00E6'; pillColor = '#FFF'; icoontje = '✌️'; borderStyle = '1px solid #7A00E6';
-                        } else if (isJuisteWinnaarNu || isJuisteDoorstromerNu) { 
-                          pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; borderStyle = '1px solid #00E5FF';
-                        } else { 
-                          pillBg = 'rgba(0, 0, 0, 0.5)'; pillColor = 'rgba(255, 255, 255, 0.6)'; icoontje = '❌'; borderStyle = '1px solid rgba(255,255,255,0.1)';
-                        }
+                          if (punten === 3) { 
+                              pillBg = '#CCFF00'; pillColor = '#111827'; icoontje = '🎯'; borderStyle = '1px solid #CCFF00';
+                          } else if (punten === 2) {
+                              pillBg = '#7A00E6'; pillColor = '#FFF'; icoontje = '✌️'; borderStyle = '1px solid #7A00E6';
+                          } else if (punten === 1) { 
+                              pillBg = '#00E5FF'; pillColor = '#111827'; icoontje = '🟢'; borderStyle = '1px solid #00E5FF';
+                          } else { 
+                              pillBg = 'rgba(0, 0, 0, 0.5)'; pillColor = 'rgba(255, 255, 255, 0.6)'; icoontje = '❌'; borderStyle = '1px solid rgba(255,255,255,0.1)';
+                              pillOpacity = 0.35;
+                          }
                       }
                     }
 
                     return (
-                      <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: pillBg, border: borderStyle, padding: '4px 10px', borderRadius: '10px', minWidth: '55px', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)', transition: 'all 0.3s ease' }}>
-                        <span style={{ fontSize: '0.55rem', fontWeight: 900, color: pillColor, textTransform: 'uppercase', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
+                      <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: pillBg, border: borderStyle, opacity: pillOpacity, padding: '4px 10px', borderRadius: '10px', minWidth: '55px', flexShrink: 0, boxShadow: '0 2px 4px rgba(0,0,0,0.2)', transition: 'all 0.3s ease' }}>
+                        <span style={{ fontSize: '0.55rem', fontWeight: 900, color: pillColor, opacity: 0.8, textTransform: 'uppercase', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center' }}>
                           {spelerNaam}
                         </span>
                         <span style={{ fontSize: '0.75rem', fontWeight: 900, color: pillColor, whiteSpace: 'nowrap', display: 'flex', gap: '2px', alignItems: 'center' }}>
