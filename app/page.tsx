@@ -48,7 +48,7 @@ const normalizeString = (teamString: string) => {
     'oekraïne': 'Oekraïne', 'ukraine': 'Oekraïne',
     'peru': 'Peru', 'panama': 'Panama',
     'egypt': 'Egypte', 'egypte': 'Egypte',
-    'tunesië': 'Tunesië', 'tunesië': 'Tunesië',
+    'tunisia': 'Tunesië', 'tunesië': 'Tunesië',
     'nieuw-zeeland': 'Nieuw-Zeeland', 'new zealand': 'Nieuw-Zeeland',
     'qatar': 'Qatar', 'ierland': 'Ierland', 'ireland': 'Ierland',
     'turkije': 'Turkije', 'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije',
@@ -111,6 +111,11 @@ export default function Home() {
   
   const [showUrgentPopup, setShowUrgentPopup] = useState(true);
   const [urgenteMatchen, setUrgenteMatchen] = useState<{matchNaam: string, datum: string, ontbrekend: string[], ontbrekendIds: number[]}[]>([]);
+
+  // POLL STATES
+  const [heeftAlGestemd, setHeeftAlGestemd] = useState(false);
+  const [allePollStemmen, setAlleToernooiPollStemmen] = useState<any[]>([]);
+  const [pollVerstuurdStatus, setPollVerstuurdStatus] = useState('');
 
   const actieveTabRef = useRef(actieveTab);
   const actieveSpelerRef = useRef(actieveSpeler);
@@ -213,8 +218,8 @@ export default function Home() {
     const tijd36u = nuTijd + (36 * 60 * 60 * 1000);
 
     const { data: mData } = await supabase.from('matchen').select('*').order('datum', { ascending: true });
-    const { data: sData } = await supabase.from('spelers').select('id, naam, betaald').eq('betaald', true);
-    const { data: vData } = await supabase.from('match_voorspellingen').select('match_id, speler_id, thuis_score, uit_score, winnaar_na_penaltys').limit(10000);
+    const { data: sData = [] } = await supabase.from('spelers').select('id, naam, betaald').eq('betaald', true);
+    const { data: vData = [] } = await supabase.from('match_voorspellingen').select('match_id, speler_id, thuis_score, uit_score, winnaar_na_penaltys').limit(10000);
 
     if (!mData || !sData || !vData) return;
 
@@ -247,6 +252,34 @@ export default function Home() {
     setUrgenteMatchen(urgentList);
   };
 
+  // OPHALEN VAN DE POLL DATA
+  const haalPollDataOp = async (spelerId: number) => {
+    const { data: mijnStem } = await supabase.from('cl_poll').select('*').eq('speler_id', spelerId).maybeSingle();
+    if (mijnStem) {
+      setHeeftAlGestemd(true);
+    } else {
+      setHeeftAlGestemd(false);
+    }
+
+    if (actieveSpelerRef.current?.naam?.toLowerCase().includes('jorden ricour')) {
+      const { data: alleStemmen } = await supabase.from('cl_poll').select('*, spelers(naam)');
+      if (alleStemmen) setAlleToernooiPollStemmen(alleStemmen);
+    }
+  };
+
+  const stemInPoll = async (optie: string) => {
+    if (!actieveSpeler?.id) return;
+    setPollVerstuurdStatus('⏳...');
+    const { error } = await supabase.from('cl_poll').insert([{ speler_id: actieveSpeler.id, antwoord: optie }]);
+    if (!error) {
+      setPollVerstuurdStatus('✅ Bedankt voor je stem!');
+      setHeeftAlGestemd(true);
+      haalPollDataOp(actieveSpeler.id);
+    } else {
+      setPollVerstuurdStatus('❌ Fout bij opslaan.');
+    }
+  };
+
   useEffect(() => {
     if (!actieveSpeler) return;
 
@@ -257,6 +290,7 @@ export default function Home() {
       }).eq('id', actieveSpeler.id);
     };
     registreerLogin();
+    haalPollDataOp(actieveSpeler.id);
 
     const interval = setInterval(async () => {
       const { data } = await supabase.from('spelers').select('tijd_gespendeerd').eq('id', actieveSpeler.id).single();
@@ -456,10 +490,10 @@ export default function Home() {
   };
 
   const haalKlassementOp = async () => {
-    const { data: s, error: sErr } = await supabase.from('spelers').select('*');
-    const { data: m, error: mErr } = await supabase.from('matchen').select('*');
-    const { data: v, error: vErr } = await supabase.from('match_voorspellingen').select('*').limit(10000);
-    const { data: bonusV, error: bonusErr } = await supabase.from('toernooi_voorspellingen').select('*');
+    const { data: s = [], error: sErr } = await supabase.from('spelers').select('*');
+    const { data: m = [], error: mErr } = await supabase.from('matchen').select('*');
+    const { data: v = [], error: vErr } = await supabase.from('match_voorspellingen').select('*').limit(10000);
+    const { data: bonusV = [], error: bonusErr } = await supabase.from('toernooi_voorspellingen').select('*');
 
     if (sErr || mErr || vErr || bonusErr || !s || !m || !v || !bonusV) return;
 
@@ -469,7 +503,6 @@ export default function Home() {
     const halveFinalisten: string[] = [];
     let wkWinnaar = "";
 
-    // DE FIX VOOR DE STREAK: We halen hier de laatste 10 afgewerkte matchen op, gesorteerd van nieuw naar oud
     const gespeeldeMatchen = m.filter(ma => ma.thuis_score !== null).sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime());
     const laatste10Matchen = gespeeldeMatchen.slice(0, 10);
 
@@ -548,10 +581,9 @@ export default function Home() {
         }
       });
 
-      // DE FIX VOOR DE STREAK: Hier berekenen we de punten per speler per match uit de top 10
       const recent_scores = laatste10Matchen.map(match => {
         const vo = v.find(vo => vo.speler_id === sp.id && vo.match_id === match.id);
-        if (!vo || vo.thuis_score === null || vo.uit_score === null) return 0; // Niks ingevuld = 0 pt
+        if (!vo || vo.thuis_score === null || vo.uit_score === null) return 0;
         
         const isKnockout = match.ronde !== 'Groepsfase';
         let echteWinnaar = Number(match.thuis_score) > Number(match.uit_score) ? 1 : Number(match.thuis_score) < Number(match.uit_score) ? 2 : 0;
@@ -563,7 +595,7 @@ export default function Home() {
            return 1;
         }
         return 0;
-      }).reverse(); // Omdraaien zodat we in de UI van links (oud) naar rechts (nieuw) kunnen lezen
+      }).reverse();
 
       const bv = bonusV.find(b => b.speler_id === sp.id);
       const breakdown: {label: string, pt: number}[] = [];
@@ -587,7 +619,6 @@ export default function Home() {
         });
       }
       
-      // recent_scores wordt hier aan het klassement-object van de speler meegegeven
       return { 
         ...sp, prono_score: pronoP, bonus_score: bonusP, totaal_score: pronoP + bonusP, 
         exact: ex, winnaarCorrect: wc, fout: f, bonus_breakdown: breakdown, recent_scores 
@@ -656,7 +687,7 @@ export default function Home() {
     const code = invoerCode.trim();
     
     if (!naam || !code) { setStatus('Vul je naam en een pincode in! 🚩'); return; }
-    if (alleSpelers.some(s => s.naam.toLowerCase() === naam.toLowerCase())) { setStatus('Deze naam bestaat al! Kies onderaan voor inloggen. 🚩'); return; }
+    if (alleSpelers.some(s => s.naam.toLowerCase() === naam.toLowerCase())) { setStatus('Deze naam bestaat al! Choose onderaan voor inloggen. 🚩'); return; }
 
     setStatus('Aanmaken... ⏳');
     const { data, error } = await supabase.from('spelers').insert([{ naam: naam, code: code, betaald: false }]).select().single();
@@ -743,18 +774,22 @@ export default function Home() {
         .full-input:focus { border-color: var(--wk-aqua); box-shadow: 0 0 15px rgba(0, 229, 255, 0.2); }
         .btn-primary { width: 100%; padding: 18px; border-radius: 16px; background: var(--wk-blue); color: #FFF; border: none; font-weight: 900; font-size: 1.2rem; cursor: pointer; box-shadow: 0 4px 20px rgba(43, 0, 255, 0.5); transition: 0.2s; margin-top: 5px; display: block; text-transform: uppercase; letter-spacing: 1px; }
         .btn-primary:active { transform: scale(0.98); }
+
+        /* POLL STYLES */
+        .poll-container { width: 100%; max-width: 500px; background: #1A1423; border: 2px solid var(--wk-aqua); border-radius: 20px; padding: 20px; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(0, 229, 255, 0.2); }
+        .poll-title { font-family: 'Bebas Neue', sans-serif; fontSize: 1.8rem; color: var(--wk-aqua); text-align: center; margin: 0 0 15px 0; letter-spacing: 1px; }
+        .poll-btn { width: 100%; padding: 12px; margin-bottom: 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #FFF; font-weight: 800; font-size: 0.9rem; cursor: pointer; transition: 0.2s; text-align: center; }
+        .poll-btn:hover { background: rgba(0, 229, 255, 0.15); border-color: var(--wk-aqua); }
       `}</style>
 
       {toonUrgentPopup && actieveSpeler && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(9, 5, 20, 0.85)', backdropFilter: 'blur(10px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(9, 5, 20, 0.85)', backdropFilter: 'blur(10px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifycontent: 'center', padding: '20px' }}>
           <div style={{ background: '#1A1423', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '380px', position: 'relative', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid var(--wk-orange)', maxHeight: '90vh', overflowY: 'auto' }}>
             <button onClick={() => setShowUrgentPopup(false)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.1)', border: 'none', width: '30px', height: '30px', borderRadius: '50%', fontWeight: 900, color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-            
             <div style={{ textAlign: 'center', marginBottom: '10px' }}>
               <div style={{ fontSize: '3rem', lineHeight: 1, marginBottom: '10px' }}>⏰</div>
               <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: 'var(--wk-orange)', margin: '0 0 5px 0', lineHeight: 1, letterSpacing: '1px' }}>VERGEET JE PRONO NIET!</h2>
               <p style={{ fontSize: '0.85rem', color: '#ADB5BD', fontWeight: 800, margin: '0 0 20px 0' }}>Je hebt nog {urgenteMatchen.filter(u => u.ontbrekendIds.includes(actieveSpeler.id)).length} match(en) die binnen de 36 uur starten en waar je nog geen voorspelling voor hebt:</p>
-              
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', textAlign: 'left' }}>
                 {urgenteMatchen.filter(u => u.ontbrekendIds.includes(actieveSpeler.id)).map((u, i) => {
                   const matchDate = new Date(u.datum);
@@ -764,13 +799,12 @@ export default function Home() {
                   return (
                     <div key={i} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px', borderLeft: '4px solid var(--wk-orange)' }}>
                       <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#FFF', marginBottom: '4px' }}>{u.matchNaam}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--wk-orange)', fontWeight: 900, textTransform: 'uppercase' }}>⏳ {dagStr} om {tijdStr}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--wk-orange)', fontWeight: 900, textTransform: 'uppercase' }}>⏳ {dayStr} om {tijdStr}</div>
                     </div>
                   )
                 })}
               </div>
             </div>
-            
             <button onClick={() => setShowUrgentPopup(false)} style={{ width: '100%', background: 'var(--wk-orange)', color: '#FFF', border: 'none', padding: '12px', borderRadius: '12px', fontWeight: 900, marginTop: '20px', cursor: 'pointer' }}>IK VUL ZE METEEN IN! ⚽</button>
           </div>
         </div>
@@ -802,7 +836,7 @@ export default function Home() {
 
       {toast && (
         <div onClick={() => { setActieveTab('kleedkamer'); setToast(null); }} style={{ position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', background: '#1A1423', border: '2px solid var(--wk-lime)', padding: '12px 16px', borderRadius: '16px', zIndex: 9999, boxShadow: '0 10px 30px rgba(0,0,0,0.5)', display: 'flex', gap: '12px', alignItems: 'center', width: '90%', maxWidth: '350px', cursor: 'pointer' }}>
-          <div style={{ background: 'var(--wk-lime)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>💬</div>
+          <div style={{ background: 'var(--wk-lime)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifycontent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>💬</div>
           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}><span style={{ fontWeight: 900, color: '#FFF', fontSize: '0.8rem', marginBottom: '2px' }}>{toast.naam}</span><span style={{ color: '#ADB5BD', fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 800 }}>{toast.bericht}</span></div>
         </div>
       )}
@@ -815,6 +849,64 @@ export default function Home() {
             <div className="speler-badge"><span className="avatar-icon">👤</span><span>{actieveSpeler.naam}</span></div>
           </div>
         )}
+
+        {/* ==================== DE NIEUWE CL POLL LOGICA ==================== */}
+        {actieveSpeler && (actieveSpeler.betaald || isJorden) && (!heeftAlGestemd || isJorden) && (
+          <div className="poll-container">
+            <h2 className="poll-title">🔮 CHAMPIONS LEAGUE PRONOSTIEK?</h2>
+            
+            {!heeftAlGestemd && !isJorden && (
+              <>
+                <p style={{ fontSize: '0.8rem', color: '#ADB5BD', textAlign: 'center', fontWeight: 800, margin: '0 0 15px 0' }}>
+                  Het einde van het WK is in zicht! Wie heeft er zin om volgend seizoen mee te doen met een pronostiek over de Champions League?
+                </p>
+                <button className="poll-btn" onClick={() => stemInPoll('Ja, met €10 inzet')}>🔥 Ja, met €10 inzet</button>
+                <button className="poll-btn" onClick={() => stemInPoll('Ja, zonder inleg')}>🤝 Ja, zonder inleg</button>
+                <button className="poll-btn" onClick={() => stemInPoll('Nee, bedankt')}>💤 Nee, liever niet</button>
+                {pollVerstuurdStatus && <p style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--wk-lime)', textAlign: 'center', marginTop: '10px' }}>{pollVerstuurdStatus}</p>}
+              </>
+            )}
+
+            {isJorden && (
+              <div style={{ marginTop: '5px' }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--wk-lime)', fontWeight: 900, textAlign: 'center', marginBottom: '15px', textTransform: 'uppercase' }}>
+                  🛡️ GEHEIM JORDEN DASHBOARD ({allePollStemmen.length} stemmen)
+                </p>
+                
+                {allePollStemmen.length === 0 ? (
+                  <p style={{ fontSize: '0.8rem', color: '#ADB5BD', fontStyle: 'italic', textAlign: 'center' }}>Nog geen stemmen ontvangen...</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '250px', overflowY: 'auto' }}>
+                    {allePollStemmen.map((s: any) => (
+                      <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '8px 12px', borderRadius: '10px', borderLeft: '3px solid var(--wk-aqua)' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#FFF' }}>{s.spelers?.naam || 'Onbekend'}</span>
+                        <span style={{ 
+                          fontSize: '0.75rem', fontWeight: 900, padding: '4px 10px', borderRadius: '8px',
+                          background: s.antwoord.includes('€10') ? 'rgba(204,255,0,0.15)' : s.antwoord.includes('zonder') ? 'rgba(0,229,255,0.15)' : 'rgba(227,0,34,0.15)',
+                          color: s.antwoord.includes('€10') ? 'var(--wk-lime)' : s.antwoord.includes('zonder') ? 'var(--wk-aqua)' : 'var(--wk-red)'
+                        }}>
+                          {s.antwoord}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {!heeftAlGestemd && (
+                  <div style={{ marginTop: '20px', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '15px' }}>
+                    <p style={{ fontSize: '0.75rem', color: '#ADB5BD', fontWeight: 800, textAlign: 'center', marginBottom: '10px' }}>Je hebt zelf nog niet gestemd:</p>
+                    <div style={{ display: 'flex', gap: '5px' }}>
+                      <button style={{ flex: 1, fontSize: '0.65rem', padding: '8px' }} className="poll-btn" onClick={() => stemInPoll('Ja, met €10 inzet')}>€10</button>
+                      <button style={{ flex: 1, fontSize: '0.65rem', padding: '8px' }} className="poll-btn" onClick={() => stemInPoll('Ja, zonder inleg')}>Gratis</button>
+                      <button style={{ flex: 1, fontSize: '0.65rem', padding: '8px' }} className="poll-btn" onClick={() => stemInPoll('Nee')}>Nee</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        {/* ================================================================== */}
 
         {actieveSpeler && actieveTab === 'ranking' && (
           <div style={{ width: '100%', marginBottom: '20px' }}>
