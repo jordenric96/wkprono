@@ -48,7 +48,7 @@ const normalizeString = (teamString: string) => {
     'oekraïne': 'Oekraïne', 'ukraine': 'Oekraïne',
     'peru': 'Peru', 'panama': 'Panama',
     'egypt': 'Egypte', 'egypte': 'Egypte',
-    'tunisia': 'Tunesië', 'tunesië': 'Tunesië',
+    'tunesië': 'Tunesië', 'tunesië': 'Tunesië',
     'nieuw-zeeland': 'Nieuw-Zeeland', 'new zealand': 'Nieuw-Zeeland',
     'qatar': 'Qatar', 'ierland': 'Ierland', 'ireland': 'Ierland',
     'turkije': 'Turkije', 'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije',
@@ -469,6 +469,10 @@ export default function Home() {
     const halveFinalisten: string[] = [];
     let wkWinnaar = "";
 
+    // DE FIX VOOR DE STREAK: We halen hier de laatste 10 afgewerkte matchen op, gesorteerd van nieuw naar oud
+    const gespeeldeMatchen = m.filter(ma => ma.thuis_score !== null).sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime());
+    const laatste10Matchen = gespeeldeMatchen.slice(0, 10);
+
     m.forEach(match => {
       if (match.id === 101 || match.id === 102) {
         if (match.thuisploeg && !match.thuisploeg.toLowerCase().includes('winnaar')) halveFinalisten.push(match.thuisploeg);
@@ -529,7 +533,7 @@ export default function Home() {
           let echteWinnaar = Number(match.thuis_score) > Number(match.uit_score) ? 1 : Number(match.thuis_score) < Number(match.uit_score) ? 2 : 0;
           let predWinnaar = Number(vo.thuis_score) > Number(vo.uit_score) ? 1 : Number(vo.thuis_score) < Number(vo.uit_score) ? 2 : 0;
 
-          if (vo.thuis_score === match.thuis_score && vo.uit_score === match.uit_score) { 
+          if (Number(vo.thuis_score) === Number(match.thuis_score) && Number(vo.uit_score) === Number(match.uit_score)) { 
             pronoP += 3; ex++; 
           } else if (echteWinnaar === predWinnaar) { 
             if (isKnockout && echteWinnaar === 0 && vo.winnaar_na_penaltys && match.winnaar_na_penaltys && vo.winnaar_na_penaltys === match.winnaar_na_penaltys) {
@@ -543,6 +547,23 @@ export default function Home() {
           }
         }
       });
+
+      // DE FIX VOOR DE STREAK: Hier berekenen we de punten per speler per match uit de top 10
+      const recent_scores = laatste10Matchen.map(match => {
+        const vo = v.find(vo => vo.speler_id === sp.id && vo.match_id === match.id);
+        if (!vo || vo.thuis_score === null || vo.uit_score === null) return 0; // Niks ingevuld = 0 pt
+        
+        const isKnockout = match.ronde !== 'Groepsfase';
+        let echteWinnaar = Number(match.thuis_score) > Number(match.uit_score) ? 1 : Number(match.thuis_score) < Number(match.uit_score) ? 2 : 0;
+        let predWinnaar = Number(vo.thuis_score) > Number(vo.uit_score) ? 1 : Number(vo.thuis_score) < Number(vo.uit_score) ? 2 : 0;
+
+        if (Number(vo.thuis_score) === Number(match.thuis_score) && Number(vo.uit_score) === Number(match.uit_score)) return 3;
+        if (echteWinnaar === predWinnaar) {
+           if (isKnockout && echteWinnaar === 0 && vo.winnaar_na_penaltys && match.winnaar_na_penaltys && vo.winnaar_na_penaltys === match.winnaar_na_penaltys) return 2;
+           return 1;
+        }
+        return 0;
+      }).reverse(); // Omdraaien zodat we in de UI van links (oud) naar rechts (nieuw) kunnen lezen
 
       const bv = bonusV.find(b => b.speler_id === sp.id);
       const breakdown: {label: string, pt: number}[] = [];
@@ -566,9 +587,10 @@ export default function Home() {
         });
       }
       
+      // recent_scores wordt hier aan het klassement-object van de speler meegegeven
       return { 
         ...sp, prono_score: pronoP, bonus_score: bonusP, totaal_score: pronoP + bonusP, 
-        exact: ex, winnaarCorrect: wc, fout: f, bonus_breakdown: breakdown 
+        exact: ex, winnaarCorrect: wc, fout: f, bonus_breakdown: breakdown, recent_scores 
       };
     });
 
@@ -576,7 +598,7 @@ export default function Home() {
     
     let eindStats = stats.map(sp => {
       if (!matchenGespeeld) {
-        return { ...sp, totaal_score: 0, prono_score: 0, bonus_score: 0, exact: 0, winnaarCorrect: 0, fout: 0, bonus_breakdown: [] };
+        return { ...sp, totaal_score: 0, prono_score: 0, bonus_score: 0, exact: 0, winnaarCorrect: 0, fout: 0, bonus_breakdown: [], recent_scores: [] };
       }
       return sp; 
     });
@@ -660,6 +682,7 @@ export default function Home() {
 
   const moetUrgentInvullen = actieveSpeler && urgenteMatchen.some(u => u.ontbrekendIds.includes(actieveSpeler.id));
   const toonUrgentPopup = showUrgentPopup && moetUrgentInvullen;
+
   const toonBonusPopup = !toonUrgentPopup && toonInstallPopup && actieveSpeler && ontbrekendeBonusIds.includes(actieveSpeler.id);
 
   return (
