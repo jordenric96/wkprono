@@ -1,23 +1,32 @@
 // src/components/RankingTab.tsx
 import React, { useState } from 'react';
 
+// Handige helper om de lange bonusnamen om te zetten naar prachtige, compacte icoon-badges
+const krijgBonusBadge = (label: string) => {
+  const l = label.toLowerCase();
+  if (l.includes('goals')) return { tekst: 'Goals 🎯', bg: 'rgba(204, 255, 0, 0.15)', grens: 'var(--wk-lime)' };
+  if (l.includes('gele')) return { tekst: 'Geel 🟨', bg: 'rgba(0, 225, 255, 0.15)', grens: 'var(--wk-aqua)' };
+  if (l.includes('rode')) return { tekst: 'Rood 🟥', bg: 'rgba(227, 0, 34, 0.15)', grens: 'var(--wk-red)' };
+  if (l.includes('wereldkampioen')) return { tekst: 'WK Winnaar 👑', bg: 'rgba(255, 215, 0, 0.2)', grens: '#FFD700' };
+  if (l.includes('aanval')) return { tekst: 'Aanval ⚽', bg: 'rgba(43, 0, 255, 0.15)', grens: 'var(--wk-blue)' };
+  if (l.includes('verdediging')) return { tekst: 'Defensie 🛡️', bg: 'rgba(122, 0, 230, 0.15)', grens: 'var(--wk-purple)' };
+  if (l.includes('halve')) {
+    // Haal de teamnaam uit de tekst, bijv. "Halve Finalist (België)" -> "België"
+    const land = label.match(/\(([^)]+)\)/);
+    return { tekst: `HF: ${land ? land[1] : '💎'}`, bg: 'rgba(255,255,255,0.05)', grens: 'rgba(255,255,255,0.3)' };
+  }
+  return { tekst: '💎 Bonus', bg: 'rgba(255,255,255,0.05)', grens: 'rgba(255,255,255,0.2)' };
+};
+
 export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, isJorden }: any) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [toonEindklassement, setToonEindklassement] = useState(false);
 
-  // Zorgt ervoor dat we dynamisch sorteren afhankelijk van welke tab je aanklikt
+  // Sortering staat nu permanent en rotsvast op TOTAAL_SCORE (Match + Bonus)
   const gesorteerdKlassement = [...klassement].sort((a, b) => {
-    if (!toonEindklassement) {
-      if (b.prono_score !== a.prono_score) return b.prono_score - a.prono_score;
-      if (b.exact !== a.exact) return b.exact - a.exact;
-      if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect;
-      return a.naam.localeCompare(b.naam);
-    } else {
-      if (b.totaal_score !== a.totaal_score) return b.totaal_score - a.totaal_score;
-      if (b.exact !== a.exact) return b.exact - a.exact;
-      if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect;
-      return a.naam.localeCompare(b.naam);
-    }
+    if (b.totaal_score !== a.totaal_score) return b.totaal_score - a.totaal_score;
+    if (b.exact !== a.exact) return b.exact - a.exact;
+    if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect;
+    return a.naam.localeCompare(b.naam);
   });
 
   return (
@@ -28,47 +37,33 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
           align-items: center; justify-content: center; font-size: 0.5rem; 
           font-weight: 900; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.4);
         }
-        /* FLASHY WK KLEUREN VOOR DE VORM */
         .dot-3 { background: var(--wk-lime); color: #111827; }
         .dot-2 { background: var(--wk-purple); color: #FFF; }
         .dot-1 { background: var(--wk-aqua); color: #111827; }
         .dot-0 { background: var(--wk-red); color: #FFF; }
         
+        .bonus-pill {
+          font-size: 0.6rem; font-weight: 900; padding: 2px 6px; 
+          border-radius: 6px; text-transform: uppercase; white-space: nowrap;
+          border: 1px solid transparent; display: inline-flex; align-items: center;
+        }
         .hide-scroll::-webkit-scrollbar { display: none; }
         .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
-      {/* UITLEG BOX - Waarom 2 klassementen */}
-      <div style={{ background: '#1A1423', borderRadius: '16px', padding: '15px', marginBottom: '5px', border: '1px solid rgba(255,255,255,0.1)', borderLeft: '4px solid var(--wk-aqua)' }}>
-         <h3 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: 'var(--wk-aqua)', textTransform: 'uppercase', fontWeight: 900 }}>💡 Waarom twee klassementen?</h3>
-         <div style={{ fontSize: '0.75rem', color: '#ADB5BD', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-           <div><strong style={{color: '#FFF'}}>1. Regulier Klassement:</strong> Dit zijn puur en alleen je punten uit de matchen. Winnaars hiervan strijden voor een deel van de reguliere prijzenpot.</div>
-           <div><strong style={{color: '#FFF'}}>2. Eindklassement (+ Bonussen):</strong> Dit zijn je matchpunten én je bonuspunten samen. De top van dit klassement bepaalt de absolute eindwinnaar(s)!</div>
-         </div>
-      </div>
-
-      {/* TOGGLE KNOPPEN */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-        <button 
-           onClick={() => setToonEindklassement(false)}
-           style={{ flex: 1, padding: '12px 5px', borderRadius: '12px', background: !toonEindklassement ? 'var(--wk-blue)' : 'rgba(255,255,255,0.05)', color: !toonEindklassement ? '#FFF' : '#ADB5BD', fontWeight: 900, border: !toonEindklassement ? '2px solid var(--wk-blue)' : '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.8rem' }}
-        >
-           ⚽ REGULIER
-        </button>
-        <button 
-           onClick={() => setToonEindklassement(true)}
-           style={{ flex: 1, padding: '12px 5px', borderRadius: '12px', background: toonEindklassement ? 'var(--wk-purple)' : 'rgba(255,255,255,0.05)', color: toonEindklassement ? '#FFF' : '#ADB5BD', fontWeight: 900, border: toonEindklassement ? '2px solid var(--wk-purple)' : '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.8rem' }}
-        >
-           🏆 EINDKLASSEMENT
-        </button>
+      {/* HEADER KROON BANNER */}
+      <div style={{ background: 'linear-gradient(135deg, #1A1423 0%, #090514 100%)', borderRadius: '16px', padding: '15px', marginBottom: '5px', border: '2px solid var(--wk-lime)', textAlign: 'center', boxShadow: '0 4px 20px rgba(204, 255, 0, 0.15)' }}>
+         <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: 'var(--wk-lime)', margin: 0, letterSpacing: '1.5px', lineHeight: 1 }}>
+           🏆 OFFICIEEL EINDKLASSEMENT
+         </h2>
+         <p style={{ fontSize: '0.7rem', color: '#ADB5BD', margin: '4px 0 0 0', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+           Matchvoorspellingen + Toernooibonussen gecombineerd
+         </p>
       </div>
       
       {gesorteerdKlassement.map((speler: any, index: number) => {
         const isMe = actieveSpeler?.id === speler.id;
         const isTop3 = index < 3;
-        
-        // Laat de juiste score zien afhankelijk van de gekozen knop
-        const getoondeScore = toonEindklassement ? speler.totaal_score : speler.prono_score;
         
         return (
           <div key={speler.id} style={{
@@ -81,7 +76,7 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
             
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               
-              {/* LINKER KANT: Rank, Naam en Vorm */}
+              {/* LINKER KANT: Rank, Naam, Vorm & Bonussen */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 1, minWidth: 0 }}>
                 <div style={{ 
                   width: '32px', height: '32px', borderRadius: '50%', 
@@ -98,9 +93,9 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
                     {speler.naam} {!speler.betaald && <span style={{fontSize: '0.7rem'}} title="Nog niet betaald">💰❌</span>}
                   </div>
                   
-                  {/* VORM BALKJE - Strak en altijd op 1 lijn */}
+                  {/* VORM BALKJE - Altijd strak 8 bolletjes */}
                   {speler.recent_scores && speler.recent_scores.length > 0 && (
-                    <div className="hide-scroll" style={{ display: 'flex', alignItems: 'center', marginTop: '6px', overflowX: 'auto' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginTop: '6px' }}>
                       <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginRight: '6px', flexShrink: 0 }}>VORM:</span>
                       <div style={{ display: 'flex', gap: '3px', flexWrap: 'nowrap' }}>
                         {speler.recent_scores.map((score: number, i: number) => (
@@ -109,20 +104,34 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
                       </div>
                     </div>
                   )}
+
+                  {/* MINI BONUS BADGES DIRECT VISUEEL OP DE KAART */}
+                  {speler.bonus_breakdown && speler.bonus_breakdown.length > 0 && (
+                    <div className="hide-scroll" style={{ display: 'flex', gap: '4px', marginTop: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
+                      {speler.bonus_breakdown.map((b: any, i: number) => {
+                        const badgeStyle = krijgBonusBadge(b.label);
+                        return (
+                          <span key={i} className="bonus-pill" style={{ background: badgeStyle.bg, border: `1px solid ${badgeStyle.grens}`, color: badgeStyle.grens }}>
+                            {badgeStyle.tekst}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
               
-              {/* RECHTER KANT: Punten */}
+              {/* RECHTER KANT: Grote Totaalscore */}
               <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '10px' }}>
-                <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: isTop3 ? 'var(--wk-lime)' : '#FFF', lineHeight: 1 }}>
-                  {getoondeScore}
+                <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.4rem', color: isTop3 ? 'var(--wk-lime)' : '#FFF', lineHeight: 1 }}>
+                  {speler.totaal_score}
                 </div>
                 <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginTop: '2px' }}>Punten</div>
               </div>
 
             </div>
 
-            {/* DETAILS POP-UP */}
+            {/* UITGEBREIDE VERDELING BIJ TIKKEN */}
             {expandedId === speler.id && (
               <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed rgba(255,255,255,0.2)' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', textAlign: 'center', marginBottom: '15px' }}>
@@ -139,16 +148,24 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
                     <div style={{ fontSize: '0.6rem', color: '#ADB5BD', fontWeight: 900, textTransform: 'uppercase' }}>Fout (0pt)</div>
                   </div>
                 </div>
+
+                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 800, color: '#FFF' }}>
+                   <span style={{ color: '#ADB5BD' }}>Match Punten:</span>
+                   <span>{speler.prono_score} pt</span>
+                </div>
+                <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 800, color: '#FFF', marginTop: '4px' }}>
+                   <span style={{ color: 'var(--wk-lime)' }}>Bonus Punten:</span>
+                   <span style={{ color: 'var(--wk-lime)' }}>+{speler.bonus_score} pt</span>
+                </div>
                 
-                {/* Toon de behaalde bonussen enkel als ze in het Eindklassement zitten (of hou het altijd zichtbaar als ze iets gehaald hebben) */}
-                {toonEindklassement && speler.bonus_breakdown && speler.bonus_breakdown.length > 0 && (
-                  <div style={{ background: 'rgba(204, 255, 0, 0.05)', border: '1px solid rgba(204, 255, 0, 0.2)', borderRadius: '12px', padding: '10px' }}>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--wk-lime)', fontWeight: 900, textTransform: 'uppercase', marginBottom: '8px' }}>💎 Behaalde Bonussen:</div>
+                {speler.bonus_breakdown && speler.bonus_breakdown.length > 0 && (
+                  <div style={{ background: 'rgba(204, 255, 0, 0.05)', border: '1px solid rgba(204, 255, 0, 0.2)', borderRadius: '12px', padding: '10px', marginTop: '10px' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--wk-lime)', fontWeight: 900, textTransform: 'uppercase', marginBottom: '8px' }}>💎 Volledig Bonus Overzicht:</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       {speler.bonus_breakdown.map((b: any, i: number) => (
                         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 800, color: '#FFF' }}>
                           <span>{b.label}</span>
-                          <span style={{ color: 'var(--wk-lime)' }}>+{b.pt}</span>
+                          <span style={{ color: 'var(--wk-lime)' }}>+{b.pt} pt</span>
                         </div>
                       ))}
                     </div>
