@@ -1,213 +1,115 @@
 // src/components/RankingTab.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 
-// De felle WK Kleuren
-const cardThemes = [
-  { hex: '#2B00FF' }, // Blauw
-  { hex: '#7A00E6' }, // Paars
-  { hex: '#E30022' }, // Rood
-  { hex: '#CCFF00' }, // Lime Groen
-  { hex: '#00E5FF' }  // Cyaan
-];
-
-// De harde TV-Broadcast balk (Horizontaal georiënteerd voor de header)
-const tvBroadcastBar = 'linear-gradient(90deg, #2B00FF 0%, #2B00FF 16.6%, #7A00E6 16.6%, #7A00E6 33.3%, #E30022 33.3%, #E30022 50%, #FF6B00 50%, #FF6B00 66.6%, #CCFF00 66.6%, #CCFF00 83.3%, #00E5FF 83.3%, #00E5FF 100%)';
-
-export default function RankingTab({ klassement = [], actieveSpeler, toggleBetaald, isJorden }: any) {
-  const [modus, setModus] = useState('tussenstand'); 
-  const [expandedBonusId, setExpandedBonusId] = useState<number | null>(null);
-
-  // --- AUTO-SCROLL NAAR JEZELF ---
-  useEffect(() => {
-    if (actieveSpeler?.id) {
-      const timer = setTimeout(() => {
-        const element = document.getElementById(`speler-${actieveSpeler.id}`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [actieveSpeler?.id, modus]);
-
-  // Sorteer de spelers
-  const gesorteerd = [...klassement].sort((a: any, b: any) => {
-    if (modus === 'tussenstand') {
-      if (b.prono_score !== a.prono_score) return b.prono_score - a.prono_score;
-      if (b.exact !== a.exact) return b.exact - a.exact;
-      if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect;
-    } else {
-      if (b.totaal_score !== a.totaal_score) return b.totaal_score - a.totaal_score;
-      if (b.exact !== a.exact) return b.exact - a.exact;
-      if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect;
-    }
-    return (a.naam || '').localeCompare(b.naam || '');
-  });
+export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, isJorden }: any) {
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-      
-      {/* MENU KNOPPEN */}
-      <div style={{ display: 'flex', background: '#090514', borderRadius: '16px', padding: '6px', border: '1px solid rgba(255,255,255,0.1)', marginBottom: '4px' }}>
-        <button
-          onClick={() => { setModus('tussenstand'); setExpandedBonusId(null); }}
-          style={{
-            flex: 1, padding: '10px', borderRadius: '12px', border: 'none', fontWeight: 900, cursor: 'pointer',
-            background: modus === 'tussenstand' ? '#FFF' : 'transparent',
-            color: modus === 'tussenstand' ? '#000' : '#ADB5BD',
-            transition: 'all 0.3s'
-          }}
-        >
-          TUSSENSTAND
-        </button>
-        <button
-          onClick={() => { setModus('eindstand'); }}
-          style={{
-            flex: 1, padding: '10px', borderRadius: '12px', border: 'none', fontWeight: 900, cursor: 'pointer',
-            background: modus === 'eindstand' ? '#FFF' : 'transparent',
-            color: modus === 'eindstand' ? '#000' : '#ADB5BD',
-            transition: 'all 0.3s'
-          }}
-        >
-          EINDSTAND
-        </button>
-      </div>
-
-      {/* DUIDELIJKE UITLEG BANNERS */}
-      {modus === 'tussenstand' ? (
-        <div style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '10px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.75rem', color: '#ADB5BD', margin: 0, fontWeight: 800 }}>
-            ℹ️ <strong style={{color: '#FFF'}}>ZUIVERE TUSSENSTAND</strong>: Puur de matchen, zónder bonusvragen.
-          </p>
-        </div>
-      ) : (
-        <div style={{ background: 'rgba(204, 255, 0, 0.1)', padding: '10px', borderRadius: '12px', border: '1px solid rgba(204, 255, 0, 0.3)', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.75rem', color: '#FFF', margin: 0, fontWeight: 800 }}>
-            ⚠️ <strong style={{color: '#CCFF00'}}>TELT VOOR DE PRIJZEN</strong>: Inclusief bonus. Tik op een speler voor details.
-          </p>
-        </div>
-      )}
-
-      {/* TV BROADCAST HEADER BAR */}
-      <div style={{ 
-        width: '100%', 
-        height: '6px', 
-        background: tvBroadcastBar, 
-        borderRadius: '3px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.5)',
-        marginTop: '5px',
-        marginBottom: '5px'
-      }} />
-
-      {/* KLASSEMENT LIJST (NEON WATERVAL) */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {gesorteerd.map((speler: any, index: number) => {
-          const isMij = speler.id === actieveSpeler?.id;
-          const isExpanded = expandedBonusId === speler.id;
-          const theme = cardThemes[index % cardThemes.length];
-          
-          let rankIcon = <span style={{ opacity: 0.5, color: '#FFF' }}>{index + 1}</span>;
-          if (index === 0) rankIcon = <span style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'}}>🥇</span>;
-          if (index === 1) rankIcon = <span style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'}}>🥈</span>;
-          if (index === 2) rankIcon = <span style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))'}}>🥉</span>;
-
-          return (
-            <div 
-              id={`speler-${speler.id}`}
-              key={speler.id} 
-              onClick={() => { if (modus === 'eindstand') setExpandedBonusId(isExpanded ? null : speler.id); }}
-              style={{ 
-                // ESPORTS DASHBOARD STYLING
-                background: isMij ? `linear-gradient(90deg, ${theme.hex}25 0%, #1A1423 100%)` : '#1A1423',
-                border: isMij ? `1px solid ${theme.hex}80` : '1px solid rgba(255,255,255,0.03)',
-                borderLeft: `8px solid ${theme.hex}`, 
-                borderRadius: '12px', 
-                padding: '12px 14px', 
-                cursor: modus === 'eindstand' ? 'pointer' : 'default',
-                transition: 'all 0.2s',
-                transform: isMij ? 'scale(1.02)' : 'scale(1)', 
-                boxShadow: isMij ? `0 0 20px ${theme.hex}30, 0 4px 15px rgba(0,0,0,0.5)` : '0 4px 10px rgba(0,0,0,0.3)',
-                position: 'relative',
-                zIndex: isMij ? 10 : 1
-              }}
-            >
+      <style>{`
+        .streak-dot { 
+          width: 16px; height: 16px; border-radius: 50%; display: flex; 
+          align-items: center; justify-content: center; font-size: 0.6rem; 
+          font-weight: 900; flex-shrink: 0; 
+        }
+        .dot-3 { background: #CCFF00; color: #111827; }
+        .dot-2 { background: #7A00E6; color: #FFF; }
+        .dot-1 { background: #00E5FF; color: #111827; }
+        .dot-0 { background: rgba(0,0,0,0.5); color: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.1); }
+      `}</style>
+      {klassement.map((speler: any, index: number) => {
+        const isMe = actieveSpeler?.id === speler.id;
+        const isTop3 = index < 3;
+        
+        return (
+          <div key={speler.id} style={{
+            background: isMe ? 'linear-gradient(135deg, rgba(43,0,255,0.4), rgba(43,0,255,0.1))' : 'rgba(255,255,255,0.05)',
+            border: isMe ? '2px solid var(--wk-blue)' : '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '16px', padding: '15px', display: 'flex', flexDirection: 'column',
+            boxShadow: isMe ? '0 4px 15px rgba(43,0,255,0.3)' : 'none',
+            cursor: 'pointer', transition: 'all 0.2s ease'
+          }} onClick={() => setExpandedId(expandedId === speler.id ? null : speler.id)}>
+            
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ fontSize: '1.2rem', width: '25px', textAlign: 'center', fontWeight: 900 }}>{rankIcon}</div>
-                
-                <div style={{ flex: 1 }}>
-                  <div style={{ 
-                    fontWeight: 900, 
-                    fontSize: '1.1rem', 
-                    color: isMij ? theme.hex : '#FFF', 
-                    letterSpacing: '0.5px',
-                    textShadow: isMij ? `0 0 10px ${theme.hex}50` : 'none'
-                  }}>
-                    {speler.naam}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', marginTop: '4px', fontWeight: 800, color: '#6C757D' }}>
-                    🎯 {speler.exact} &nbsp; 🟢 {speler.winnaarCorrect} &nbsp; ❌ {speler.fout}
-                  </div>
+                <div style={{ 
+                  width: '32px', height: '32px', borderRadius: '50%', 
+                  background: isTop3 ? 'var(--wk-lime)' : 'rgba(255,255,255,0.1)',
+                  color: isTop3 ? '#111827' : '#FFF',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 900, fontSize: '1rem', flexShrink: 0
+                }}>
+                  {index + 1}
                 </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  
-                  {/* ADMIN KNOP (Enkel nog zichtbaar als er NIET betaald is) */}
-                  {isJorden && toggleBetaald && !speler.betaald && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); toggleBetaald(speler.id, speler.betaald); }}
-                      style={{
-                        background: '#E30022',
-                        border: 'none',
-                        color: '#FFF',
-                        padding: '4px 8px', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer',
-                      }}
-                    >
-                      💰 BETALEN
-                    </button>
-                  )}
-
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ 
-                      fontFamily: 'Bebas Neue', 
-                      fontSize: '2.4rem', 
-                      lineHeight: 0.9, 
-                      color: theme.hex, // Punten altijd in de kleur van de verticale balk!
-                      textShadow: `0 2px 10px ${theme.hex}40`
-                    }}>
-                      {modus === 'tussenstand' ? speler.prono_score : speler.totaal_score}
-                    </div>
-                    <div style={{ fontSize: '0.55rem', fontWeight: 900, textTransform: 'uppercase', color: '#6C757D', marginTop: '4px' }}>
-                      Punten
-                    </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ fontWeight: 900, fontSize: '1.1rem', color: isMe ? '#FFF' : '#E9ECEF', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {speler.naam} {!speler.betaald && <span style={{fontSize: '0.7rem'}} title="Nog niet betaald">💰❌</span>}
                   </div>
+                  
+                  {/* HET VORM BALKJE - Zichtbaar na de eerste gespeelde match */}
+                  {speler.recent_scores && speler.recent_scores.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                      <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginRight: '2px' }}>VORM:</span>
+                      {speler.recent_scores.map((score: number, i: number) => (
+                         <div key={i} className={`streak-dot dot-${score}`}>{score}</div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
+              
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: isTop3 ? 'var(--wk-lime)' : '#FFF', lineHeight: 1 }}>
+                  {speler.totaal_score}
+                </div>
+                <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginTop: '2px' }}>Punten</div>
+              </div>
+            </div>
 
-              {/* UITKLAPBAAR BONUS BLOK (Alleen in de Eindstand tab) */}
-              {modus === 'eindstand' && isExpanded && (
-                <div style={{ 
-                  marginTop: '12px', paddingTop: '12px', 
-                  borderTop: '1px dashed rgba(255,255,255,0.1)', 
-                  fontSize: '0.75rem', fontWeight: 800, color: '#FFF'
-                }}>
-                  {speler.bonus_breakdown && speler.bonus_breakdown.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            {expandedId === speler.id && (
+              <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed rgba(255,255,255,0.2)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', textAlign: 'center', marginBottom: '15px' }}>
+                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '12px' }}>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--wk-lime)' }}>{speler.exact}</div>
+                    <div style={{ fontSize: '0.6rem', color: '#ADB5BD', fontWeight: 900, textTransform: 'uppercase' }}>Exact (3pt)</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '12px' }}>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--wk-aqua)' }}>{speler.winnaarCorrect}</div>
+                    <div style={{ fontSize: '0.6rem', color: '#ADB5BD', fontWeight: 900, textTransform: 'uppercase' }}>Juist (1/2pt)</div>
+                  </div>
+                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '12px' }}>
+                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--wk-red)' }}>{speler.fout}</div>
+                    <div style={{ fontSize: '0.6rem', color: '#ADB5BD', fontWeight: 900, textTransform: 'uppercase' }}>Fout (0pt)</div>
+                  </div>
+                </div>
+                
+                {speler.bonus_breakdown && speler.bonus_breakdown.length > 0 && (
+                  <div style={{ background: 'rgba(204, 255, 0, 0.05)', border: '1px solid rgba(204, 255, 0, 0.2)', borderRadius: '12px', padding: '10px' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--wk-lime)', fontWeight: 900, textTransform: 'uppercase', marginBottom: '8px' }}>💎 Behaalde Bonussen:</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       {speler.bonus_breakdown.map((b: any, i: number) => (
-                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', opacity: 0.9, background: 'rgba(255,255,255,0.03)', padding: '6px 10px', borderRadius: '6px' }}>
-                          <span style={{ color: '#ADB5BD' }}>• {b.label}</span>
-                          <span style={{ fontWeight: 900, color: theme.hex }}>+{b.pt} pt</span>
+                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 800, color: '#FFF' }}>
+                          <span>{b.label}</span>
+                          <span style={{ color: 'var(--wk-lime)' }}>+{b.pt}</span>
                         </div>
                       ))}
                     </div>
-                  ) : (
-                    <div style={{ opacity: 0.5, fontStyle: 'italic', textAlign: 'center' }}>Nog geen extra punten gescoord...</div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+                  </div>
+                )}
+
+                {isJorden && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); toggleBetaald(speler.id, speler.betaald); }}
+                    style={{ width: '100%', marginTop: '10px', padding: '10px', background: speler.betaald ? 'rgba(227,0,34,0.2)' : 'rgba(204,255,0,0.2)', color: speler.betaald ? 'var(--wk-red)' : 'var(--wk-lime)', border: `1px solid ${speler.betaald ? 'var(--wk-red)' : 'var(--wk-lime)'}`, borderRadius: '12px', fontWeight: 900, cursor: 'pointer' }}
+                  >
+                    ZET ALS {speler.betaald ? 'NIET BETAALD' : 'BETAALD'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
