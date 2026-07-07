@@ -8,14 +8,15 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       <style>{`
         .streak-dot { 
-          width: 16px; height: 16px; border-radius: 50%; display: flex; 
-          align-items: center; justify-content: center; font-size: 0.6rem; 
-          font-weight: 900; flex-shrink: 0; 
+          width: 14px; height: 14px; border-radius: 50%; display: flex; 
+          align-items: center; justify-content: center; font-size: 0.55rem; 
+          font-weight: 900; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.4);
         }
-        .dot-3 { background: #CCFF00; color: #111827; }
-        .dot-2 { background: #7A00E6; color: #FFF; }
-        .dot-1 { background: #00E5FF; color: #111827; }
-        .dot-0 { background: rgba(0,0,0,0.5); color: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.1); }
+        /* FLASHY WK KLEUREN VOOR DE VORM */
+        .dot-3 { background: var(--wk-lime); color: #111827; }
+        .dot-2 { background: var(--wk-purple); color: #FFF; }
+        .dot-1 { background: var(--wk-aqua); color: #111827; }
+        .dot-0 { background: var(--wk-red); color: #FFF; }
       `}</style>
       
       {klassement.map((speler: any, index: number) => {
@@ -31,8 +32,10 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
             cursor: 'pointer', transition: 'all 0.2s ease'
           }} onClick={() => setExpandedId(expandedId === speler.id ? null : speler.id)}>
             
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              
+              {/* LINKER KANT: Rank, Naam en Vorm (flex: 1 + minWidth: 0 voorkomt overlap!) */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 1, minWidth: 0 }}>
                 <div style={{ 
                   width: '32px', height: '32px', borderRadius: '50%', 
                   background: isTop3 ? 'var(--wk-lime)' : 'rgba(255,255,255,0.1)',
@@ -42,14 +45,15 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
                 }}>
                   {index + 1}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ fontWeight: 900, fontSize: '1.1rem', color: isMe ? '#FFF' : '#E9ECEF', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, paddingTop: '2px' }}>
+                  <div style={{ fontWeight: 900, fontSize: '1.1rem', color: isMe ? '#FFF' : '#E9ECEF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {speler.naam} {!speler.betaald && <span style={{fontSize: '0.7rem'}} title="Nog niet betaald">💰❌</span>}
                   </div>
                   
                   {speler.recent_scores && speler.recent_scores.length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                      <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginRight: '2px' }}>VORM:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginTop: '6px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginRight: '4px' }}>VORM:</span>
                       {speler.recent_scores.map((score: number, i: number) => (
                          <div key={i} className={`streak-dot dot-${score}`}>{score}</div>
                       ))}
@@ -58,14 +62,17 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
                 </div>
               </div>
               
-              <div style={{ textAlign: 'right' }}>
+              {/* RECHTER KANT: Punten (flexShrink: 0 zorgt dat dit nooit platgedrukt wordt) */}
+              <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '10px' }}>
                 <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: isTop3 ? 'var(--wk-lime)' : '#FFF', lineHeight: 1 }}>
                   {speler.totaal_score}
                 </div>
                 <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginTop: '2px' }}>Punten</div>
               </div>
+
             </div>
 
+            {/* DETAILS POP-UP */}
             {expandedId === speler.id && (
               <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed rgba(255,255,255,0.2)' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', textAlign: 'center', marginBottom: '15px' }}>
