@@ -17,6 +17,7 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
         .dot-1 { background: #00E5FF; color: #111827; }
         .dot-0 { background: rgba(0,0,0,0.5); color: rgba(255,255,255,0.4); border: 1px solid rgba(255,255,255,0.1); }
       `}</style>
+      
       {klassement.map((speler: any, index: number) => {
         const isMe = actieveSpeler?.id === speler.id;
         const isTop3 = index < 3;
@@ -46,7 +47,6 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
                     {speler.naam} {!speler.betaald && <span style={{fontSize: '0.7rem'}} title="Nog niet betaald">💰❌</span>}
                   </div>
                   
-                  {/* HET VORM BALKJE - Zichtbaar na de eerste gespeelde match */}
                   {speler.recent_scores && speler.recent_scores.length > 0 && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
                       <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginRight: '2px' }}>VORM:</span>
