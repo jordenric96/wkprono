@@ -76,7 +76,7 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
             
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               
-              {/* LINKER KANT: Rank, Naam, Vorm & Bonussen */}
+              {/* LINKER KANT: Rank, Naam, Vorm, Stats & Bonussen */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 1, minWidth: 0 }}>
                 <div style={{ 
                   width: '32px', height: '32px', borderRadius: '50%', 
@@ -105,9 +105,24 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
                     </div>
                   )}
 
+                  {/* STATISTIEKEN BALKJE (Exact, Juist, Fout inclusief punten berekening) */}
+                  <div className="hide-scroll" style={{ display: 'flex', gap: '6px', marginTop: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
+                    <div style={{ background: 'rgba(204, 255, 0, 0.05)', border: '1px solid rgba(204, 255, 0, 0.2)', padding: '4px 6px', borderRadius: '8px', color: 'var(--wk-lime)', fontSize: '0.65rem', fontWeight: 900, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>🎯 {speler.exact}x</span>
+                      <span style={{ background: 'var(--wk-lime)', color: '#111827', padding: '2px 4px', borderRadius: '4px', fontSize: '0.6rem' }}>{speler.exact * 3} PT</span>
+                    </div>
+                    <div style={{ background: 'rgba(0, 229, 255, 0.05)', border: '1px solid rgba(0, 229, 255, 0.2)', padding: '4px 6px', borderRadius: '8px', color: 'var(--wk-aqua)', fontSize: '0.65rem', fontWeight: 900, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>🟢 {speler.winnaarCorrect}x</span>
+                      <span style={{ background: 'var(--wk-aqua)', color: '#111827', padding: '2px 4px', borderRadius: '4px', fontSize: '0.6rem' }}>{speler.prono_score - (speler.exact * 3)} PT</span>
+                    </div>
+                    <div style={{ background: 'rgba(227, 0, 34, 0.05)', border: '1px solid rgba(227, 0, 34, 0.2)', padding: '4px 6px', borderRadius: '8px', color: 'var(--wk-red)', fontSize: '0.65rem', fontWeight: 900, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>🔴 {speler.fout}x</span>
+                    </div>
+                  </div>
+
                   {/* MINI BONUS BADGES DIRECT VISUEEL OP DE KAART */}
                   {speler.bonus_breakdown && speler.bonus_breakdown.length > 0 && (
-                    <div className="hide-scroll" style={{ display: 'flex', gap: '4px', marginTop: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
+                    <div className="hide-scroll" style={{ display: 'flex', gap: '4px', marginTop: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
                       {speler.bonus_breakdown.map((b: any, i: number) => {
                         const badgeStyle = krijgBonusBadge(b.label);
                         return (
@@ -131,30 +146,15 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
 
             </div>
 
-            {/* UITGEBREIDE VERDELING BIJ TIKKEN */}
+            {/* UITGEBREIDE VERDELING BIJ TIKKEN (Alleen overzicht van Match/Bonus totalen) */}
             {expandedId === speler.id && (
               <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px dashed rgba(255,255,255,0.2)' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', textAlign: 'center', marginBottom: '15px' }}>
-                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '12px' }}>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--wk-lime)' }}>{speler.exact}</div>
-                    <div style={{ fontSize: '0.6rem', color: '#ADB5BD', fontWeight: 900, textTransform: 'uppercase' }}>Exact (3pt)</div>
-                  </div>
-                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '12px' }}>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--wk-aqua)' }}>{speler.winnaarCorrect}</div>
-                    <div style={{ fontSize: '0.6rem', color: '#ADB5BD', fontWeight: 900, textTransform: 'uppercase' }}>Juist (1/2pt)</div>
-                  </div>
-                  <div style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '12px' }}>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--wk-red)' }}>{speler.fout}</div>
-                    <div style={{ fontSize: '0.6rem', color: '#ADB5BD', fontWeight: 900, textTransform: 'uppercase' }}>Fout (0pt)</div>
-                  </div>
-                </div>
-
                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 800, color: '#FFF' }}>
-                   <span style={{ color: '#ADB5BD' }}>Match Punten:</span>
+                   <span style={{ color: '#ADB5BD' }}>Totaal Match Punten:</span>
                    <span>{speler.prono_score} pt</span>
                 </div>
                 <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 800, color: '#FFF', marginTop: '4px' }}>
-                   <span style={{ color: 'var(--wk-lime)' }}>Bonus Punten:</span>
+                   <span style={{ color: 'var(--wk-lime)' }}>Totaal Bonus Punten:</span>
                    <span style={{ color: 'var(--wk-lime)' }}>+{speler.bonus_score} pt</span>
                 </div>
                 
