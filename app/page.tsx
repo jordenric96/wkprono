@@ -48,7 +48,7 @@ const normalizeString = (teamString: string) => {
     'oekraïne': 'Oekraïne', 'ukraine': 'Oekraïne',
     'peru': 'Peru', 'panama': 'Panama',
     'egypt': 'Egypte', 'egypte': 'Egypte',
-    'tunisia': 'Tunesië', 'tunesië': 'Tunesië',
+    'tunesië': 'Tunesië', 'tunesië': 'Tunesië',
     'nieuw-zeeland': 'Nieuw-Zeeland', 'new zealand': 'Nieuw-Zeeland',
     'qatar': 'Qatar', 'ierland': 'Ierland', 'ireland': 'Ierland',
     'turkije': 'Turkije', 'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije',
@@ -687,7 +687,7 @@ export default function Home() {
     const code = invoerCode.trim();
     
     if (!naam || !code) { setStatus('Vul je naam en een pincode in! 🚩'); return; }
-    if (alleSpelers.some(s => s.naam.toLowerCase() === naam.toLowerCase())) { setStatus('Deze naam bestaat al! Choose onderaan voor inloggen. 🚩'); return; }
+    if (alleSpelers.some(s => s.naam.toLowerCase() === naam.toLowerCase())) { setStatus('Deze naam bestaat al! Kies onderaan voor inloggen. 🚩'); return; }
 
     setStatus('Aanmaken... ⏳');
     const { data, error } = await supabase.from('spelers').insert([{ naam: naam, code: code, betaald: false }]).select().single();
@@ -777,13 +777,13 @@ export default function Home() {
 
         /* POLL STYLES */
         .poll-container { width: 100%; max-width: 500px; background: #1A1423; border: 2px solid var(--wk-aqua); border-radius: 20px; padding: 20px; margin-bottom: 25px; box-shadow: 0 4px 20px rgba(0, 229, 255, 0.2); }
-        .poll-title { font-family: 'Bebas Neue', sans-serif; fontSize: 1.8rem; color: var(--wk-aqua); text-align: center; margin: 0 0 15px 0; letter-spacing: 1px; }
+        .poll-title { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; color: var(--wk-aqua); text-align: center; margin: 0 0 15px 0; letter-spacing: 1px; }
         .poll-btn { width: 100%; padding: 12px; margin-bottom: 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: #FFF; font-weight: 800; font-size: 0.9rem; cursor: pointer; transition: 0.2s; text-align: center; }
         .poll-btn:hover { background: rgba(0, 229, 255, 0.15); border-color: var(--wk-aqua); }
       `}</style>
 
       {toonUrgentPopup && actieveSpeler && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(9, 5, 20, 0.85)', backdropFilter: 'blur(10px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifycontent: 'center', padding: '20px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(9, 5, 20, 0.85)', backdropFilter: 'blur(10px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: '#1A1423', borderRadius: '24px', padding: '25px', width: '100%', maxWidth: '380px', position: 'relative', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', border: '2px solid var(--wk-orange)', maxHeight: '90vh', overflowY: 'auto' }}>
             <button onClick={() => setShowUrgentPopup(false)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.1)', border: 'none', width: '30px', height: '30px', borderRadius: '50%', fontWeight: 900, color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
             <div style={{ textAlign: 'center', marginBottom: '10px' }}>
@@ -799,7 +799,7 @@ export default function Home() {
                   return (
                     <div key={i} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '12px', borderLeft: '4px solid var(--wk-orange)' }}>
                       <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#FFF', marginBottom: '4px' }}>{u.matchNaam}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--wk-orange)', fontWeight: 900, textTransform: 'uppercase' }}>⏳ {dayStr} om {tijdStr}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--wk-orange)', fontWeight: 900, textTransform: 'uppercase' }}>⏳ {dagStr} om {tijdStr}</div>
                     </div>
                   )
                 })}
@@ -836,7 +836,7 @@ export default function Home() {
 
       {toast && (
         <div onClick={() => { setActieveTab('kleedkamer'); setToast(null); }} style={{ position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', background: '#1A1423', border: '2px solid var(--wk-lime)', padding: '12px 16px', borderRadius: '16px', zIndex: 9999, boxShadow: '0 10px 30px rgba(0,0,0,0.5)', display: 'flex', gap: '12px', alignItems: 'center', width: '90%', maxWidth: '350px', cursor: 'pointer' }}>
-          <div style={{ background: 'var(--wk-lime)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifycontent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>💬</div>
+          <div style={{ background: 'var(--wk-lime)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>💬</div>
           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}><span style={{ fontWeight: 900, color: '#FFF', fontSize: '0.8rem', marginBottom: '2px' }}>{toast.naam}</span><span style={{ color: '#ADB5BD', fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 800 }}>{toast.bericht}</span></div>
         </div>
       )}
