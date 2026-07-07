@@ -3,6 +3,22 @@ import React, { useState } from 'react';
 
 export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, isJorden }: any) {
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [toonEindklassement, setToonEindklassement] = useState(false);
+
+  // Zorgt ervoor dat we dynamisch sorteren afhankelijk van welke tab je aanklikt
+  const gesorteerdKlassement = [...klassement].sort((a, b) => {
+    if (!toonEindklassement) {
+      if (b.prono_score !== a.prono_score) return b.prono_score - a.prono_score;
+      if (b.exact !== a.exact) return b.exact - a.exact;
+      if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect;
+      return a.naam.localeCompare(b.naam);
+    } else {
+      if (b.totaal_score !== a.totaal_score) return b.totaal_score - a.totaal_score;
+      if (b.exact !== a.exact) return b.exact - a.exact;
+      if (b.winnaarCorrect !== a.winnaarCorrect) return b.winnaarCorrect - a.winnaarCorrect;
+      return a.naam.localeCompare(b.naam);
+    }
+  });
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -17,11 +33,42 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
         .dot-2 { background: var(--wk-purple); color: #FFF; }
         .dot-1 { background: var(--wk-aqua); color: #111827; }
         .dot-0 { background: var(--wk-red); color: #FFF; }
+        
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
+
+      {/* UITLEG BOX - Waarom 2 klassementen */}
+      <div style={{ background: '#1A1423', borderRadius: '16px', padding: '15px', marginBottom: '5px', border: '1px solid rgba(255,255,255,0.1)', borderLeft: '4px solid var(--wk-aqua)' }}>
+         <h3 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: 'var(--wk-aqua)', textTransform: 'uppercase', fontWeight: 900 }}>💡 Waarom twee klassementen?</h3>
+         <div style={{ fontSize: '0.75rem', color: '#ADB5BD', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+           <div><strong style={{color: '#FFF'}}>1. Regulier Klassement:</strong> Dit zijn puur en alleen je punten uit de matchen. Winnaars hiervan strijden voor een deel van de reguliere prijzenpot.</div>
+           <div><strong style={{color: '#FFF'}}>2. Eindklassement (+ Bonussen):</strong> Dit zijn je matchpunten én je bonuspunten samen. De top van dit klassement bepaalt de absolute eindwinnaar(s)!</div>
+         </div>
+      </div>
+
+      {/* TOGGLE KNOPPEN */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+        <button 
+           onClick={() => setToonEindklassement(false)}
+           style={{ flex: 1, padding: '12px 5px', borderRadius: '12px', background: !toonEindklassement ? 'var(--wk-blue)' : 'rgba(255,255,255,0.05)', color: !toonEindklassement ? '#FFF' : '#ADB5BD', fontWeight: 900, border: !toonEindklassement ? '2px solid var(--wk-blue)' : '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.8rem' }}
+        >
+           ⚽ REGULIER
+        </button>
+        <button 
+           onClick={() => setToonEindklassement(true)}
+           style={{ flex: 1, padding: '12px 5px', borderRadius: '12px', background: toonEindklassement ? 'var(--wk-purple)' : 'rgba(255,255,255,0.05)', color: toonEindklassement ? '#FFF' : '#ADB5BD', fontWeight: 900, border: toonEindklassement ? '2px solid var(--wk-purple)' : '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.8rem' }}
+        >
+           🏆 EINDKLASSEMENT
+        </button>
+      </div>
       
-      {klassement.map((speler: any, index: number) => {
+      {gesorteerdKlassement.map((speler: any, index: number) => {
         const isMe = actieveSpeler?.id === speler.id;
         const isTop3 = index < 3;
+        
+        // Laat de juiste score zien afhankelijk van de gekozen knop
+        const getoondeScore = toonEindklassement ? speler.totaal_score : speler.prono_score;
         
         return (
           <div key={speler.id} style={{
@@ -51,9 +98,9 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
                     {speler.naam} {!speler.betaald && <span style={{fontSize: '0.7rem'}} title="Nog niet betaald">💰❌</span>}
                   </div>
                   
-                  {/* VORM BALKJE - Strak en altijd op 1 lijn, precies de 8 laatste */}
+                  {/* VORM BALKJE - Strak en altijd op 1 lijn */}
                   {speler.recent_scores && speler.recent_scores.length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', marginTop: '6px' }}>
+                    <div className="hide-scroll" style={{ display: 'flex', alignItems: 'center', marginTop: '6px', overflowX: 'auto' }}>
                       <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginRight: '6px', flexShrink: 0 }}>VORM:</span>
                       <div style={{ display: 'flex', gap: '3px', flexWrap: 'nowrap' }}>
                         {speler.recent_scores.map((score: number, i: number) => (
@@ -68,7 +115,7 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
               {/* RECHTER KANT: Punten */}
               <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '10px' }}>
                 <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: isTop3 ? 'var(--wk-lime)' : '#FFF', lineHeight: 1 }}>
-                  {speler.totaal_score}
+                  {getoondeScore}
                 </div>
                 <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginTop: '2px' }}>Punten</div>
               </div>
@@ -93,7 +140,8 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
                   </div>
                 </div>
                 
-                {speler.bonus_breakdown && speler.bonus_breakdown.length > 0 && (
+                {/* Toon de behaalde bonussen enkel als ze in het Eindklassement zitten (of hou het altijd zichtbaar als ze iets gehaald hebben) */}
+                {toonEindklassement && speler.bonus_breakdown && speler.bonus_breakdown.length > 0 && (
                   <div style={{ background: 'rgba(204, 255, 0, 0.05)', border: '1px solid rgba(204, 255, 0, 0.2)', borderRadius: '12px', padding: '10px' }}>
                     <div style={{ fontSize: '0.7rem', color: 'var(--wk-lime)', fontWeight: 900, textTransform: 'uppercase', marginBottom: '8px' }}>💎 Behaalde Bonussen:</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
