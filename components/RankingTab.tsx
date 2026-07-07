@@ -8,9 +8,9 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       <style>{`
         .streak-dot { 
-          width: 14px; height: 14px; border-radius: 50%; display: flex; 
-          align-items: center; justify-content: center; font-size: 0.55rem; 
-          font-weight: 900; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+          width: 13px; height: 13px; border-radius: 50%; display: flex; 
+          align-items: center; justify-content: center; font-size: 0.5rem; 
+          font-weight: 900; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.4);
         }
         /* FLASHY WK KLEUREN VOOR DE VORM */
         .dot-3 { background: var(--wk-lime); color: #111827; }
@@ -34,7 +34,7 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
             
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               
-              {/* LINKER KANT: Rank, Naam en Vorm (flex: 1 + minWidth: 0 voorkomt overlap!) */}
+              {/* LINKER KANT: Rank, Naam en Vorm */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', flex: 1, minWidth: 0 }}>
                 <div style={{ 
                   width: '32px', height: '32px', borderRadius: '50%', 
@@ -51,18 +51,21 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
                     {speler.naam} {!speler.betaald && <span style={{fontSize: '0.7rem'}} title="Nog niet betaald">💰❌</span>}
                   </div>
                   
+                  {/* VORM BALKJE - Strak en altijd op 1 lijn, precies de 8 laatste */}
                   {speler.recent_scores && speler.recent_scores.length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginTop: '6px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginRight: '4px' }}>VORM:</span>
-                      {speler.recent_scores.map((score: number, i: number) => (
-                         <div key={i} className={`streak-dot dot-${score}`}>{score}</div>
-                      ))}
+                    <div style={{ display: 'flex', alignItems: 'center', marginTop: '6px' }}>
+                      <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ADB5BD', textTransform: 'uppercase', marginRight: '6px', flexShrink: 0 }}>VORM:</span>
+                      <div style={{ display: 'flex', gap: '3px', flexWrap: 'nowrap' }}>
+                        {speler.recent_scores.map((score: number, i: number) => (
+                           <div key={i} className={`streak-dot dot-${score}`}>{score}</div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
               
-              {/* RECHTER KANT: Punten (flexShrink: 0 zorgt dat dit nooit platgedrukt wordt) */}
+              {/* RECHTER KANT: Punten */}
               <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: '10px' }}>
                 <div style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: isTop3 ? 'var(--wk-lime)' : '#FFF', lineHeight: 1 }}>
                   {speler.totaal_score}
