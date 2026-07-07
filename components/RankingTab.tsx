@@ -11,7 +11,6 @@ const krijgBonusBadge = (label: string) => {
   if (l.includes('aanval')) return { tekst: 'Aanval ⚽', bg: 'rgba(43, 0, 255, 0.15)', grens: 'var(--wk-blue)' };
   if (l.includes('verdediging')) return { tekst: 'Defensie 🛡️', bg: 'rgba(122, 0, 230, 0.15)', grens: 'var(--wk-purple)' };
   if (l.includes('halve')) {
-    // Haal de teamnaam uit de tekst, bijv. "Halve Finalist (België)" -> "België"
     const land = label.match(/\(([^)]+)\)/);
     return { tekst: `HF: ${land ? land[1] : '💎'}`, bg: 'rgba(255,255,255,0.05)', grens: 'rgba(255,255,255,0.3)' };
   }
@@ -47,8 +46,6 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
           border-radius: 6px; text-transform: uppercase; white-space: nowrap;
           border: 1px solid transparent; display: inline-flex; align-items: center;
         }
-        .hide-scroll::-webkit-scrollbar { display: none; }
-        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
 
       {/* HEADER KROON BANNER */}
@@ -106,7 +103,8 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
                   )}
 
                   {/* STATISTIEKEN BALKJE (Exact, Juist, Fout inclusief punten berekening) */}
-                  <div className="hide-scroll" style={{ display: 'flex', gap: '6px', marginTop: '8px', overflowX: 'auto', paddingBottom: '2px' }}>
+                  {/* FIX: Nu met 'flexWrap: wrap' zodat het netjes overloopt zonder vervelende scrollbar */}
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
                     <div style={{ background: 'rgba(204, 255, 0, 0.05)', border: '1px solid rgba(204, 255, 0, 0.2)', padding: '4px 6px', borderRadius: '8px', color: 'var(--wk-lime)', fontSize: '0.65rem', fontWeight: 900, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span>🎯 {speler.exact}x</span>
                       <span style={{ background: 'var(--wk-lime)', color: '#111827', padding: '2px 4px', borderRadius: '4px', fontSize: '0.6rem' }}>{speler.exact * 3} PT</span>
@@ -121,8 +119,9 @@ export default function RankingTab({ klassement, actieveSpeler, toggleBetaald, i
                   </div>
 
                   {/* MINI BONUS BADGES DIRECT VISUEEL OP DE KAART */}
+                  {/* FIX: Ook hier 'flexWrap: wrap' toegepast voor een mooie flow op smalle schermen */}
                   {speler.bonus_breakdown && speler.bonus_breakdown.length > 0 && (
-                    <div className="hide-scroll" style={{ display: 'flex', gap: '4px', marginTop: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+                    <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap' }}>
                       {speler.bonus_breakdown.map((b: any, i: number) => {
                         const badgeStyle = krijgBonusBadge(b.label);
                         return (
