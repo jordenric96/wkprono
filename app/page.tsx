@@ -112,6 +112,7 @@ export default function Home() {
   const [showUrgentPopup, setShowUrgentPopup] = useState(true);
   const [urgenteMatchen, setUrgenteMatchen] = useState<{matchNaam: string, datum: string, ontbrekend: string[], ontbrekendIds: number[]}[]>([]);
 
+  // POLL STATES
   const [heeftAlGestemd, setHeeftAlGestemd] = useState(false);
   const [allePollStemmen, setAlleToernooiPollStemmen] = useState<any[]>([]);
   const [pollVerstuurdStatus, setPollVerstuurdStatus] = useState('');
@@ -501,7 +502,6 @@ export default function Home() {
     const halveFinalisten: string[] = [];
     let wkWinnaar = "";
 
-    // Grote fix: We pakken nu exact 8 laatste wedstrijden in plaats van 10
     const gespeeldeMatchen = m.filter(ma => ma.thuis_score !== null).sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime());
     const laatste8Matchen = gespeeldeMatchen.slice(0, 8);
 
@@ -835,7 +835,7 @@ export default function Home() {
 
       {toast && (
         <div onClick={() => { setActieveTab('kleedkamer'); setToast(null); }} style={{ position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', background: '#1A1423', border: '2px solid var(--wk-lime)', padding: '12px 16px', borderRadius: '16px', zIndex: 9999, boxShadow: '0 10px 30px rgba(0,0,0,0.5)', display: 'flex', gap: '12px', alignItems: 'center', width: '90%', maxWidth: '350px', cursor: 'pointer' }}>
-          <div style={{ background: 'var(--wk-lime)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifycontent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>💬</div>
+          <div style={{ background: 'var(--wk-lime)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>💬</div>
           <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}><span style={{ fontWeight: 900, color: '#FFF', fontSize: '0.8rem', marginBottom: '2px' }}>{toast.naam}</span><span style={{ color: '#ADB5BD', fontSize: '0.75rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 800 }}>{toast.bericht}</span></div>
         </div>
       )}
