@@ -20,6 +20,7 @@ const normalizeString = (teamString: string) => {
   let cleanString = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
   let searchKey = cleanString.toLowerCase();
 
+  // FIX: Alle dubbele waarden (zoals tunesië) zijn hier uitgehaald
   const vertalingen: Record<string, string> = {
     'brazil': 'Brazilië', 'brazilië': 'Brazilië',
     'morocco': 'Marokko', 'marokko': 'Marokko',
@@ -48,7 +49,7 @@ const normalizeString = (teamString: string) => {
     'oekraïne': 'Oekraïne', 'ukraine': 'Oekraïne',
     'peru': 'Peru', 'panama': 'Panama',
     'egypt': 'Egypte', 'egypte': 'Egypte',
-    'tunesië': 'Tunesië', 'tunesië': 'Tunesië',
+    'tunisia': 'Tunesië', 'tunesië': 'Tunesië',
     'nieuw-zeeland': 'Nieuw-Zeeland', 'new zealand': 'Nieuw-Zeeland',
     'qatar': 'Qatar', 'ierland': 'Ierland', 'ireland': 'Ierland',
     'turkije': 'Turkije', 'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije',
@@ -112,7 +113,6 @@ export default function Home() {
   const [showUrgentPopup, setShowUrgentPopup] = useState(true);
   const [urgenteMatchen, setUrgenteMatchen] = useState<{matchNaam: string, datum: string, ontbrekend: string[], ontbrekendIds: number[]}[]>([]);
 
-  // POLL STATES
   const [heeftAlGestemd, setHeeftAlGestemd] = useState(false);
   const [allePollStemmen, setAlleToernooiPollStemmen] = useState<any[]>([]);
   const [pollVerstuurdStatus, setPollVerstuurdStatus] = useState('');
@@ -252,7 +252,6 @@ export default function Home() {
     setUrgenteMatchen(urgentList);
   };
 
-  // OPHALEN VAN DE POLL DATA
   const haalPollDataOp = async (spelerId: number) => {
     const { data: mijnStem } = await supabase.from('cl_poll').select('*').eq('speler_id', spelerId).maybeSingle();
     if (mijnStem) {
