@@ -23,10 +23,11 @@ const parseTeam = (teamString: string) => {
   let cleanString = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}]/gu, '').trim();
   let searchKey = cleanString.toLowerCase();
 
+  // FIX: Alle duplicate keys er 100% zeker uit, inclusief de tunesië bug!
   const vertalingen: Record<string, string> = {
-    'brazil': 'Brazilië', 
-    'morocco': 'Marokko', 
-    'switzerland': 'Zwitserland',
+    'brazil': 'Brazilië', 'brazilië': 'Brazilië',
+    'morocco': 'Marokko', 'marokko': 'Marokko',
+    'switzerland': 'Zwitserland', 'zwitserland': 'Zwitserland',
     'bosnia and herzegovina': 'Bosnië', 'bosnia & herzegovina': 'Bosnië', 'bosnia': 'Bosnië', 'bosnië': 'Bosnië',
     'south korea': 'Zuid-Korea', 'zuid-korea': 'Zuid-Korea',
     'south africa': 'Zuid-Afrika', 'zuid-afrika': 'Zuid-Afrika',
@@ -38,7 +39,7 @@ const parseTeam = (teamString: string) => {
     'belgium': 'België', 'belgië': 'België',
     'italy': 'Italië', 'italië': 'Italië',
     'argentina': 'Argentinië', 'argentinië': 'Argentinië',
-    'england': 'Engeland', 'wales': 'Wales', 'scotland': 'Schotland',
+    'england': 'Engeland', 'wales': 'Wales', 'scotland': 'Schotland', 'schotland': 'Schotland',
     'usa': 'Verenigde Staten', 'united states': 'Verenigde Staten', 'verenigde staten': 'Verenigde Staten',
     'canada': 'Canada', 'mexico': 'Mexico', 'japan': 'Japan',
     'croatia': 'Kroatië', 'kroatië': 'Kroatië',
@@ -51,7 +52,7 @@ const parseTeam = (teamString: string) => {
     'oekraïne': 'Oekraïne', 'ukraine': 'Oekraïne',
     'peru': 'Peru', 'panama': 'Panama',
     'egypt': 'Egypte', 'egypte': 'Egypte',
-    'tunesië': 'Tunesië', 'tunesië': 'Tunesië',
+    'tunisia': 'Tunesië', 'tunesië': 'Tunesië',
     'nieuw-zeeland': 'Nieuw-Zeeland', 'new zealand': 'Nieuw-Zeeland',
     'qatar': 'Qatar', 'ierland': 'Ierland', 'ireland': 'Ierland',
     'turkije': 'Turkije', 'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije',
@@ -456,7 +457,6 @@ export default function MatchenTab({
                 </div>
               </div>
 
-              {/* DOORSTROMER / PENALTY KEUZE VOOR ALLE KNOCKOUTS */}
               {isKnockout && !isMatchGesloten && (
                 <div style={{ margin: '0 12px 12px 12px', background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.2)' }}>
                   <div style={{ fontSize: '0.7rem', color: '#ADB5BD', fontWeight: 900, textAlign: 'center', marginBottom: '8px', textTransform: 'uppercase' }}>
@@ -654,7 +654,6 @@ export default function MatchenTab({
         })
       )}
 
-      {/* JORDEN'S GEHEIME GLUUR POP-UP */}
       {gluurPopUp !== null && isJorden && typeof document !== 'undefined' && ReactDOM.createPortal(
         <div onClick={() => setGluurPopUp(null)} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.8)', zIndex: 999999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#1A1423', padding: '20px', borderRadius: '20px', width: '90%', maxWidth: '350px', border: '2px solid #00E5FF', animation: 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)' }}>
