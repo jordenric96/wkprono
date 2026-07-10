@@ -500,11 +500,22 @@ export default function Home() {
     const teamGoalsTegen: Record<string, number> = {};
     const halveFinalisten: string[] = [];
     let wkWinnaar = "";
+    
+    let echtEindstationBelgie = "";
+    let teamsInKnockout = new Set<string>();
+    let knockoutsHebbenScore = false;
 
     const gespeeldeMatchen = m.filter(ma => ma.thuis_score !== null).sort((a, b) => new Date(b.datum).getTime() - new Date(a.datum).getTime());
     const laatste8Matchen = gespeeldeMatchen.slice(0, 8);
 
-    m.forEach(match => {
+    m.forEach((match: any) => {
+      // Verzamel teams die in de knockouts zitten
+      if (match.ronde !== 'Groepsfase') {
+        if (match.thuisploeg) teamsInKnockout.add(normalizeString(match.thuisploeg));
+        if (match.uitploeg) teamsInKnockout.add(normalizeString(match.uitploeg));
+        if (match.thuis_score !== null) knockoutsHebbenScore = true;
+      }
+
       if (match.id === 101 || match.id === 102) {
         if (match.thuisploeg && !match.thuisploeg.toLowerCase().includes('winnaar')) halveFinalisten.push(match.thuisploeg);
         if (match.uitploeg && !match.uitploeg.toLowerCase().includes('winnaar')) halveFinalisten.push(match.uitploeg);
@@ -524,6 +535,35 @@ export default function Home() {
         teamGoalsVoor[match.uitploeg] = (teamGoalsVoor[match.uitploeg] || 0) + uitGoalsTotal;
         teamGoalsTegen[match.thuisploeg] = (teamGoalsTegen[match.thuisploeg] || 0) + uitGoalsTotal;
         teamGoalsTegen[match.uitploeg] = (teamGoalsTegen[match.uitploeg] || 0) + thuisGoalsTotal;
+      }
+    });
+
+    // Check of België de groepsfase niet heeft overleefd
+    if (knockoutsHebbenScore && !teamsInKnockout.has('belgie') && !teamsInKnockout.has('belgië')) {
+       echtEindstationBelgie = 'Groepsfase';
+    }
+
+    // Check of België in een knockout is uitgeschakeld
+    m.forEach((match: any) => {
+      if (match.ronde !== 'Groepsfase' && match.thuis_score !== null) {
+        const isThuisBelgie = normalizeString(match.thuisploeg) === 'belgie' || normalizeString(match.thuisploeg) === 'belgië';
+        const isUitBelgie = normalizeString(match.uitploeg) === 'belgie' || normalizeString(match.uitploeg) === 'belgië';
+        
+        if (isThuisBelgie || isUitBelgie) {
+           const tScore = Number(match.thuis_score) + Number(match.extra_goals_thuis || 0);
+           const uScore = Number(match.uit_score) + Number(match.extra_goals_uit || 0);
+           let belgieWon = false;
+           
+           if (isThuisBelgie && tScore > uScore) belgieWon = true;
+           else if (isUitBelgie && uScore > tScore) belgieWon = true;
+           else if (tScore === uScore && (normalizeString(match.winnaar_na_penaltys) === 'belgie' || normalizeString(match.winnaar_na_penaltys) === 'belgië')) belgieWon = true;
+           
+           if (!belgieWon) {
+              echtEindstationBelgie = match.ronde;
+           } else if (belgieWon && match.ronde === 'Finale') {
+              echtEindstationBelgie = 'Wereldkampioen';
+           }
+        }
       }
     });
 
@@ -615,6 +655,17 @@ export default function Home() {
           const lNorm = normalizeString(land);
           if (lNorm && halveFinalistenNorm.includes(lNorm)) { bonusP += 3; breakdown.push({label: `Halve Finalist (${land})`, pt: 3}); }
         });
+
+        // EINDSTATION BELGIË
+        const myBelgie = normalizeString(bv.eindstation_belgie);
+        const echtEindstationNorm = normalizeString(echtEindstationBelgie);
+        
+        if (echtEindstationNorm && myBelgie) {
+          if (myBelgie === echtEindstationNorm || myBelgie.includes(echtEindstationNorm) || echtEindstationNorm.includes(myBelgie) || (myBelgie === 'winnaar' && echtEindstationNorm === 'wereldkampioen') || (myBelgie === 'wereldkampioen' && echtEindstationNorm === 'winnaar')) {
+             bonusP += 3; 
+             breakdown.push({label: `Eindstation BE (${echtEindstationBelgie})`, pt: 3}); 
+          }
+        }
       }
       
       return { 
@@ -962,7 +1013,7 @@ export default function Home() {
               {actieveTab === 'prijs' && <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />}
               {actieveTab === 'bonus' && <BonusTab winnaar={winnaar} setWinnaar={setWinnaar} hf={hf} setHf={setHf} meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} eindstation={eindstation} setEindstation={setEindstation} totaalGoals={totaalGoals} setTotaalGoals={setTotaalGoals} totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} />}
               
-              {/* FIX: matchen={matchen} is hier toegevoegd om eliminaties te berekenen! */}
+              {/* Hier krijgt AntwoordenTab ook netjes de matchen door! */}
               {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} matchen={matchen} />}
               
               {actieveTab === 'ranking' && <RankingTab klassement={klassement} actieveSpeler={actieveSpeler} toggleBetaald={toggleBetaald} isJorden={isJorden} />}
