@@ -1,193 +1,182 @@
 // src/components/AntwoordenTab.tsx
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 
-export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV = [] }: any) {
-  const isGesloten = nu >= DEADLINE_DATE;
-  const [openThema, setOpenTheme] = useState<string | null>('winnaar');
+export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV }: any) {
+  
+  const defaultEmojis: Record<string, string> = {
+    'belgië': '🇧🇪', 'nederland': '🇳🇱', 'frankrijk': '🇫🇷', 'duitsland': '🇩🇪', 'spanje': '🇪🇸',
+    'brazilië': '🇧🇷', 'argentinië': '🇦🇷', 'portugal': '🇵🇹', 'italië': '🇮🇹', 'engeland': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+    'mexico': '🇲🇽', 'verenigde staten': '🇺🇸', 'canada': '🇨🇦', 'marokko': '🇲🇦',
+    'chili': '🇨🇱', 'kameroen': '🇨🇲', 'colombia': '🇨🇴', 'costa rica': '🇨🇷', 'zwitserland': '🇨🇭',
+    'ivoorkust': '🇨🇮', 'oostenrijk': '🇦🇹', 'australië': '🇦🇺', 'japan': '🇯🇵', 'zuid-korea': '🇰🇷',
+    'kroatië': '🇭🇷', 'uruguay': '🇺🇾', 'senegal': '🇸🇳', 'ghana': '🇬🇭', 'nigeria': '🇳🇬', 
+    'ecuador': '🇪🇨', 'zweden': '🇸🇪', 'denemarken': '🇩🇰', 'schotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'polen': '🇵🇱', 
+    'servië': '🇷🇸', 'iran': '🇮🇷', 'saudi-arabië': '🇸🇦', 'wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'oekraïne': '🇺🇦', 
+    'peru': '🇵🇪', 'panama': '🇵🇦', 'egypte': '🇪🇬', 'tunesië': '🇹🇳', 'nieuw-zeeland': '🇳🇿', 
+    'qatar': '🇶🇦', 'ierland': '🇮🇪', 'turkije': '🇹🇷', 'zuid-afrika': '🇿🇦', 'tsjechië': '🇨🇿', 
+    'roemenië': '🇷🇴', 'hongarije': '🇭🇺', 'noorwegen': '🇳🇴', 'ijsland': '🇮🇸', 'slowakije': '🇸🇰'
+  };
 
-  if (!isGesloten) {
+  const krijgEmoji = (land: string) => {
+    if (!land) return '🏳️';
+    const zoekSleutel = land.trim().toLowerCase();
+    return defaultEmojis[zoekSleutel] || '🏳️';
+  };
+
+  // Functie om de data in "Kampen" te groeperen (Meest gekozen bovenaan)
+  const groepeerData = (veld: string) => {
+    const groepen: Record<string, string[]> = {};
+    alleToernooiV.forEach((v: any) => {
+      let val = v[veld];
+      if (!val) return;
+      val = val.trim();
+      const cleanVal = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
+      if (!groepen[cleanVal]) groepen[cleanVal] = [];
+      const voornaam = v.spelers?.naam?.split(' ')[0] || 'Onbekend';
+      groepen[cleanVal].push(voornaam);
+    });
+    return Object.entries(groepen).sort((a, b) => b[1].length - a[1].length);
+  };
+
+  // Speciale groepeerfunctie voor de Halve Finalisten (combineert 4 kolommen)
+  const groepeerHalveFinalisten = () => {
+    const groepen: Record<string, string[]> = {};
+    alleToernooiV.forEach((v: any) => {
+      const voornaam = v.spelers?.naam?.split(' ')[0] || 'Onbekend';
+      [v.halve_finalist_1, v.halve_finalist_2, v.halve_finalist_3, v.halve_finalist_4].forEach(hf => {
+        if (!hf) return;
+        const cleanVal = hf.trim().charAt(0).toUpperCase() + hf.trim().slice(1).toLowerCase();
+        if (!groepen[cleanVal]) groepen[cleanVal] = [];
+        groepen[cleanVal].push(voornaam);
+      });
+    });
+    return Object.entries(groepen).sort((a, b) => b[1].length - a[1].length);
+  };
+
+  const renderKampen = (data: [string, string[]][], primaryColor: string) => {
+    if (data.length === 0) return <div style={{ color: '#ADB5BD', fontSize: '0.8rem', fontStyle: 'italic' }}>Nog geen data beschikbaar.</div>;
+    
     return (
-      <div style={{ textAlign: 'center', padding: '40px 20px', background: '#1A1423', borderRadius: '24px', border: '2px solid #E30022', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
-        <div style={{ fontSize: '4rem', marginBottom: '15px' }}>🔒</div>
-        <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: '#E30022', margin: '0 0 10px 0', letterSpacing: '1px' }}>NOG EVEN GEDULD</h2>
-        <p style={{ color: '#ADB5BD', fontWeight: 800, fontSize: '0.9rem' }}>
-          Om spieken te voorkomen blijven alle bonusantwoorden strikt geheim tot de deadline is verstreken.
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px' }}>
+        {data.map(([land, spelers], index) => (
+          <div key={index} style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '16px', border: `1px solid rgba(255,255,255,0.1)`, borderTop: `4px solid ${primaryColor}`, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '10px', background: 'rgba(0,0,0,0.2)', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ fontSize: '1.8rem', lineHeight: 1.2 }}>{krijgEmoji(land)}</div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 900, color: '#FFF', textTransform: 'uppercase', marginTop: '4px' }}>{land}</div>
+              <div style={{ fontSize: '0.6rem', color: primaryColor, fontWeight: 900, marginTop: '2px' }}>{spelers.length} {spelers.length === 1 ? 'STEM' : 'STEMMEN'}</div>
+            </div>
+            <div style={{ padding: '10px', display: 'flex', flexWrap: 'wrap', gap: '4px', justifyContent: 'center' }}>
+              {spelers.map((speler, i) => (
+                <span key={i} style={{ background: 'rgba(255,255,255,0.1)', color: '#FFF', fontSize: '0.65rem', fontWeight: 800, padding: '4px 8px', borderRadius: '8px' }}>
+                  {speler}
+                </span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderCijferLijn = (veld: string, color: string, eenheid: string) => {
+    const sorted = alleToernooiV
+      .filter((v: any) => v[veld] !== null && v[veld] !== undefined)
+      .map((v: any) => ({ naam: v.spelers?.naam?.split(' ')[0] || '?', val: Number(v[veld]) }))
+      .sort((a: any, b: any) => a.val - b.val);
+
+    if (sorted.length === 0) return null;
+
+    return (
+      <div className="hide-scroll" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '5px' }}>
+        {sorted.map((s: any, i: number) => (
+          <div key={i} style={{ background: 'rgba(0,0,0,0.2)', border: `1px solid ${color}`, borderRadius: '12px', padding: '12px 15px', minWidth: '70px', textAlign: 'center', flexShrink: 0 }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 900, color: color, fontFamily: 'Bebas Neue', lineHeight: 1 }}>{s.val}</div>
+            <div style={{ fontSize: '0.55rem', color: '#ADB5BD', fontWeight: 900, textTransform: 'uppercase', marginTop: '4px' }}>{s.naam}</div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  if (nu < DEADLINE_DATE) {
+    return (
+      <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '24px', padding: '40px 20px', textAlign: 'center', border: '1px solid rgba(255,255,255,0.1)' }}>
+        <div style={{ fontSize: '4rem', marginBottom: '15px' }}>🕵️‍♂️</div>
+        <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', color: 'var(--wk-lime)', margin: '0 0 10px 0', letterSpacing: '1px' }}>ANTWOORDEN VERBORGEN</h2>
+        <p style={{ color: '#ADB5BD', fontSize: '0.9rem', fontWeight: 800, lineHeight: 1.5 }}>
+          Geen spionage toegestaan! De antwoorden van de andere spelers blijven strikt geheim tot de aftrap van de allereerste match.
         </p>
       </div>
     );
   }
 
-  // --- HELPER FUNCTIES (Nu 100% Vercel & TypeScript Proof) ---
-  const groepeerOpAntwoord = (veld: string) => {
-    const groepen: Record<string, string[]> = {};
-    alleToernooiV.forEach((v: any) => {
-      const antwoord = String(v[veld] || 'Niets ingevuld');
-      const naam = String(v.spelers?.naam?.split(' ')[0] || 'Onbekend');
-      if (!groepen[antwoord]) groepen[antwoord] = [];
-      groepen[antwoord].push(naam);
-    });
-    return Object.entries(groepen).sort((a: [string, string[]], b: [string, string[]]) => b[1].length - a[1].length);
-  };
-
-  const groepeerHalveFinalisten = () => {
-    const groepen: Record<string, string[]> = {};
-    alleToernooiV.forEach((v: any) => {
-      const naam = String(v.spelers?.naam?.split(' ')[0] || 'Onbekend');
-      const landen = [v.halve_finalist_1, v.halve_finalist_2, v.halve_finalist_3, v.halve_finalist_4].filter(Boolean);
-      const gekozenLanden = Array.from(new Set(landen));
-      
-      gekozenLanden.forEach((land: any) => {
-        const landStr = String(land);
-        if (!groepen[landStr]) groepen[landStr] = [];
-        groepen[landStr].push(naam);
-      });
-    });
-    return Object.entries(groepen).sort((a: [string, string[]], b: [string, string[]]) => b[1].length - a[1].length);
-  };
-
-  const sorteerCijfers = (veld: string) => {
-    return [...alleToernooiV]
-      .filter((v: any) => v[veld] !== null && v[veld] !== undefined)
-      .sort((a: any, b: any) => (Number(a[veld]) || 0) - (Number(b[veld]) || 0))
-      .map((v: any) => ({ naam: String(v.spelers?.naam?.split(' ')[0] || 'Onbekend'), getal: String(v[veld]) }));
-  };
-
-  const themaz = [
-    { id: 'winnaar', titel: '🏆 Wereldkampioen', kleur: '#CCFF00', data: groepeerOpAntwoord('winnaar') },
-    { id: 'hf', titel: '🌍 Halve Finalisten', kleur: '#00E5FF', data: groepeerHalveFinalisten() },
-    { id: 'topschutter', titel: '⚽ Topschutter', kleur: '#2B00FF', data: groepeerOpAntwoord('topschutter') },
-    { id: 'keeper', titel: '🧤 Beste Doelman', kleur: '#7A00E6', data: groepeerOpAntwoord('beste_keeper') },
-    { id: 'belgie', titel: '🇧🇪 Eindstation België', kleur: '#E30022', data: groepeerOpAntwoord('eindstation_belgie') }
-  ];
+  const kampWereldkampioen = groepeerData('winnaar');
+  const kampHalveFinalisten = groepeerHalveFinalisten();
+  const kampAanval = groepeerData('topschutter');
+  const kampVerdediging = groepeerData('beste_keeper');
+  const kampBelgie = groepeerData('eindstation_belgie');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      
-      {themaz.map((thema: any) => {
-        const isOpen = openThema === thema.id;
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+      <style>{`
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        .sectie-titel { fontFamily: 'Bebas Neue', fontSize: '2rem', margin: '0 0 10px 0', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '10px' }
+      `}</style>
+
+      <div style={{ background: '#1A1423', borderRadius: '16px', padding: '15px', borderLeft: '4px solid var(--wk-lime)' }}>
+         <h3 style={{ margin: '0 0 5px 0', fontSize: '1rem', color: 'var(--wk-lime)', textTransform: 'uppercase', fontWeight: 900 }}>⚔️ De Kampen zijn gevormd!</h3>
+         <div style={{ fontSize: '0.75rem', color: '#ADB5BD', fontWeight: 800 }}>Hier zie je precies wie jouw bondgenoten zijn. Vallen jouw landen uit? Dan val je samen met je bondgenoten!</div>
+      </div>
+
+      {/* WERELDKAMPIOEN */}
+      <div>
+        <h2 className="sectie-titel" style={{ color: '#FFD700' }}><span>👑</span> WERELDKAMPIOEN</h2>
+        {renderKampen(kampWereldkampioen, '#FFD700')}
+      </div>
+
+      {/* HALVE FINALISTEN */}
+      <div>
+        <h2 className="sectie-titel" style={{ color: 'var(--wk-aqua)' }}><span>🚀</span> HALVE FINALISTEN</h2>
+        {renderKampen(kampHalveFinalisten, 'var(--wk-aqua)')}
+      </div>
+
+      {/* AANVAL & VERDEDIGING */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div>
+          <h2 className="sectie-titel" style={{ color: 'var(--wk-lime)' }}><span>⚽</span> BESTE AANVAL</h2>
+          {renderKampen(kampAanval, 'var(--wk-lime)')}
+        </div>
+        <div>
+          <h2 className="sectie-titel" style={{ color: 'var(--wk-purple)' }}><span>🛡️</span> BESTE VERDEDIGING</h2>
+          {renderKampen(kampVerdediging, 'var(--wk-purple)')}
+        </div>
+      </div>
+
+      {/* EINDSTATION BELGIË */}
+      <div>
+        <h2 className="sectie-titel" style={{ color: 'var(--wk-orange)' }}><span>🍟</span> EINDSTATION BELGIË</h2>
+        {renderKampen(kampBelgie, 'var(--wk-orange)')}
+      </div>
+
+      {/* DE CIJFERS (Mini Klassementjes) */}
+      <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '20px', padding: '20px', marginTop: '10px' }}>
+        <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.2rem', color: '#FFF', margin: '0 0 20px 0', textAlign: 'center', letterSpacing: '1px' }}>🔢 DE CIJFER RACE</h2>
         
-        return (
-          <div key={thema.id} style={{ 
-            background: '#1A1423', 
-            borderRadius: '16px', 
-            overflow: 'hidden',
-            border: isOpen ? `2px solid ${thema.kleur}` : '2px solid transparent',
-            boxShadow: isOpen ? `0 4px 15px ${thema.kleur}30` : '0 4px 10px rgba(0,0,0,0.3)',
-            transition: 'all 0.3s ease'
-          }}>
-            <div 
-              onClick={() => setOpenTheme(isOpen ? null : thema.id)}
-              style={{ 
-                padding: '16px 20px', 
-                background: isOpen ? 'rgba(255,255,255,0.05)' : 'transparent',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                cursor: 'pointer'
-              }}
-            >
-              <h3 style={{ margin: 0, fontFamily: 'Bebas Neue', fontSize: '1.6rem', color: isOpen ? thema.kleur : '#FFF', letterSpacing: '1px' }}>
-                {thema.titel}
-              </h3>
-              <span style={{ color: isOpen ? thema.kleur : '#ADB5BD', fontWeight: 900 }}>
-                {isOpen ? '▲' : '▼'}
-              </span>
-            </div>
-
-            {isOpen && (
-              <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {thema.data.map(([antwoord, namen]: [string, string[]], index: number) => (
-                  <div key={index} style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '12px', borderLeft: `4px solid ${thema.kleur}` }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
-                      <span style={{ fontWeight: 900, fontSize: '1.1rem', color: '#FFF' }}>{antwoord}</span>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 900, color: thema.kleur, textTransform: 'uppercase' }}>
-                        {namen.length}x gekozen
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                      {namen.map((naam: string, i: number) => (
-                        <span key={i} style={{ background: 'rgba(255,255,255,0.1)', color: '#ADB5BD', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 800 }}>
-                          {naam}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
-
-      {/* APARTE ACCORDION VOOR DE GETALLEN (DOELPUNTEN & KAARTEN) */}
-      <div style={{ 
-        background: '#1A1423', 
-        borderRadius: '16px', 
-        overflow: 'hidden',
-        border: openThema === 'cijfers' ? '2px solid #FFF' : '2px solid transparent',
-        boxShadow: openThema === 'cijfers' ? '0 4px 15px rgba(255,255,255,0.2)' : '0 4px 10px rgba(0,0,0,0.3)',
-        transition: 'all 0.3s ease'
-      }}>
-        <div 
-          onClick={() => setOpenTheme(openThema === 'cijfers' ? null : 'cijfers')}
-          style={{ 
-            padding: '16px 20px', 
-            background: openThema === 'cijfers' ? 'rgba(255,255,255,0.05)' : 'transparent',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer'
-          }}
-        >
-          <h3 style={{ margin: 0, fontFamily: 'Bebas Neue', fontSize: '1.6rem', color: '#FFF', letterSpacing: '1px' }}>
-            🔢 Toernooicijfers
-          </h3>
-          <span style={{ color: '#ADB5BD', fontWeight: 900 }}>{openThema === 'cijfers' ? '▲' : '▼'}</span>
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--wk-lime)', textTransform: 'uppercase', marginBottom: '8px' }}>Totaal Aantal Goals:</div>
+          {renderCijferLijn('totaal_goals', 'var(--wk-lime)', 'Goals')}
         </div>
 
-        {openThema === 'cijfers' && (
-          <div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            
-            {/* TOTAAL GOALS */}
-            <div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 900, color: '#CCFF00', textTransform: 'uppercase', marginBottom: '8px' }}>Totaal Aantal Goals</div>
-              <div className="hide-scrollbar" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '5px' }}>
-                {sorteerCijfers('totaal_goals').map((item: any, i: number) => (
-                  <div key={i} style={{ background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '10px', minWidth: '70px', textAlign: 'center', flexShrink: 0 }}>
-                    <div style={{ fontSize: '0.65rem', color: '#ADB5BD', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.naam}</div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FFF' }}>{item.getal}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
+        <div style={{ marginBottom: '20px' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--wk-aqua)', textTransform: 'uppercase', marginBottom: '8px' }}>Totaal Gele Kaarten:</div>
+          {renderCijferLijn('totaal_gele_kaarten', 'var(--wk-aqua)', 'Geel')}
+        </div>
 
-            {/* GELE KAARTEN */}
-            <div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 900, color: '#00E5FF', textTransform: 'uppercase', marginBottom: '8px' }}>Totaal Gele Kaarten</div>
-              <div className="hide-scrollbar" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '5px' }}>
-                {sorteerCijfers('totaal_gele_kaarten').map((item: any, i: number) => (
-                  <div key={i} style={{ background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '10px', minWidth: '70px', textAlign: 'center', flexShrink: 0 }}>
-                    <div style={{ fontSize: '0.65rem', color: '#ADB5BD', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.naam}</div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FFF' }}>{item.getal}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* RODE KAARTEN */}
-            <div>
-              <div style={{ fontSize: '0.8rem', fontWeight: 900, color: '#E30022', textTransform: 'uppercase', marginBottom: '8px' }}>Totaal Rode Kaarten</div>
-              <div className="hide-scrollbar" style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '5px' }}>
-                {sorteerCijfers('totaal_rode_kaarten').map((item: any, i: number) => (
-                  <div key={i} style={{ background: 'rgba(0,0,0,0.3)', padding: '8px', borderRadius: '10px', minWidth: '70px', textAlign: 'center', flexShrink: 0 }}>
-                    <div style={{ fontSize: '0.65rem', color: '#ADB5BD', marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.naam}</div>
-                    <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#FFF' }}>{item.getal}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <style>{`
-              .hide-scrollbar::-webkit-scrollbar { display: none; }
-              .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-            `}</style>
-          </div>
-        )}
+        <div>
+          <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--wk-red)', textTransform: 'uppercase', marginBottom: '8px' }}>Totaal Rode Kaarten:</div>
+          {renderCijferLijn('totaal_rode_kaarten', 'var(--wk-red)', 'Rood')}
+        </div>
       </div>
 
     </div>
