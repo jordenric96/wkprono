@@ -1,30 +1,16 @@
 // src/components/AntwoordenTab.tsx
 import React from 'react';
 
-const normalize = (s: string) => s ? s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() : '';
+// Verwijdert alle vlaggen/emojis onzichtbaar op de achtergrond 
+// zodat hij correct kan checken met de actuele matchen in de database
+const normalize = (s: string) => {
+  if (!s) return '';
+  let clean = s.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}\uFE0F]/gu, '').trim();
+  return clean.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+};
 
 export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matchen }: any) {
   
-  const defaultEmojis: Record<string, string> = {
-    'belgië': '🇧🇪', 'nederland': '🇳🇱', 'frankrijk': '🇫🇷', 'duitsland': '🇩🇪', 'spanje': '🇪🇸',
-    'brazilië': '🇧🇷', 'argentinië': '🇦🇷', 'portugal': '🇵🇹', 'italië': '🇮🇹', 'engeland': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-    'mexico': '🇲🇽', 'verenigde staten': '🇺🇸', 'canada': '🇨🇦', 'marokko': '🇲🇦',
-    'chili': '🇨🇱', 'kameroen': '🇨🇲', 'colombia': '🇨🇴', 'costa rica': '🇨🇷', 'zwitserland': '🇨🇭',
-    'ivoorkust': '🇨🇮', 'oostenrijk': '🇦🇹', 'australië': '🇦🇺', 'japan': '🇯🇵', 'zuid-korea': '🇰🇷',
-    'kroatië': '🇭🇷', 'uruguay': '🇺🇾', 'senegal': '🇸🇳', 'ghana': '🇬🇭', 'nigeria': '🇳🇬', 
-    'ecuador': '🇪🇨', 'zweden': '🇸🇪', 'denemarken': '🇩🇰', 'schotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'polen': '🇵🇱', 
-    'servië': '🇷🇸', 'iran': '🇮🇷', 'saudi-arabië': '🇸🇦', 'wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'oekraïne': '🇺🇦', 
-    'peru': '🇵🇪', 'panama': '🇵🇦', 'egypte': '🇪🇬', 'tunesië': '🇹🇳', 'nieuw-zeeland': '🇳🇿', 
-    'qatar': '🇶🇦', 'ierland': '🇮🇪', 'turkije': '🇹🇷', 'zuid-afrika': '🇿🇦', 'tsjechië': '🇨🇿', 
-    'roemenië': '🇷🇴', 'hongarije': '🇭🇺', 'noorwegen': '🇳🇴', 'ijsland': '🇮🇸', 'slowakije': '🇸🇰'
-  };
-
-  const krijgEmoji = (land: string) => {
-    if (!land) return '🏳️';
-    const zoekSleutel = land.trim().toLowerCase();
-    return defaultEmojis[zoekSleutel] || '🏳️';
-  };
-
   // Functie die live in de matchen-tabel kijkt om te zien of een land definitief naar huis is
   const checkStatus = (land: string) => {
     const key = normalize(land);
@@ -48,7 +34,7 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
        });
 
        // Ligt eruit in de groepsfase (zit niet in de knock-outs)
-       if (hasKnockoutsStarted && !teamsInKnockout.has(key)) {
+       if (hasKnockoutsStarted && key && !teamsInKnockout.has(key)) {
           outForTitle = true;
           outBeforeSemi = true;
        }
@@ -84,11 +70,10 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
     alleToernooiV.forEach((v: any) => {
       let val = v[veld];
       if (!val) return;
-      val = val.trim();
-      const cleanVal = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
-      if (!groepen[cleanVal]) groepen[cleanVal] = [];
+      val = val.trim(); // We laten de string exact zoals hij is in de DB (incl. de emoji)
+      if (!groepen[val]) groepen[val] = [];
       const voornaam = v.spelers?.naam?.split(' ')[0] || 'Onbekend';
-      groepen[cleanVal].push(voornaam);
+      groepen[val].push(voornaam);
     });
     return Object.entries(groepen).sort((a, b) => b[1].length - a[1].length);
   };
@@ -99,9 +84,9 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
       const voornaam = v.spelers?.naam?.split(' ')[0] || 'Onbekend';
       [v.halve_finalist_1, v.halve_finalist_2, v.halve_finalist_3, v.halve_finalist_4].forEach(hf => {
         if (!hf) return;
-        const cleanVal = hf.trim().charAt(0).toUpperCase() + hf.trim().slice(1).toLowerCase();
-        if (!groepen[cleanVal]) groepen[cleanVal] = [];
-        groepen[cleanVal].push(voornaam);
+        const val = hf.trim();
+        if (!groepen[val]) groepen[val] = [];
+        groepen[val].push(voornaam);
       });
     });
     return Object.entries(groepen).sort((a, b) => b[1].length - a[1].length);
@@ -143,7 +128,6 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
             }}>
               <div style={{ padding: '12px 10px', background: 'rgba(0,0,0,0.2)', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <div style={{ fontSize: '1.05rem', fontWeight: 900, color: isDead ? '#ADB5BD' : '#FFF', textTransform: 'uppercase' }}>
-                  <span style={{ marginRight: '6px' }}>{krijgEmoji(land)}</span>
                   <span style={{ textDecoration: isDead ? 'line-through' : 'none' }}>{land}</span>
                 </div>
                 {badge}
