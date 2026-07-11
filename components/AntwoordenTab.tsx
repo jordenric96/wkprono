@@ -1,18 +1,94 @@
 // src/components/AntwoordenTab.tsx
 import React from 'react';
 
-// Verwijdert onzichtbaar alle vlaggen/emojis in de achtergrond 
-// zodat we perfect kunnen vergelijken met de database-matchen
-const normalize = (s: string) => {
-  if (!s) return '';
-  let clean = s.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}\uFE0F]/gu, '').trim();
-  return clean.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+// De hyper-intelligente normalisatiefunctie die ALLES begrijpt (Emojis, Engels, Caps)
+const normalizeString = (teamString: string) => {
+  if (!teamString) return '';
+  let cleanString = teamString.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}\uFE0F]/gu, '').trim();
+  let searchKey = cleanString.toLowerCase();
+
+  const vertalingen: Record<string, string> = {
+    'brazil': 'Brazilië', 'brazilië': 'Brazilië',
+    'morocco': 'Marokko', 'marokko': 'Marokko',
+    'switzerland': 'Zwitserland', 'zwitserland': 'Zwitserland',
+    'bosnia and herzegovina': 'Bosnië', 'bosnia & herzegovina': 'Bosnië', 'bosnia': 'Bosnië', 'bosnië': 'Bosnië',
+    'south korea': 'Zuid-Korea', 'zuid-korea': 'Zuid-Korea',
+    'south africa': 'Zuid-Afrika', 'zuid-afrika': 'Zuid-Afrika',
+    'czechia': 'Tsjechië', 'czech republic': 'Tsjechië', 'tsjechië': 'Tsjechië',
+    'germany': 'Duitsland', 'duitsland': 'Duitsland',
+    'spain': 'Spanje', 'spanje': 'Spanje',
+    'france': 'Frankrijk', 'frankrijk': 'Frankrijk',
+    'netherlands': 'Nederland', 'nederland': 'Nederland',
+    'belgium': 'België', 'belgië': 'België',
+    'italy': 'Italië', 'italië': 'Italië',
+    'argentina': 'Argentinië', 'argentinië': 'Argentinië',
+    'england': 'Engeland', 'wales': 'Wales', 'scotland': 'Schotland',
+    'usa': 'Verenigde Staten', 'united states': 'Verenigde Staten', 'verenigde staten': 'Verenigde Staten',
+    'canada': 'Canada', 'mexico': 'Mexico', 'japan': 'Japan',
+    'croatia': 'Kroatië', 'kroatië': 'Kroatië',
+    'uruguay': 'Uruguay', 'senegal': 'Senegal', 'ghana': 'Ghana', 'nigeria': 'Nigeria', 'ecuador': 'Ecuador',
+    'sweden': 'Zweden', 'zweden': 'Zweden',
+    'denmark': 'Denemarken', 'denemarken': 'Denemarken',
+    'polen': 'Polen', 'poland': 'Polen',
+    'servië': 'Servië', 'serbia': 'Servië',
+    'iran': 'Iran', 'saudi-arabië': 'Saudi-Arabië', 'saudi arabia': 'Saudi-Arabië',
+    'oekraïne': 'Oekraïne', 'ukraine': 'Oekraïne',
+    'peru': 'Peru', 'panama': 'Panama',
+    'egypt': 'Egypte', 'egypte': 'Egypte',
+    'tunisia': 'Tunesië', 'tunesië': 'Tunesië',
+    'nieuw-zeeland': 'Nieuw-Zeeland', 'new zealand': 'Nieuw-Zeeland',
+    'qatar': 'Qatar', 'ierland': 'Ierland', 'ireland': 'Ierland',
+    'turkije': 'Turkije', 'turkey': 'Turkije', 'turkiye': 'Turkije', 'türkiye': 'Turkije',
+    'roemenië': 'Roemenië', 'romania': 'Roemenië',
+    'hongarije': 'Hongarije', 'hungary': 'Hongarije',
+    'noorwegen': 'Noorwegen', 'norway': 'Noorwegen',
+    'ijsland': 'IJsland', 'iceland': 'IJsland',
+    'slowakije': 'Slowakije', 'slovakia': 'Slowakije',
+    'irak': 'Irak', 'iraq': 'Irak',
+    'paraguay': 'Paraguay', 'venezuela': 'Venezuela',
+    'mali': 'Mali', 'algerije': 'Algerije', 'algeria': 'Algerije',
+    'zambia': 'Zambia', 'honduras': 'Honduras', 'el salvador': 'El Salvador',
+    'kaapverdië': 'Kaapverdië', 'cabo verde': 'Kaapverdië', 'cape verde': 'Kaapverdië',
+    'haïti': 'Haïti', 'haiti': 'Haïti',
+    'curaçao': 'Curaçao', 'curacao': 'Curaçao',
+    'jordanië': 'Jordanië', 'jordan': 'Jordanië',
+    'congo': 'Congo', 'congo dr': 'Congo', 'dr congo': 'Congo',
+    'oezbekistan': 'Oezbekistan', 'uzbekistan': 'Oezbekistan',
+    'ivoorkust': 'Ivoorkust', "cote d'ivoire": 'Ivoorkust', "côte d'ivoire": 'Ivoorkust', 'cote divoire': 'Ivoorkust',
+    'kameroen': 'Kameroen', 'cameroon': 'Kameroen',
+    'chili': 'Chili', 'chile': 'Chili',
+    'colombia': 'Colombia', 'costa rica': 'Costa Rica',
+    'oostenrijk': 'Oostenrijk', 'austria': 'Oostenrijk',
+    'australië': 'Australië', 'australia': 'Australië'
+  };
+
+  let nameNL = vertalingen[searchKey] || cleanString;
+  return nameNL.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 };
 
 export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matchen }: any) {
   
-  // Bereken real-time topschutters en beste verdedigingen om te voorkomen 
-  // dat we teams wegstrepen die eruit liggen maar WEL koploper zijn.
+  const defaultEmojis: Record<string, string> = {
+    'belgië': '🇧🇪', 'nederland': '🇳🇱', 'frankrijk': '🇫🇷', 'duitsland': '🇩🇪', 'spanje': '🇪🇸',
+    'brazilië': '🇧🇷', 'argentinië': '🇦🇷', 'portugal': '🇵🇹', 'italië': '🇮🇹', 'engeland': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+    'mexico': '🇲🇽', 'verenigde staten': '🇺🇸', 'canada': '🇨🇦', 'marokko': '🇲🇦',
+    'chili': '🇨🇱', 'kameroen': '🇨🇲', 'colombia': '🇨🇴', 'costa rica': '🇨🇷', 'zwitserland': '🇨🇭',
+    'ivoorkust': '🇨🇮', 'oostenrijk': '🇦🇹', 'australië': '🇦🇺', 'japan': '🇯🇵', 'zuid-korea': '🇰🇷',
+    'kroatië': '🇭🇷', 'uruguay': '🇺🇾', 'senegal': '🇸🇳', 'ghana': '🇬🇭', 'nigeria': '🇳🇬', 
+    'ecuador': '🇪🇨', 'zweden': '🇸🇪', 'denemarken': '🇩🇰', 'schotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'polen': '🇵🇱', 
+    'servië': '🇷🇸', 'iran': '🇮🇷', 'saudi-arabië': '🇸🇦', 'wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'oekraïne': '🇺🇦', 
+    'peru': '🇵🇪', 'panama': '🇵🇦', 'egypte': '🇪🇬', 'tunesië': '🇹🇳', 'nieuw-zeeland': '🇳🇿', 
+    'qatar': '🇶🇦', 'ierland': '🇮🇪', 'turkije': '🇹🇷', 'zuid-afrika': '🇿🇦', 'tsjechië': '🇨🇿', 
+    'roemenië': '🇷🇴', 'hongarije': '🇭🇺', 'noorwegen': '🇳🇴', 'ijsland': '🇮🇸', 'slowakije': '🇸🇰'
+  };
+
+  const krijgEmoji = (land: string) => {
+    if (!land) return '🏳️';
+    const zoekSleutel = normalizeString(land);
+    return defaultEmojis[zoekSleutel] || '🏳️';
+  };
+
+  // 1. DATA BEREKENEN: Topschutters & Beste Verdediging
   const teamGoalsVoor: Record<string, number> = {};
   const teamGoalsTegen: Record<string, number> = {};
   
@@ -21,8 +97,8 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
       if (match.thuis_score !== null && match.uit_score !== null) {
         const tScore = Number(match.thuis_score) + Number(match.extra_goals_thuis || 0);
         const uScore = Number(match.uit_score) + Number(match.extra_goals_uit || 0);
-        const tTeam = normalize(match.thuisploeg);
-        const uTeam = normalize(match.uitploeg);
+        const tTeam = normalizeString(match.thuisploeg);
+        const uTeam = normalizeString(match.uitploeg);
         
         if (tTeam) {
           teamGoalsVoor[tTeam] = (teamGoalsVoor[tTeam] || 0) + tScore;
@@ -42,7 +118,7 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
   const minTegen = Object.values(teamGoalsTegen).length > 0 ? Math.min(...Object.values(teamGoalsTegen)) : -1;
   const bestDefenses = Object.keys(teamGoalsTegen).filter(t => teamGoalsTegen[t] === minTegen && minTegen >= 0);
 
-  // EINDSTATION BELGIË LOGICA
+  // 2. DATA BEREKENEN: Eindstation België
   let echtEindstationBelgie = "";
   let belgieIsUitgeschakeld = false;
   let teamsInKnockoutVoorBelgie = new Set<string>();
@@ -51,8 +127,8 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
   if (matchen && matchen.length > 0) {
     matchen.forEach((match: any) => {
       if (match.ronde !== 'Groepsfase') {
-        if (match.thuisploeg && match.thuisploeg !== '?') { teamsInKnockoutVoorBelgie.add(normalize(match.thuisploeg)); knockoutsHebbenPloegen = true; }
-        if (match.uitploeg && match.uitploeg !== '?') { teamsInKnockoutVoorBelgie.add(normalize(match.uitploeg)); knockoutsHebbenPloegen = true; }
+        if (match.thuisploeg && match.thuisploeg !== '?') { teamsInKnockoutVoorBelgie.add(normalizeString(match.thuisploeg)); knockoutsHebbenPloegen = true; }
+        if (match.uitploeg && match.uitploeg !== '?') { teamsInKnockoutVoorBelgie.add(normalizeString(match.uitploeg)); knockoutsHebbenPloegen = true; }
       }
     });
 
@@ -62,9 +138,9 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
     }
 
     matchen.forEach((match: any) => {
-      if (match.ronde !== 'Groepsfase' && match.thuis_score !== null) {
-        const isThuisBelgie = normalize(match.thuisploeg) === 'belgie' || normalize(match.thuisploeg) === 'belgië';
-        const isUitBelgie = normalize(match.uitploeg) === 'belgie' || normalize(match.uitploeg) === 'belgië';
+      if (match.ronde !== 'Groepsfase' && match.thuis_score !== null && match.uit_score !== null) {
+        const isThuisBelgie = normalizeString(match.thuisploeg) === 'belgie' || normalizeString(match.thuisploeg) === 'belgië';
+        const isUitBelgie = normalizeString(match.uitploeg) === 'belgie' || normalizeString(match.uitploeg) === 'belgië';
         
         if (isThuisBelgie || isUitBelgie) {
            const tScore = Number(match.thuis_score) + Number(match.extra_goals_thuis || 0);
@@ -73,12 +149,15 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
            
            if (isThuisBelgie && tScore > uScore) belgieWon = true;
            else if (isUitBelgie && uScore > tScore) belgieWon = true;
-           else if (tScore === uScore && (normalize(match.winnaar_na_penaltys) === 'belgie' || normalize(match.winnaar_na_penaltys) === 'belgië')) belgieWon = true;
+           else if (tScore === uScore && match.winnaar_na_penaltys) {
+               const penaltyWinner = normalizeString(match.winnaar_na_penaltys);
+               if (penaltyWinner === 'belgie' || penaltyWinner === 'belgië') belgieWon = true;
+           }
            
            if (!belgieWon) {
               echtEindstationBelgie = match.ronde;
               belgieIsUitgeschakeld = true;
-           } else if (belgieWon && match.ronde === 'Finale') {
+           } else if (belgieWon && match.ronde.toLowerCase().includes('finale') && !match.ronde.toLowerCase().includes('kwart') && !match.ronde.toLowerCase().includes('halve') && !match.ronde.toLowerCase().includes('troost')) {
               echtEindstationBelgie = 'Wereldkampioen';
               belgieIsUitgeschakeld = true;
            }
@@ -87,35 +166,35 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
     });
   }
 
-  // Check of een land levend of dood is
+  // 3. HOOFDLOGICA: Is een ploeg uitgeschakeld of nog in leven?
   const checkStatus = (land: string) => {
-    const key = normalize(land);
+    const key = normalizeString(land);
     let outForTitle = false;
     let reachedSemi = false;
-    let outBeforeSemi = false;
 
     if (matchen && matchen.length > 0) {
+       const hasKnockoutsStarted = matchen.some((m: any) => m.ronde !== 'Groepsfase' && m.thuis_score !== null);
        const teamsInKnockout = new Set();
-       let knockoutsGevormd = false;
        
        matchen.forEach((m: any) => {
           if (m.ronde !== 'Groepsfase') {
-             if (m.thuisploeg && m.thuisploeg !== '?') { teamsInKnockout.add(normalize(m.thuisploeg)); knockoutsGevormd = true; }
-             if (m.uitploeg && m.uitploeg !== '?') { teamsInKnockout.add(normalize(m.uitploeg)); knockoutsGevormd = true; }
+             if (m.thuisploeg && m.thuisploeg !== '?') teamsInKnockout.add(normalizeString(m.thuisploeg));
+             if (m.uitploeg && m.uitploeg !== '?') teamsInKnockout.add(normalizeString(m.uitploeg));
           }
-          if (m.ronde === 'Halve finale' || m.ronde === 'Troostfinale' || m.ronde === 'Finale') {
-             if (m.thuisploeg && normalize(m.thuisploeg) === key) reachedSemi = true;
-             if (m.uitploeg && normalize(m.uitploeg) === key) reachedSemi = true;
+          
+          const rondeLower = m.ronde.toLowerCase();
+          if (rondeLower.includes('halve') || rondeLower.includes('troost') || rondeLower.includes('finale')) {
+             if (m.thuisploeg && normalizeString(m.thuisploeg) === key) reachedSemi = true;
+             if (m.uitploeg && normalizeString(m.uitploeg) === key) reachedSemi = true;
           }
        });
 
-       // Ligt eruit in de groepsfase (Zit niet in de Achtste Finales terwijl die al bekend zijn)
-       if (knockoutsGevormd && key && !teamsInKnockout.has(key)) {
+       // 1. Is het toernooi al in de knock-outs, maar dit land niet?
+       if (hasKnockoutsStarted && key && !teamsInKnockout.has(key)) {
           outForTitle = true;
-          outBeforeSemi = true;
        }
 
-       // Ligt eruit door een verloren knock-out match
+       // 2. Heeft dit land een besliste wedstrijd verloren in de knock-outs?
        matchen.forEach((m: any) => {
           if (m.ronde !== 'Groepsfase' && m.thuis_score !== null && m.uit_score !== null) {
              const tScore = Number(m.thuis_score) + Number(m.extra_goals_thuis || 0);
@@ -125,18 +204,20 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
              if (tScore > uScore) loser = m.uitploeg;
              else if (uScore > tScore) loser = m.thuisploeg;
              else if (m.winnaar_na_penaltys) {
-                loser = normalize(m.winnaar_na_penaltys) === normalize(m.thuisploeg) ? m.uitploeg : m.thuisploeg;
+                // Als het gelijk is, check wie er de penalties NIET won
+                loser = normalizeString(m.winnaar_na_penaltys) === normalizeString(m.thuisploeg) ? m.uitploeg : m.thuisploeg;
              }
 
-             if (loser && normalize(loser) === key) {
+             if (loser && normalizeString(loser) === key) {
                 outForTitle = true;
-                if (m.ronde === 'Ronde van 32' || m.ronde === 'Achtste finale' || m.ronde === 'Kwartfinale') {
-                   outBeforeSemi = true;
-                }
              }
           }
        });
     }
+
+    // De absolute gouden regel: Je bent pas uitgeschakeld voor de Halve finale 
+    // als je dood bent én nooit de halve finale hebt gehaald.
+    const outBeforeSemi = outForTitle && !reachedSemi;
 
     return { outForTitle, reachedSemi, outBeforeSemi };
   };
@@ -146,10 +227,14 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
     alleToernooiV.forEach((v: any) => {
       let val = v[veld];
       if (!val) return;
-      val = val.trim();
-      if (!groepen[val]) groepen[val] = [];
+      
+      // We gebruiken string cleaning ZONDER de emoji te wissen voor de display naam
+      let displayNaam = val.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}\uFE0F]/gu, '').trim();
+      displayNaam = displayNaam.charAt(0).toUpperCase() + displayNaam.slice(1).toLowerCase();
+      
+      if (!groepen[displayNaam]) groepen[displayNaam] = [];
       const voornaam = v.spelers?.naam?.split(' ')[0] || 'Onbekend';
-      groepen[val].push(voornaam);
+      groepen[displayNaam].push(voornaam);
     });
     return Object.entries(groepen).sort((a, b) => b[1].length - a[1].length);
   };
@@ -160,9 +245,11 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
       const voornaam = v.spelers?.naam?.split(' ')[0] || 'Onbekend';
       [v.halve_finalist_1, v.halve_finalist_2, v.halve_finalist_3, v.halve_finalist_4].forEach(hf => {
         if (!hf) return;
-        const val = hf.trim();
-        if (!groepen[val]) groepen[val] = [];
-        groepen[val].push(voornaam);
+        let displayNaam = hf.replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}\u{E0060}-\u{E007F}\u{1F1E6}-\u{1F1FF}\uFE0F]/gu, '').trim();
+        displayNaam = displayNaam.charAt(0).toUpperCase() + displayNaam.slice(1).toLowerCase();
+        
+        if (!groepen[displayNaam]) groepen[displayNaam] = [];
+        groepen[displayNaam].push(voornaam);
       });
     });
     return Object.entries(groepen).sort((a, b) => b[1].length - a[1].length);
@@ -176,7 +263,7 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
         {data.map(([land, spelers], index) => {
           
           const { outForTitle, reachedSemi, outBeforeSemi } = checkStatus(land);
-          const normalizedLand = normalize(land);
+          const normalizedLand = normalizeString(land);
           let isDead = false;
           let isSuccess = false;
           let badge = null;
@@ -208,8 +295,8 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
                 badge = <div style={{ background: 'rgba(122, 0, 230, 0.15)', color: 'var(--wk-purple)', fontSize: '0.55rem', padding: '2px 6px', borderRadius: '6px', fontWeight: 900, textTransform: 'uppercase', marginTop: '5px', display: 'inline-block', border: '1px solid var(--wk-purple)' }}>⚠️ Koploper (Uit)</div>;
              }
           } else if (type === 'belgie') {
-              const normOptie = normalize(land);
-              const normEcht = normalize(echtEindstationBelgie);
+              const normOptie = normalizeString(land);
+              const normEcht = normalizeString(echtEindstationBelgie);
               
               if (belgieIsUitgeschakeld) {
                   if (normOptie === normEcht || normOptie.includes(normEcht) || normEcht.includes(normOptie) || (normOptie === 'winnaar' && normEcht === 'wereldkampioen') || (normOptie === 'wereldkampioen' && normEcht === 'winnaar')) {
@@ -240,8 +327,8 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
               transition: '0.3s'
             }}>
               <div style={{ padding: '12px 10px', background: 'rgba(0,0,0,0.2)', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                {/* GEEN EXTRA EMOJI MEER TOEGEVOEGD, DIRECT UIT DATABASE */}
                 <div style={{ fontSize: '1.05rem', fontWeight: 900, color: isDead ? '#ADB5BD' : '#FFF', textTransform: 'uppercase' }}>
+                  <span style={{ marginRight: '6px' }}>{krijgEmoji(land)}</span>
                   <span style={{ textDecoration: isDead ? 'line-through' : 'none' }}>{land}</span>
                 </div>
                 {badge}
