@@ -11,7 +11,58 @@ const normalize = (s: string) => {
 
 export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matchen }: any) {
   
-  // Functie die live in de matchen-tabel kijkt om te zien of een land definitief naar huis is
+  const defaultEmojis: Record<string, string> = {
+    'belgië': '🇧🇪', 'nederland': '🇳🇱', 'frankrijk': '🇫🇷', 'duitsland': '🇩🇪', 'spanje': '🇪🇸',
+    'brazilië': '🇧🇷', 'argentinië': '🇦🇷', 'portugal': '🇵🇹', 'italië': '🇮🇹', 'engeland': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+    'mexico': '🇲🇽', 'verenigde staten': '🇺🇸', 'canada': '🇨🇦', 'marokko': '🇲🇦',
+    'chili': '🇨🇱', 'kameroen': '🇨🇲', 'colombia': '🇨🇴', 'costa rica': '🇨🇷', 'zwitserland': '🇨🇭',
+    'ivoorkust': '🇨🇮', 'oostenrijk': '🇦🇹', 'australië': '🇦🇺', 'japan': '🇯🇵', 'zuid-korea': '🇰🇷',
+    'kroatië': '🇭🇷', 'uruguay': '🇺🇾', 'senegal': '🇸🇳', 'ghana': '🇬🇭', 'nigeria': '🇳🇬', 
+    'ecuador': '🇪🇨', 'zweden': '🇸🇪', 'denemarken': '🇩🇰', 'schotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'polen': '🇵🇱', 
+    'servië': '🇷🇸', 'iran': '🇮🇷', 'saudi-arabië': '🇸🇦', 'wales': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'oekraïne': '🇺🇦', 
+    'peru': '🇵🇪', 'panama': '🇵🇦', 'egypte': '🇪🇬', 'tunesië': '🇹🇳', 'nieuw-zeeland': '🇳🇿', 
+    'qatar': '🇶🇦', 'ierland': '🇮🇪', 'turkije': '🇹🇷', 'zuid-afrika': '🇿🇦', 'tsjechië': '🇨🇿', 
+    'roemenië': '🇷🇴', 'hongarije': '🇭🇺', 'noorwegen': '🇳🇴', 'ijsland': '🇮🇸', 'slowakije': '🇸🇰'
+  };
+
+  const krijgEmoji = (land: string) => {
+    if (!land) return '🏳️';
+    const zoekSleutel = land.trim().toLowerCase();
+    return defaultEmojis[zoekSleutel] || '🏳️';
+  };
+
+  // Bereken real-time topschutters en beste verdedigingen om te voorkomen 
+  // dat we teams wegstrepen die eruit liggen maar WEL de meeste goals hebben.
+  const teamGoalsVoor: Record<string, number> = {};
+  const teamGoalsTegen: Record<string, number> = {};
+  
+  if (matchen) {
+    matchen.forEach((match: any) => {
+      if (match.thuis_score !== null && match.uit_score !== null) {
+        const tScore = Number(match.thuis_score) + Number(match.extra_goals_thuis || 0);
+        const uScore = Number(match.uit_score) + Number(match.extra_goals_uit || 0);
+        const tTeam = normalize(match.thuisploeg);
+        const uTeam = normalize(match.uitploeg);
+        
+        if (tTeam) {
+          teamGoalsVoor[tTeam] = (teamGoalsVoor[tTeam] || 0) + tScore;
+          teamGoalsTegen[tTeam] = (teamGoalsTegen[tTeam] || 0) + uScore;
+        }
+        if (uTeam) {
+          teamGoalsVoor[uTeam] = (teamGoalsVoor[uTeam] || 0) + uScore;
+          teamGoalsTegen[uTeam] = (teamGoalsTegen[uTeam] || 0) + tScore;
+        }
+      }
+    });
+  }
+
+  const maxGoals = Object.values(teamGoalsVoor).length > 0 ? Math.max(...Object.values(teamGoalsVoor)) : -1;
+  const topScorers = Object.keys(teamGoalsVoor).filter(t => teamGoalsVoor[t] === maxGoals && maxGoals > 0);
+
+  const minTegen = Object.values(teamGoalsTegen).length > 0 ? Math.min(...Object.values(teamGoalsTegen)) : -1;
+  const bestDefenses = Object.keys(teamGoalsTegen).filter(t => teamGoalsTegen[t] === minTegen && minTegen >= 0);
+
+  // Check of een land levend of dood is
   const checkStatus = (land: string) => {
     const key = normalize(land);
     let outForTitle = false;
@@ -33,7 +84,7 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
           }
        });
 
-       // Ligt eruit in de groepsfase (zit niet in de knock-outs)
+       // Ligt eruit in de groepsfase
        if (hasKnockoutsStarted && key && !teamsInKnockout.has(key)) {
           outForTitle = true;
           outBeforeSemi = true;
@@ -46,10 +97,11 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
              const uScore = Number(m.uit_score) + Number(m.extra_goals_uit || 0);
              let loser = null;
              
+             // BUGFIX: Pas als er winnaar na penaltys is in geval van gelijkspel, duiden we een verliezer aan!
              if (tScore > uScore) loser = m.uitploeg;
              else if (uScore > tScore) loser = m.thuisploeg;
-             else {
-                loser = m.winnaar_na_penaltys === m.thuisploeg ? m.uitploeg : m.thuisploeg;
+             else if (m.winnaar_na_penaltys) {
+                loser = normalize(m.winnaar_na_penaltys) === normalize(m.thuisploeg) ? m.uitploeg : m.thuisploeg;
              }
 
              if (loser && normalize(loser) === key) {
@@ -70,10 +122,11 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
     alleToernooiV.forEach((v: any) => {
       let val = v[veld];
       if (!val) return;
-      val = val.trim(); // We laten de string exact zoals hij is in de DB (incl. de emoji)
-      if (!groepen[val]) groepen[val] = [];
+      val = val.trim();
+      const cleanVal = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase();
+      if (!groepen[cleanVal]) groepen[cleanVal] = [];
       const voornaam = v.spelers?.naam?.split(' ')[0] || 'Onbekend';
-      groepen[val].push(voornaam);
+      groepen[cleanVal].push(voornaam);
     });
     return Object.entries(groepen).sort((a, b) => b[1].length - a[1].length);
   };
@@ -84,15 +137,15 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
       const voornaam = v.spelers?.naam?.split(' ')[0] || 'Onbekend';
       [v.halve_finalist_1, v.halve_finalist_2, v.halve_finalist_3, v.halve_finalist_4].forEach(hf => {
         if (!hf) return;
-        const val = hf.trim();
-        if (!groepen[val]) groepen[val] = [];
-        groepen[val].push(voornaam);
+        const cleanVal = hf.trim().charAt(0).toUpperCase() + hf.trim().slice(1).toLowerCase();
+        if (!groepen[cleanVal]) groepen[cleanVal] = [];
+        groepen[cleanVal].push(voornaam);
       });
     });
     return Object.entries(groepen).sort((a, b) => b[1].length - a[1].length);
   };
 
-  const renderKampen = (data: [string, string[]][], primaryColor: string, type: 'winnaar' | 'halve' | 'andere' | 'belgie') => {
+  const renderKampen = (data: [string, string[]][], primaryColor: string, type: 'winnaar' | 'halve' | 'aanval' | 'verdediging' | 'belgie') => {
     if (data.length === 0) return <div style={{ color: '#ADB5BD', fontSize: '0.8rem', fontStyle: 'italic' }}>Nog geen data beschikbaar.</div>;
     
     return (
@@ -100,6 +153,7 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
         {data.map(([land, spelers], index) => {
           
           const { outForTitle, reachedSemi, outBeforeSemi } = checkStatus(land);
+          const normalizedLand = normalize(land);
           let isDead = false;
           let isSuccess = false;
           let badge = null;
@@ -110,10 +164,26 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
           } else if (type === 'halve') {
              isDead = outBeforeSemi;
              isSuccess = reachedSemi;
-             if (isDead) badge = <div style={{ background: 'var(--wk-red)', color: '#FFF', fontSize: '0.55rem', padding: '2px 6px', borderRadius: '6px', fontWeight: 900, textTransform: 'uppercase', marginTop: '5px', display: 'inline-block' }}>❌ Uitgeschakeld</div>;
              if (isSuccess) badge = <div style={{ background: 'var(--wk-lime)', color: '#111827', fontSize: '0.55rem', padding: '2px 6px', borderRadius: '6px', fontWeight: 900, textTransform: 'uppercase', marginTop: '5px', display: 'inline-block' }}>✅ Gehaald</div>;
-          } else if (type === 'andere') {
-             if (outForTitle) badge = <div style={{ background: 'rgba(255,255,255,0.1)', color: '#ADB5BD', fontSize: '0.55rem', padding: '2px 6px', borderRadius: '6px', fontWeight: 900, textTransform: 'uppercase', marginTop: '5px', display: 'inline-block' }}>💀 Toernooi Verlaten</div>;
+             else if (isDead) badge = <div style={{ background: 'var(--wk-red)', color: '#FFF', fontSize: '0.55rem', padding: '2px 6px', borderRadius: '6px', fontWeight: 900, textTransform: 'uppercase', marginTop: '5px', display: 'inline-block' }}>❌ Uitgeschakeld</div>;
+          } else if (type === 'aanval') {
+             const isKoploper = topScorers.includes(normalizedLand);
+             isDead = outForTitle && !isKoploper;
+             
+             if (isDead) {
+                badge = <div style={{ background: 'rgba(255,255,255,0.1)', color: '#ADB5BD', fontSize: '0.55rem', padding: '2px 6px', borderRadius: '6px', fontWeight: 900, textTransform: 'uppercase', marginTop: '5px', display: 'inline-block' }}>💀 Toernooi Verlaten</div>;
+             } else if (outForTitle && isKoploper) {
+                badge = <div style={{ background: 'rgba(204, 255, 0, 0.15)', color: 'var(--wk-lime)', fontSize: '0.55rem', padding: '2px 6px', borderRadius: '6px', fontWeight: 900, textTransform: 'uppercase', marginTop: '5px', display: 'inline-block', border: '1px solid var(--wk-lime)' }}>⚠️ Koploper (Uitgeschakeld)</div>;
+             }
+          } else if (type === 'verdediging') {
+             const isKoploper = bestDefenses.includes(normalizedLand);
+             isDead = outForTitle && !isKoploper;
+             
+             if (isDead) {
+                badge = <div style={{ background: 'rgba(255,255,255,0.1)', color: '#ADB5BD', fontSize: '0.55rem', padding: '2px 6px', borderRadius: '6px', fontWeight: 900, textTransform: 'uppercase', marginTop: '5px', display: 'inline-block' }}>💀 Toernooi Verlaten</div>;
+             } else if (outForTitle && isKoploper) {
+                badge = <div style={{ background: 'rgba(122, 0, 230, 0.15)', color: 'var(--wk-purple)', fontSize: '0.55rem', padding: '2px 6px', borderRadius: '6px', fontWeight: 900, textTransform: 'uppercase', marginTop: '5px', display: 'inline-block', border: '1px solid var(--wk-purple)' }}>⚠️ Koploper (Uitgeschakeld)</div>;
+             }
           }
 
           return (
@@ -128,6 +198,7 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
             }}>
               <div style={{ padding: '12px 10px', background: 'rgba(0,0,0,0.2)', textAlign: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <div style={{ fontSize: '1.05rem', fontWeight: 900, color: isDead ? '#ADB5BD' : '#FFF', textTransform: 'uppercase' }}>
+                  <span style={{ marginRight: '6px' }}>{krijgEmoji(land)}</span>
                   <span style={{ textDecoration: isDead ? 'line-through' : 'none' }}>{land}</span>
                 </div>
                 {badge}
@@ -222,11 +293,11 @@ export default function AntwoordenTab({ nu, DEADLINE_DATE, alleToernooiV, matche
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div>
           <h2 className="sectie-titel" style={{ color: 'var(--wk-lime)' }}><span>⚽</span> BESTE AANVAL <span style={{fontSize: '1rem', color: '#ADB5BD'}}>(3 PT)</span></h2>
-          {renderKampen(kampAanval, 'var(--wk-lime)', 'andere')}
+          {renderKampen(kampAanval, 'var(--wk-lime)', 'aanval')}
         </div>
         <div>
           <h2 className="sectie-titel" style={{ color: 'var(--wk-purple)' }}><span>🛡️</span> BESTE VERDEDIGING <span style={{fontSize: '1rem', color: '#ADB5BD'}}>(3 PT)</span></h2>
-          {renderKampen(kampVerdediging, 'var(--wk-purple)', 'andere')}
+          {renderKampen(kampVerdediging, 'var(--wk-purple)', 'verdediging')}
         </div>
       </div>
 
