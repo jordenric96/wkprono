@@ -112,9 +112,11 @@ export default function Home() {
   const [showUrgentPopup, setShowUrgentPopup] = useState(true);
   const [urgenteMatchen, setUrgenteMatchen] = useState<{matchNaam: string, datum: string, ontbrekend: string[], ontbrekendIds: number[]}[]>([]);
 
+  // POLL STATES
   const [heeftAlGestemd, setHeeftAlGestemd] = useState(false);
   const [allePollStemmen, setAlleToernooiPollStemmen] = useState<any[]>([]);
   const [pollVerstuurdStatus, setPollVerstuurdStatus] = useState('');
+  const [toonPollDashboard, setToonPollDashboard] = useState(false);
 
   const actieveTabRef = useRef(actieveTab);
   const actieveSpelerRef = useRef(actieveSpeler);
@@ -509,7 +511,6 @@ export default function Home() {
     const laatste8Matchen = gespeeldeMatchen.slice(0, 8);
 
     m.forEach((match: any) => {
-      // Verzamel teams die in de knockouts zitten
       if (match.ronde !== 'Groepsfase') {
         if (match.thuisploeg) teamsInKnockout.add(normalizeString(match.thuisploeg));
         if (match.uitploeg) teamsInKnockout.add(normalizeString(match.uitploeg));
@@ -538,12 +539,10 @@ export default function Home() {
       }
     });
 
-    // Check of België de groepsfase niet heeft overleefd
     if (knockoutsHebbenScore && !teamsInKnockout.has('belgie') && !teamsInKnockout.has('belgië')) {
        echtEindstationBelgie = 'Groepsfase';
     }
 
-    // Check of België in een knockout is uitgeschakeld
     m.forEach((match: any) => {
       if (match.ronde !== 'Groepsfase' && match.thuis_score !== null) {
         const isThuisBelgie = normalizeString(match.thuisploeg) === 'belgie' || normalizeString(match.thuisploeg) === 'belgië';
@@ -656,7 +655,6 @@ export default function Home() {
           if (lNorm && halveFinalistenNorm.includes(lNorm)) { bonusP += 3; breakdown.push({label: `Halve Finalist (${land})`, pt: 3}); }
         });
 
-        // EINDSTATION BELGIË
         const myBelgie = normalizeString(bv.eindstation_belgie);
         const echtEindstationNorm = normalizeString(echtEindstationBelgie);
         
@@ -899,15 +897,15 @@ export default function Home() {
           </div>
         )}
 
-        {/* ==================== DE NIEUWE CL POLL LOGICA ==================== */}
+        {/* POLL LOGICA */}
         {actieveSpeler && (actieveSpeler.betaald || isJorden) && (!heeftAlGestemd || isJorden) && (
-          <div className="poll-container">
-            <h2 className="poll-title">🔮 CHAMPIONS LEAGUE PRONOSTIEK?</h2>
+          <div className="poll-container" style={!heeftAlGestemd ? { border: '2px solid var(--wk-red)', boxShadow: '0 4px 20px rgba(227, 0, 34, 0.3)' } : {}}>
             
-            {!heeftAlGestemd && !isJorden && (
+            {!heeftAlGestemd && (
               <>
+                <h2 className="poll-title" style={{ color: 'var(--wk-red)' }}>🚨 VERPLICHTE KEUZE: CHAMPIONS LEAGUE?</h2>
                 <p style={{ fontSize: '0.8rem', color: '#ADB5BD', textAlign: 'center', fontWeight: 800, margin: '0 0 15px 0' }}>
-                  Het einde van het WK is in zicht! Wie heeft er zin om volgend seizoen mee te doen met een pronostiek over de Champions League?
+                  Voor je verder gaat naar de pronostiek, willen we even polsen wie er volgend seizoen zin heeft in een Champions League editie!
                 </p>
                 <button className="poll-btn" onClick={() => stemInPoll('Ja, met €10 inzet')}>🔥 Ja, met €10 inzet</button>
                 <button className="poll-btn" onClick={() => stemInPoll('Ja, zonder inleg')}>🤝 Ja, zonder inleg</button>
@@ -917,86 +915,86 @@ export default function Home() {
             )}
 
             {isJorden && (
-              <div style={{ marginTop: '5px' }}>
-                <p style={{ fontSize: '0.75rem', color: 'var(--wk-lime)', fontWeight: 900, textAlign: 'center', marginBottom: '15px', textTransform: 'uppercase' }}>
-                  🛡️ GEHEIM JORDEN DASHBOARD ({allePollStemmen.length} stemmen)
-                </p>
+              <div style={{ marginTop: !heeftAlGestemd ? '20px' : '0', paddingTop: !heeftAlGestemd ? '15px' : '0', borderTop: !heeftAlGestemd ? '1px dashed rgba(255,255,255,0.1)' : 'none' }}>
+                <button 
+                  onClick={() => setToonPollDashboard(!toonPollDashboard)}
+                  style={{ width: '100%', background: 'rgba(0, 229, 255, 0.1)', border: '1px solid var(--wk-aqua)', color: 'var(--wk-aqua)', padding: '12px', borderRadius: '12px', fontWeight: 900, cursor: 'pointer', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <span>🛡️ GEHEIM JORDEN DASHBOARD ({allePollStemmen.length})</span>
+                  <span>{toonPollDashboard ? '▲' : '▼'}</span>
+                </button>
                 
-                {allePollStemmen.length === 0 ? (
-                  <p style={{ fontSize: '0.8rem', color: '#ADB5BD', fontStyle: 'italic', textAlign: 'center' }}>Nog geen stemmen ontvangen...</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '250px', overflowY: 'auto' }}>
-                    {allePollStemmen.map((s: any) => (
-                      <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '8px 12px', borderRadius: '10px', borderLeft: '3px solid var(--wk-aqua)' }}>
-                        <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#FFF' }}>{s.spelers?.naam || 'Onbekend'}</span>
-                        <span style={{ 
-                          fontSize: '0.75rem', fontWeight: 900, padding: '4px 10px', borderRadius: '8px',
-                          background: s.antwoord.includes('€10') ? 'rgba(204,255,0,0.15)' : s.antwoord.includes('zonder') ? 'rgba(0,229,255,0.15)' : 'rgba(227,0,34,0.15)',
-                          color: s.antwoord.includes('€10') ? 'var(--wk-lime)' : s.antwoord.includes('zonder') ? 'var(--wk-aqua)' : 'var(--wk-red)'
-                        }}>
-                          {s.antwoord}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {!heeftAlGestemd && (
-                  <div style={{ marginTop: '20px', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '15px' }}>
-                    <p style={{ fontSize: '0.75rem', color: '#ADB5BD', fontWeight: 800, textAlign: 'center', marginBottom: '10px' }}>Je hebt zelf nog niet gestemd:</p>
-                    <div style={{ display: 'flex', gap: '5px' }}>
-                      <button style={{ flex: 1, fontSize: '0.65rem', padding: '8px' }} className="poll-btn" onClick={() => stemInPoll('Ja, met €10 inzet')}>€10</button>
-                      <button style={{ flex: 1, fontSize: '0.65rem', padding: '8px' }} className="poll-btn" onClick={() => stemInPoll('Ja, zonder inleg')}>Gratis</button>
-                      <button style={{ flex: 1, fontSize: '0.65rem', padding: '8px' }} className="poll-btn" onClick={() => stemInPoll('Nee')}>Nee</button>
-                    </div>
+                {toonPollDashboard && (
+                  <div style={{ marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '250px', overflowY: 'auto' }}>
+                    {allePollStemmen.length === 0 ? (
+                      <p style={{ fontSize: '0.8rem', color: '#ADB5BD', fontStyle: 'italic', textAlign: 'center' }}>Nog geen stemmen ontvangen...</p>
+                    ) : (
+                      allePollStemmen.map((s: any) => (
+                        <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '8px 12px', borderRadius: '10px', borderLeft: '3px solid var(--wk-aqua)' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#FFF' }}>{s.spelers?.naam || 'Onbekend'}</span>
+                          <span style={{ 
+                            fontSize: '0.75rem', fontWeight: 900, padding: '4px 10px', borderRadius: '8px',
+                            background: s.antwoord.includes('€10') ? 'rgba(204,255,0,0.15)' : s.antwoord.includes('zonder') ? 'rgba(0,229,255,0.15)' : 'rgba(227,0,34,0.15)',
+                            color: s.antwoord.includes('€10') ? 'var(--wk-lime)' : s.antwoord.includes('zonder') ? 'var(--wk-aqua)' : 'var(--wk-red)'
+                          }}>
+                            {s.antwoord}
+                          </span>
+                        </div>
+                      ))
+                    )}
                   </div>
                 )}
               </div>
             )}
           </div>
         )}
-        {/* ================================================================== */}
 
-        {actieveSpeler && actieveTab === 'ranking' && (
-          <div style={{ width: '100%', marginBottom: '20px' }}>
-            <button onClick={() => setInfoOpen(!infoOpen)} style={{ width: '100%', background: '#1A1423', border: '2px solid var(--wk-aqua)', color: 'var(--wk-aqua)', padding: '15px', borderRadius: '16px', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 15px rgba(0, 229, 255, 0.2)' }}>
-              <span>📜 REGLEMENT & PUNTEN</span><span>{infoOpen ? '▲' : '▼'}</span>
-            </button>
-            {infoOpen && (
-              <div style={{ background: '#1A1423', padding: '20px', borderRadius: '16px', borderLeft: '4px solid var(--wk-purple)', marginTop: '10px', fontSize: '0.8rem', color: '#ADB5BD', lineHeight: '1.5', boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '15px' }}>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <strong style={{color: 'var(--wk-red)', fontSize: '0.9rem'}}>⚽ MATCHEN (Score na 90 min)</strong><br/>
-                    <span style={{color: '#FFF'}}>• Exacte score: <strong>3 pt</strong></span><br/>
-                    <span style={{color: '#FFF'}}>• Gelijkspel (foute score) + Juiste doorstromer: <strong>2 pt</strong></span><br/>
-                    <span style={{color: '#FFF'}}>• Juiste winnaar (of enkel gelijkspel juist): <strong>1 pt</strong></span><br/>
-                    <span style={{color: '#FFF'}}>• Fout: <strong>0 pt</strong></span>
-                  </div>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <strong style={{color: 'var(--wk-lime)', fontSize: '0.9rem'}}>💎 BONUSVRAGEN</strong><br/>
-                    <span style={{color: '#FFF'}}>• Goals/Kaarten/WK: <strong>5 pt</strong></span><br/>
-                    <span style={{color: '#FFF'}}>• Halve Fin/België: <strong>3 pt</strong></span><br/>
-                    <span style={{color: '#FFF'}}>• Aanval/Defensie: <strong>3 pt</strong></span>
-                  </div>
-                </div>
-                <div style={{ background: 'rgba(255, 107, 0, 0.1)', padding: '12px', borderRadius: '12px', border: '1px solid var(--wk-orange)', marginBottom: '15px' }}><strong style={{color: 'var(--wk-orange)', fontSize: '0.9rem'}}>⚖️ GELIJKE STAND (EX-AEQUO)</strong><br/><span style={{color: '#FFF'}}>• <strong>Klassement:</strong> Wie de meeste <em>'Exacte Uitslagen'</em> heeft, wint. Nog gelijk? Dan telt <em>'Juiste Winnaars'</em>.</span><br/><span style={{color: '#FFF'}}>• <strong>Bonusvragen:</strong> Gedeelde eerste plaats bij topschutter/verdediging/cijfers? Iedereen met dit antwoord krijgt de volle punten.</span></div>
-                <div style={{ background: 'var(--wk-blue)', padding: '12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 900, textAlign: 'center', color: '#FFF', boxShadow: '0 4px 15px rgba(43,0,255,0.3)' }}>💰 DEELNAME: €10 NAAR BE85 0018 2075 8506<br/><span style={{color: 'var(--wk-lime)'}}>Mededeling: Naam + WK2026</span></div>
-              </div>
-            )}
-          </div>
+        {/* REGLEMENT & ADMIN & TIMERS */}
+        {actieveSpeler && (actieveSpeler.betaald || isJorden) && heeftAlGestemd && (
+           <>
+              {actieveTab === 'ranking' && (
+                 <div style={{ width: '100%', marginBottom: '20px' }}>
+                   <button onClick={() => setInfoOpen(!infoOpen)} style={{ width: '100%', background: '#1A1423', border: '2px solid var(--wk-aqua)', color: 'var(--wk-aqua)', padding: '15px', borderRadius: '16px', fontWeight: 900, fontSize: '0.9rem', cursor: 'pointer', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 15px rgba(0, 229, 255, 0.2)' }}>
+                     <span>📜 REGLEMENT & PUNTEN</span><span>{infoOpen ? '▲' : '▼'}</span>
+                   </button>
+                   {infoOpen && (
+                     <div style={{ background: '#1A1423', padding: '20px', borderRadius: '16px', borderLeft: '4px solid var(--wk-purple)', marginTop: '10px', fontSize: '0.8rem', color: '#ADB5BD', lineHeight: '1.5', boxShadow: '0 4px 15px rgba(0,0,0,0.3)' }}>
+                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '15px' }}>
+                         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                           <strong style={{color: 'var(--wk-red)', fontSize: '0.9rem'}}>⚽ MATCHEN (Score na 90 min)</strong><br/>
+                           <span style={{color: '#FFF'}}>• Exacte score: <strong>3 pt</strong></span><br/>
+                           <span style={{color: '#FFF'}}>• Gelijkspel (foute score) + Juiste doorstromer: <strong>2 pt</strong></span><br/>
+                           <span style={{color: '#FFF'}}>• Juiste winnaar (of enkel gelijkspel juist): <strong>1 pt</strong></span><br/>
+                           <span style={{color: '#FFF'}}>• Fout: <strong>0 pt</strong></span>
+                         </div>
+                         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                           <strong style={{color: 'var(--wk-lime)', fontSize: '0.9rem'}}>💎 BONUSVRAGEN</strong><br/>
+                           <span style={{color: '#FFF'}}>• Goals/Kaarten/WK: <strong>5 pt</strong></span><br/>
+                           <span style={{color: '#FFF'}}>• Halve Fin/België: <strong>3 pt</strong></span><br/>
+                           <span style={{color: '#FFF'}}>• Aanval/Defensie: <strong>3 pt</strong></span>
+                         </div>
+                       </div>
+                       <div style={{ background: 'rgba(255, 107, 0, 0.1)', padding: '12px', borderRadius: '12px', border: '1px solid var(--wk-orange)', marginBottom: '15px' }}><strong style={{color: 'var(--wk-orange)', fontSize: '0.9rem'}}>⚖️ GELIJKE STAND (EX-AEQUO)</strong><br/><span style={{color: '#FFF'}}>• <strong>Klassement:</strong> Wie de meeste <em>'Exacte Uitslagen'</em> heeft, wint. Nog gelijk? Dan telt <em>'Juiste Winnaars'</em>.</span><br/><span style={{color: '#FFF'}}>• <strong>Bonusvragen:</strong> Gedeelde eerste plaats bij topschutter/verdediging/cijfers? Iedereen met dit antwoord krijgt de volle punten.</span></div>
+                       <div style={{ background: 'var(--wk-blue)', padding: '12px', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 900, textAlign: 'center', color: '#FFF', boxShadow: '0 4px 15px rgba(43,0,255,0.3)' }}>💰 DEELNAME: €10 NAAR BE85 0018 2075 8506<br/><span style={{color: 'var(--wk-lime)'}}>Mededeling: Naam + WK2026</span></div>
+                     </div>
+                   )}
+                 </div>
+              )}
+
+              {isAdmin && <button onClick={syncMetSpreadsheet} className="admin-btn">🔄 {syncStatus || 'SYNC MET GOOGLE SHEETS'}</button>}
+
+              {!isGesloten && isTimerLoaded && (
+                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '30px', width: '100%' }}>
+                   <div style={{ flex: 1, background: 'var(--wk-lime)', color: '#111827', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(204, 255, 0, 0.3)' }}><div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.dagen}</div><div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Dagen</div></div>
+                   <div style={{ flex: 1, background: 'var(--wk-purple)', color: '#FFF', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(122, 0, 230, 0.4)' }}><div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.uren}</div><div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Uren</div></div>
+                   <div style={{ flex: 1, background: 'var(--wk-aqua)', color: '#111827', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0, 229, 255, 0.4)' }}><div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.minuten}</div><div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Min</div></div>
+                   <div style={{ flex: 1, background: 'var(--wk-red)', color: '#FFF', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(227, 0, 34, 0.4)' }}><div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.seconden}</div><div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Sec</div></div>
+                 </div>
+              )}
+           </>
         )}
 
-        {isAdmin && <button onClick={syncMetSpreadsheet} className="admin-btn">🔄 {syncStatus || 'SYNC MET GOOGLE SHEETS'}</button>}
-
-        {!isGesloten && actieveSpeler && isTimerLoaded && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', marginBottom: '30px', width: '100%' }}>
-            <div style={{ flex: 1, background: 'var(--wk-lime)', color: '#111827', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(204, 255, 0, 0.3)' }}><div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.dagen}</div><div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Dagen</div></div>
-            <div style={{ flex: 1, background: 'var(--wk-purple)', color: '#FFF', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(122, 0, 230, 0.4)' }}><div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.uren}</div><div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Uren</div></div>
-            <div style={{ flex: 1, background: 'var(--wk-aqua)', color: '#111827', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0, 229, 255, 0.4)' }}><div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.minuten}</div><div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Min</div></div>
-            <div style={{ flex: 1, background: 'var(--wk-red)', color: '#FFF', padding: '15px 5px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 15px rgba(227, 0, 34, 0.4)' }}><div style={{ fontFamily: 'Bebas Neue', fontSize: '1.8rem', lineHeight: 1 }}>{tijdOver.seconden}</div><div style={{ fontSize: '0.6rem', fontWeight: 900, textTransform: 'uppercase', marginTop: '2px' }}>Sec</div></div>
-          </div>
-        )}
-
+        {/* TABS CONTENT OR BLOCKED STATE */}
         {actieveSpeler ? (
           (!actieveSpeler.betaald && !isJorden) ? (
             <div style={{ textAlign: 'center', padding: '20px 0', background: '#1A1423', borderRadius: '24px', border: '2px solid var(--wk-red)' }}>
@@ -1006,16 +1004,20 @@ export default function Home() {
               <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '16px', padding: '20px', margin: '0 15px 20px 15px' }}><div style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--wk-aqua)', textTransform: 'uppercase' }}>Overschrijven naar:</div><div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#FFF', margin: '8px 0' }}>BE85 0018 2075 8506</div><div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#ADB5BD' }}>Mededeling: <strong style={{ color: 'var(--wk-lime)' }}>{actieveSpeler.naam} + WK2026</strong></div></div>
               <button style={{ background: '#333', border: 'none', color: '#FFF', fontWeight: 900, cursor: 'pointer', padding: '12px 25px', borderRadius: '12px', fontSize: '0.8rem' }} onClick={() => { localStorage.removeItem('wk_speler_id'); window.location.reload(); }}>UITLOGGEN</button>
             </div>
+          ) : !heeftAlGestemd ? (
+            <div style={{ textAlign: 'center', padding: '20px 0', background: '#1A1423', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '10px' }}>☝️</div>
+              <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2rem', color: '#ADB5BD', margin: '0 0 10px 0' }}>POLL INVULLEN</h2>
+              <p style={{ fontWeight: 800, color: '#6C757D', fontSize: '0.9rem', marginBottom: '20px', padding: '0 15px' }}>Je moet eerst hierboven je keuze doorgeven voor de app ontgrendelt.</p>
+              <button style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#ADB5BD', fontWeight: 900, cursor: 'pointer', padding: '12px 25px', borderRadius: '12px', fontSize: '0.8rem' }} onClick={() => { localStorage.removeItem('wk_speler_id'); window.location.reload(); }}>UITLOGGEN</button>
+            </div>
           ) : (
             <div style={{ width: '100%' }}>
               {actieveTab === 'matchen' && <MatchenTab matchen={matchen} gefilterdeMatchen={gefilterdeMatchen} nu={nu} matchVoorspellingen={matchVoorspellingen} matchSaveStatus={matchSaveStatus} alleMatchVoorspellingen={alleMatchVoorspellingen} alleSpelers={alleSpelers} expandedMatchId={expandedMatchId} setExpandedMatchId={setExpandedMatchId} handleScore={handleScore} filterRonde={filterRonde} setFilterRonde={setFilterRonde} weergavePeriode={weergavePeriode} setWeergavePeriode={setWeergavePeriode} actieveSpeler={actieveSpeler} isJorden={isJorden} matchViews={matchViews} />}
             
               {actieveTab === 'prijs' && <PrijsTab klassement={klassement} matchen={matchen} alleToernooiV={alleToernooiV} />}
               {actieveTab === 'bonus' && <BonusTab winnaar={winnaar} setWinnaar={setWinnaar} hf={hf} setHf={setHf} meesteGoalsLand={meesteGoalsLand} setMeesteGoalsLand={setMeesteGoalsLand} besteVerdedigingLand={besteVerdedigingLand} setBesteVerdedigingLand={setBesteVerdedigingLand} eindstation={eindstation} setEindstation={setEindstation} totaalGoals={totaalGoals} setTotaalGoals={setTotaalGoals} totaalGeel={totaalGeel} setTotaalGeel={setTotaalGeel} totaalRood={totaalRood} setTotaalRood={setTotaalRood} isGesloten={isGesloten} slaBonusOp={slaBonusOp} opslaanStatus={opslaanStatus} WK_LANDEN={WK_LANDEN} />}
-              
-              {/* Hier krijgt AntwoordenTab ook netjes de matchen door! */}
               {actieveTab === 'antwoorden' && <AntwoordenTab nu={nu} DEADLINE_DATE={DEADLINE_DATE} alleToernooiV={alleToernooiV} matchen={matchen} />}
-              
               {actieveTab === 'ranking' && <RankingTab klassement={klassement} actieveSpeler={actieveSpeler} toggleBetaald={toggleBetaald} isJorden={isJorden} />}
               {actieveTab === 'tellers' && <TellersTab matchen={matchen} alleToernooiV={alleToernooiV} isAdmin={isAdmin} />}
               {actieveTab === 'kleedkamer' && <ChatTab chatBerichten={chatBerichten} actieveSpeler={actieveSpeler} nieuwBericht={nieuwBericht} setNieuwBericht={setNieuwBericht} verstuurChat={verstuurChat} matchen={matchen} alleMatchVoorspellingen={alleMatchVoorspellingen} klassement={klassement} />}
@@ -1039,7 +1041,7 @@ export default function Home() {
         )}
       </div>
 
-      {actieveSpeler && (actieveSpeler.betaald || isJorden) && (
+      {actieveSpeler && (actieveSpeler.betaald || isJorden) && heeftAlGestemd && (
         <div className="bottom-nav">
           {[
             {id:'ranking', i:'🏆', n:'Rank'},
